@@ -13,10 +13,29 @@ export function SmecBattleCodeLogo(props: SVGProps<SVGSVGElement>) {
 
 export function BulletCoin(props: SVGProps<SVGSVGElement>) {
     return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
-            <path d="M12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" {...props}>
+            <circle cx="12" cy="12" r="10" fill="url(#paint0_linear_1_2)"/>
+            <path d="M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM12 20C7.582 20 4 16.418 4 12C4 7.582 7.582 4 12 4C16.418 4 20 7.582 20 12C20 16.418 16.418 20 12 20Z" fill="url(#paint1_linear_1_2)"/>
+            <path d="M13.8279 8.33391L15.2078 6.95398C15.3957 6.76611 15.2635 6.44336 15.0117 6.44336H13.6366L11.0029 9.07703L9.62784 7.70197H8.25281C7.99912 7.70197 7.86875 8.02472 8.05662 8.21259L9.43655 9.59252L8.25281 10.7763V12.1513L13.8279 6.57629V8.33391Z" fill="url(#paint2_linear_1_2)"/>
+            <path d="M13.1191 17.5566H10.3711L8.25281 15.4383V13.7807L13.8279 8.20575L15.2078 9.58568L10.3711 14.4224L11.0586 15.1098L13.1191 13.0493V17.5566Z" fill="url(#paint3_linear_1_2)"/>
+            <defs>
+                <linearGradient id="paint0_linear_1_2" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FDB813"/>
+                    <stop offset="1" stopColor="#F58529"/>
+                </linearGradient>
+                <linearGradient id="paint1_linear_1_2" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#F58529"/>
+                    <stop offset="1" stopColor="#FDB813"/>
+                </linearGradient>
+                <linearGradient id="paint2_linear_1_2" x1="11.7302" y1="6.44336" x2="11.7302" y2="12.1513" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FCEE21"/>
+                    <stop offset="1" stopColor="#F47B28"/>
+                </linearGradient>
+                <linearGradient id="paint3_linear_1_2" x1="11.7302" y1="8.20575" x2="11.7302" y2="17.5566" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#FCEE21"/>
+                    <stop offset="1" stopColor="#F47B28"/>
+                </linearGradient>
+            </defs>
         </svg>
     )
 }
