@@ -1,10 +1,8 @@
-
 'use client'
 
-import { SmecBattleCodeLogo } from '@/components/icons';
+import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { Award, BarChart, Home, Info, LogOut, Moon, Settings, Sun, User, Trophy, ArrowRight, Menu, Flame, Calendar, ListChecks } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { BarChart, Home, Info, LogOut, Settings, User, Trophy, ArrowRight, Menu, Flame, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -13,8 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, orderBy, query, limit, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import { Toaster } from '@/components/ui/toaster';
 
 type CurrentUser = {
   uid: string;
@@ -31,7 +30,6 @@ type UserStats = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { setTheme, theme } = useTheme();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -48,6 +46,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          
+          if (!userData.profileComplete) {
+              router.push('/complete-profile');
+              return;
+          }
+
           setCurrentUser({
             uid: user.uid,
             name: userData.name,
@@ -88,6 +92,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [auth, db, router, pathname]);
 
+  // Effect to update user's lastSeen timestamp
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+
+    const updateLastSeen = () => {
+        updateDoc(userDocRef, {
+            lastSeen: serverTimestamp(),
+        }).catch(console.error);
+    };
+
+    updateLastSeen(); // Update once on load
+
+    const intervalId = setInterval(updateLastSeen, 60 * 1000); // Update every 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, [currentUser, db]);
+
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('currentUser'); // For admin logout
@@ -96,10 +119,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: '/dashboard', label: 'Home', icon: Home },
-    { href: '/missions', label: 'Missions', icon: ListChecks },
-    { href: '/leaderboard', label: 'Leaderboard', icon: BarChart },
+    { href: '/missions', label: 'Missions', icon: Flame },
     { href: '/events', label: 'Events', icon: Calendar },
+    { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
     { href: '/profile', label: 'My Profile', icon: User },
+    { href: '/about', label: 'About', icon: Info },
   ];
   
   if (isLoading || !currentUser) {
@@ -139,18 +163,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </ScrollArea>
             
             <div className="mt-auto flex flex-col gap-4 p-4">
-                 <div className="flex items-center justify-end">
-                     <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                         className="text-slate-300 hover:bg-slate-800 hover:text-white"
-                      >
-                        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                        <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                        <span className="sr-only">Toggle theme</span>
-                      </Button>
-                 </div>
+                 
                  <div className="border-t border-slate-700 pt-4">
                      <Link href="/profile" className="flex items-center gap-3">
                          <Avatar className="h-10 w-10">
@@ -195,18 +208,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       ))}
                     </nav>
                      <div className="mt-auto flex flex-col gap-4 absolute bottom-4 right-4 left-4">
-                         <div className="flex items-center justify-end">
-                             <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                                 className="text-slate-300 hover:bg-slate-800 hover:text-white"
-                              >
-                                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                                <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                                <span className="sr-only">Toggle theme</span>
-                              </Button>
-                         </div>
                      </div>
                  </SheetContent>
               </Sheet>
@@ -235,6 +236,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
         </nav>
+        <Toaster />
     </div>
   );
 }
