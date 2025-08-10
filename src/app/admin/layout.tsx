@@ -4,7 +4,7 @@
 
 import { SmecBattleCodeLogo } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { Home, LogOut, Moon, Settings, Sun, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users } from 'lucide-react';
+import { Home, LogOut, Moon, Settings, Sun, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users, Megaphone } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { getAuth, signOut } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
   const { setTheme, theme } = useTheme();
   const [isClient, setIsClient] = useState(false);
+  const auth = getAuth(app);
 
   useEffect(() => {
     setIsClient(true);
@@ -31,23 +34,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isClient) {
         const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (!user || !user.isAdmin) {
-            router.push('/login');
+            router.push('/admin/login');
         } else {
             setCurrentUser(user);
         }
     }
   }, [pathname, router, isClient]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
-    router.push('/login');
+    router.push('/admin/login');
   }
 
   const navLinks = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
     { href: '/admin/challenges', label: 'Manage Challenges', icon: ListChecks },
     { href: '/admin/users', label: 'Manage Users', icon: Users },
+    { href: '/admin/advertisement', label: 'Manage Advertisement', icon: Megaphone },
   ];
   
   if (!isClient || !currentUser) {

@@ -9,6 +9,8 @@ import { User, KeyRound, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
 
 type UserData = {
     email: string;
@@ -17,7 +19,7 @@ type UserData = {
     points: number;
     branch: string;
     year: string;
-    password?: string;
+    // Password is not stored or displayed in admin panel for security
     imageUrl?: string;
 };
 
@@ -31,37 +33,40 @@ const BRANCH_MAP: Record<string, string> = {
 
 export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserData[]>([]);
-    const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const db = getFirestore(app);
 
     useEffect(() => {
-        const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
-        const leaderboard = JSON.parse(localStorage.getItem('leaderboard') || '{}');
+        const fetchUsers = async () => {
+            setIsLoading(true);
+            try {
+                const usersCollection = collection(db, 'users');
+                const q = query(usersCollection, orderBy('points', 'desc'));
+                const querySnapshot = await getDocs(q);
 
-        const combinedData: UserData[] = Object.entries(storedUsers).map(([email, userData]: [string, any]) => {
-            const profile = JSON.parse(localStorage.getItem(`userProfile_${email}`) || '{}');
-            const leaderboardEntry = leaderboard[email] || { points: 0 };
-            
-            return {
-                email,
-                name: userData.name,
-                studentId: userData.studentId,
-                password: userData.password,
-                points: leaderboardEntry.points,
-                branch: profile.branch ? BRANCH_MAP[profile.branch] || profile.branch : 'N/A',
-                year: profile.year ? `${profile.year} Year` : 'N/A',
-                imageUrl: profile.imageUrl,
-            };
-        });
-        
-        combinedData.sort((a, b) => b.points - a.points);
-        
-        setUsers(combinedData);
-    }, []);
+                const usersList = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        email: data.email,
+                        name: data.name,
+                        studentId: data.studentId,
+                        points: data.points || 0,
+                        branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
+                        year: data.year ? `${data.year} Year` : 'N/A',
+                        imageUrl: data.imageUrl,
+                    };
+                });
+                setUsers(usersList);
+            } catch (error) {
+                console.error("Error fetching users: ", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    const togglePasswordVisibility = (email: string) => {
-        setVisiblePasswords(prev => ({ ...prev, [email]: !prev[email] }));
-    }
+        fetchUsers();
+    }, [db]);
 
     const filteredUsers = users.filter(user => 
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,13 +94,14 @@ export default function ManageUsersPage() {
                     <CardDescription>A list of all registered users on the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {filteredUsers.length > 0 ? (
+                    {isLoading ? (
+                        <div className="text-center py-16">Loading users...</div>
+                    ) : filteredUsers.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>User</TableHead>
                                     <TableHead>Student ID</TableHead>
-                                    <TableHead>Password</TableHead>
                                     <TableHead>Branch & Year</TableHead>
                                     <TableHead className="text-right">Score</TableHead>
                                 </TableRow>
@@ -117,14 +123,6 @@ export default function ManageUsersPage() {
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{user.studentId}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <span>{visiblePasswords[user.email] ? user.password : '••••••••'}</span>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => togglePasswordVisibility(user.email)}>
-                                                    <KeyRound className="h-4 w-4" />
-                                                </Button>
-                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <p>{user.branch}</p>
