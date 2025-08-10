@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { CodeEditor } from "@/components/code-editor";
 import { app, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, Timestamp, runTransaction, increment } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ export default function ChallengeDetail() {
   const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { id: challengeId } = useParams();
   
   const auth = getAuth(app);
@@ -129,7 +128,7 @@ export default function ChallengeDetail() {
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit.", position: 'center' });
         return;
     }
-    setIsSubmitting(true);
+    setIsRunning(true);
     setRunResult(null);
     setActiveTab('result');
 
@@ -137,7 +136,7 @@ export default function ChallengeDetail() {
       const allTestCases = challenge.testCases || [];
       if (allTestCases.length === 0) {
          toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist.", position: 'center' });
-         setIsSubmitting(false);
+         setIsRunning(false);
          return;
       }
       
@@ -161,26 +160,41 @@ export default function ChallengeDetail() {
       });
       
       if (result.allPassed) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        // Prevent re-awarding points for already completed challenges
-        const completedChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/completed`));
-        const completedChallenges = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
-        
-        if (!completedChallenges[challenge.id!]) {
-            const currentPoints = userSnap.data()?.points || 0;
-            await updateDoc(userRef, { points: currentPoints + challenge.points });
-            toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!`, position: 'center' });
-        } else {
-            toast({ title: "Challenge Accepted!", description: "You have already completed this challenge.", position: 'center' });
-        }
+        // Use a transaction to ensure atomicity
+        await runTransaction(db, async (transaction) => {
+            const userRef = doc(db, "users", user.uid);
+            const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
+            
+            const [userSnap, completedChallengesSnap] = await Promise.all([
+                transaction.get(userRef),
+                transaction.get(completedChallengesDocRef)
+            ]);
+            
+            const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
+            
+            if (!completedData[challenge.id!]) {
+                // Not completed before, award points
+                transaction.update(userRef, { points: increment(challenge.points) });
+                
+                // Track daily points
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
+                transaction.set(dailyPointsRef, { points: increment(challenge.points) }, { merge: true });
 
-        const completedRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
-        await setDoc(completedRef, { [challenge.id!]: true }, { merge: true });
-        
-        const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-        await setDoc(inProgressRef, { [challenge.id!]: false }, { merge: true });
+                // Mark as completed
+                transaction.set(completedChallengesDocRef, { 
+                    [challenge.id!]: { completedAt: Timestamp.now() }
+                }, { merge: true });
+
+                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!`, position: 'center' });
+            } else {
+                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge.", position: 'center' });
+            }
+
+            // Update progress status
+            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+            transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
+        });
         
         setActiveTab('submissions');
       } else {
@@ -191,7 +205,7 @@ export default function ChallengeDetail() {
       console.error("Error submitting code:", error);
       toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission.", position: 'center' });
     } finally {
-      setIsSubmitting(false);
+      setIsRunning(false);
     }
   }
 
@@ -204,7 +218,7 @@ export default function ChallengeDetail() {
 
   return (
     <div className="h-full w-full flex flex-col bg-background">
-       <div className="flex-shrink-0 p-2 flex justify-between items-center border-b">
+       <div className="flex-shrink-0 p-2 flex justify-between items-center border-b bg-muted">
          <Select value={language} onValueChange={setLanguage}>
              <SelectTrigger className="w-[180px]">
                  <SelectValue placeholder="Select language" />
@@ -218,10 +232,10 @@ export default function ChallengeDetail() {
              </SelectContent>
          </Select>
          <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning || isSubmitting}>
+           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning}>
              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
            </Button>
-           <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isRunning || isSubmitting}>
+           <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isRunning}>
             {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
            </Button>
          </div>
@@ -234,13 +248,14 @@ export default function ChallengeDetail() {
           />
        </div>
        <div className="flex-shrink-0 p-2 flex justify-end items-center gap-2 border-t bg-muted">
-           <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning || isSubmitting}>
+           <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
              {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
            </Button>
-           <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning || isSubmitting}>
-             {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Bug className="mr-2 h-4 w-4" />} Submit
+           <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
+             {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Bug className="mr-2 h-4 w-4" />} Submit
            </Button>
        </div>
     </div>
   );
 }
+
