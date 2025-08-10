@@ -4,7 +4,7 @@
 
 import { SmecBattleCodeLogo } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { Home, LogOut, Moon, Settings, Sun, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users, Megaphone } from 'lucide-react';
+import { Home, LogOut, Moon, Settings, Sun, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users, Megaphone, Calendar } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isClient) {
         const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (!user || !user.isAdmin) {
-            router.push('/admin/login');
+            router.push('/admin-login');
         } else {
             setCurrentUser(user);
         }
@@ -45,13 +45,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     await signOut(auth);
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
-    router.push('/admin/login');
+    router.push('/admin-login');
   }
 
   const navLinks = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
     { href: '/admin/challenges', label: 'Manage Challenges', icon: ListChecks },
     { href: '/admin/users', label: 'Manage Users', icon: Users },
+    { href: '/admin/events', label: 'Manage Events', icon: Calendar },
     { href: '/admin/advertisement', label: 'Manage Advertisement', icon: Megaphone },
   ];
   

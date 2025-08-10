@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AuthLayout } from '../auth-layout';
+import { AuthLayout } from '@/components/auth-layout';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +59,7 @@ export default function AdminRegisterPage() {
         studentId: `ADMIN_${Date.now()}` // Generate a unique ID for admin
       });
       
-      router.push('/admin/login');
+      router.push('/admin-login');
       toast({
         title: 'Admin Registration Successful!',
         description: `Admin account for ${fullName} created. You can now log in.`,
@@ -112,7 +112,7 @@ export default function AdminRegisterPage() {
               {isLoading ? 'Creating Account...' : 'Create Admin Account'}
             </Button>
              <Button variant="link" asChild>
-                <Link href="/admin/login">Back to Login</Link>
+                <Link href="/admin-login">Back to Login</Link>
             </Button>
           </div>
         </CardContent>
