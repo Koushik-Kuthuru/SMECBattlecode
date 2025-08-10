@@ -18,6 +18,7 @@ export type Challenge = {
     isHidden?: boolean;
   }[];
   solution: string;
+  isEnabled?: boolean;
 };
 
 export const challenges: Challenge[] = [
