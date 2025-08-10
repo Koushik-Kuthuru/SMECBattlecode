@@ -11,7 +11,7 @@ export type UserData = {
     section: string;
     imageUrl?: string;
     profileComplete: boolean;
-    preferredLanguages?: string[];
+    preferredLanguages: string[];
     isAdmin?: boolean;
     lastSeen?: Timestamp;
 };
@@ -29,4 +29,5 @@ export type Event = {
     registrationLink?: string;
     aiHint?: string;
     status: 'live' | 'upcoming' | 'past';
+    createdAt?: Timestamp;
 };

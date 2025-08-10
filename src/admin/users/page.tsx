@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,22 +8,26 @@ import { User, KeyRound, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import type { UserData as AppUserData } from '@/lib/types';
 
-type UserData = {
-    email: string;
-    name: string;
-    studentId: string;
-    points: number;
-    branch: string;
-    year: string;
-    // Password is not stored or displayed in admin panel for security
-    imageUrl?: string;
+
+type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
+    lastSeen?: Timestamp;
+    branch: string; // branch is required here, unlike the partial from lib
 };
+
 
 const BRANCH_MAP: Record<string, string> = {
     cse: 'CSE',
+    csd: 'CSE (Data Science)',
+    cse_aiml: 'CSE (AI & ML)',
+    aiml: 'AI & Machine Learning',
+    aids: 'AI & Data Science',
+    it: 'Info. Tech.',
     ece: 'ECE',
     eee: 'EEE',
     mech: 'Mechanical',
@@ -38,39 +41,47 @@ export default function ManageUsersPage() {
     const db = getFirestore(app);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setIsLoading(true);
-            try {
-                const usersCollection = collection(db, 'users');
-                const q = query(usersCollection, orderBy('points', 'desc'));
-                const querySnapshot = await getDocs(q);
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, orderBy('points', 'desc'));
 
-                const usersList = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        email: data.email,
-                        name: data.name,
-                        studentId: data.studentId,
-                        points: data.points || 0,
-                        branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
-                        year: data.year ? `${data.year} Year` : 'N/A',
-                        imageUrl: data.imageUrl,
-                    };
-                });
-                setUsers(usersList);
-            } catch (error) {
-                console.error("Error fetching users: ", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const usersList = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    uid: doc.id,
+                    email: data.email,
+                    name: data.name,
+                    studentId: data.studentId,
+                    points: data.points || 0,
+                    branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
+                    year: data.year ? `${data.year} Year` : 'N/A',
+                    imageUrl: data.imageUrl,
+                    lastSeen: data.lastSeen,
+                    profileComplete: data.profileComplete,
+                    section: data.section,
+                } as UserData;
+            }).filter(user => !user.isAdmin);
+            setUsers(usersList);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching users: ", error);
+            setIsLoading(false);
+        });
 
-        fetchUsers();
+        return () => unsubscribe();
     }, [db]);
 
+    const isOnline = (lastSeen?: Timestamp) => {
+        if (!lastSeen) return false;
+        // 5 minutes threshold
+        return (new Date().getTime() - lastSeen.toDate().getTime()) < 5 * 60 * 1000;
+    };
+
     const filteredUsers = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+        !user.isAdmin && (
+            user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
     return (
@@ -103,12 +114,14 @@ export default function ManageUsersPage() {
                                     <TableHead>User</TableHead>
                                     <TableHead>Student ID</TableHead>
                                     <TableHead>Branch & Year</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Last Seen</TableHead>
                                     <TableHead className="text-right">Score</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredUsers.map(user => (
-                                    <TableRow key={user.email}>
+                                    <TableRow key={user.uid}>
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <Avatar>
@@ -127,6 +140,15 @@ export default function ManageUsersPage() {
                                         <TableCell>
                                             <p>{user.branch}</p>
                                             <p className="text-sm text-muted-foreground">{user.year}</p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn("h-2.5 w-2.5 rounded-full", isOnline(user.lastSeen) ? "bg-green-500 animate-pulse" : "bg-slate-400")} />
+                                                <span>{isOnline(user.lastSeen) ? 'Online' : 'Offline'}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.lastSeen ? formatDistanceToNow(user.lastSeen.toDate(), { addSuffix: true }) : 'Never'}
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">{user.points}</TableCell>
                                     </TableRow>
