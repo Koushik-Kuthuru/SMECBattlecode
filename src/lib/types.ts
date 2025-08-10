@@ -20,9 +20,12 @@ export type Event = {
     title: string;
     description: string;
     imageUrl: string;
-    buttonLink: string;
-    buttonText: string;
     isEnabled: boolean;
     startDate: Timestamp;
     endDate: Timestamp;
+    type: 'Podcast' | 'Challenge' | 'Workshop';
+    enrolled: number;
+    registrationLink?: string;
+    aiHint?: string;
+    status: 'live' | 'upcoming' | 'past';
 };
