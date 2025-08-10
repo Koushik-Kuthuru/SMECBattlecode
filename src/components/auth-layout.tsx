@@ -1,3 +1,4 @@
+
 import { SmecBattleCodeLogo } from './icons';
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
