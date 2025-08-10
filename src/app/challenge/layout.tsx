@@ -1,16 +1,15 @@
 
 'use client'
 
-import { SmecBattleCodeLogo } from '@/components/icons';
-import { LogOut, Moon, Sun, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2 } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import React, { useEffect, useState, createContext, useContext } from 'react';
+import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
   ResizableHandleWithHandle,
@@ -28,6 +27,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDistanceToNow } from 'date-fns';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type CurrentUser = {
   uid: string;
@@ -67,21 +75,30 @@ export const useChallenge = () => {
     return context;
 }
 
+type PenaltyDialogContent = {
+    type: 'warning' | 'penalty' | 'error';
+    title: string;
+    description: string;
+    points?: number;
+}
+
 
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
-  const { setTheme, theme } = useTheme();
   
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
+  const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
   const [activeTab, setActiveTab] = useState('description');
   const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
+  const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -89,21 +106,22 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setCurrentUser({
-            uid: user.uid,
-            name: userData.name,
-            email: userData.email,
-            imageUrl: userData.imageUrl,
-          });
-        } else {
-          setCurrentUser(null);
-        }
+        getDoc(userDocRef).then(userDoc => {
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setCurrentUser({
+                uid: user.uid,
+                name: userData.name,
+                email: userData.email,
+                imageUrl: userData.imageUrl,
+              });
+            } else {
+              setCurrentUser(null);
+            }
+        });
       } else {
         setCurrentUser(null);
       }
@@ -132,6 +150,27 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     };
     fetchChallenge();
   }, [challengeId]);
+  
+  useEffect(() => {
+      if (!currentUser || !challengeId) return;
+
+      const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
+      const unsubscribe = onSnapshot(completedDocRef, (docSnap) => {
+          if (docSnap.exists() && docSnap.data()[challengeId]) {
+              setIsChallengeCompleted(true);
+          } else {
+              setIsChallengeCompleted(false);
+          }
+      });
+
+      // Mark as in-progress when visiting the page
+      if (!isChallengeCompleted) {
+        const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
+        setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
+      }
+
+      return () => unsubscribe();
+  }, [currentUser, challengeId, isChallengeCompleted]);
 
   useEffect(() => {
     if (!currentUser || !challengeId) return;
@@ -153,6 +192,58 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         setActiveResultTab('0');
     }
   }, [runResult]);
+
+  // Anti-cheat tab switch detection
+  const handleVisibilityChange = useCallback(async () => {
+      if (document.hidden && currentUser && challenge && !isChallengeCompleted) {
+          try {
+              const userDocRef = doc(db, `users/${currentUser.uid}`);
+              
+              await runTransaction(db, async (transaction) => {
+                  const userDoc = await transaction.get(userDocRef);
+                  
+                  if (!userDoc.exists()) {
+                      throw "User document does not exist!";
+                  }
+
+                  const userData = userDoc.data();
+                  let currentPoints = userData.points || 0;
+                  
+                  const difficultyPenaltyMap = { 'Easy': 2, 'Medium': 5, 'Hard': 15 };
+                  const penaltyPoints = difficultyPenaltyMap[challenge.difficulty] || 5;
+                  
+                  const newPoints = currentPoints - penaltyPoints;
+                  
+                  transaction.update(userDocRef, { points: newPoints });
+                  
+                  setPenaltyDialogContent({
+                      type: 'penalty',
+                      title: "Penalty Applied for Tab Switching",
+                      description: `You have lost points for navigating away from the challenge page. This will affect your leaderboard score.`,
+                      points: penaltyPoints
+                  });
+                  setIsPenaltyDialogOpen(true);
+              });
+
+          } catch (error) {
+              console.error("Error applying penalty: ", error);
+              setPenaltyDialogContent({
+                  type: 'error',
+                  title: 'Error',
+                  description: 'Could not process the tab switch penalty.',
+              });
+              setIsPenaltyDialogOpen(true);
+          }
+      }
+  }, [currentUser, challenge, db, isChallengeCompleted]);
+
+  useEffect(() => {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+  }, [handleVisibilityChange]);
+
   
   if (isLoading) {
     return (
@@ -215,10 +306,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                  </div>
             </div>
           ))}
-
-          <div className="flex flex-wrap gap-2 mt-6">
-              {Array.isArray(challenge.tags) && challenge.tags.map(tag => <Badge key={tag} variant="outline">{tag}</Badge>)}
-          </div>
         </>
     ) : (
         <div>Challenge details not found.</div>
@@ -346,25 +433,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
            <header className="flex-shrink-0 flex items-center justify-between p-2 bg-slate-900 text-white border-b border-slate-700">
-               <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2">
-                        <SmecBattleCodeLogo className="h-8 w-8" />
-                        <span className="text-xl hidden sm:inline">SMEC Battle Code</span>
-                    </Link>
+               <div className="flex items-center gap-2">
+                    <Button variant="ghost" className="text-white hover:bg-slate-800" asChild>
+                        <Link href="/dashboard">
+                          <ArrowLeft className="h-5 w-5 md:mr-2" />
+                          <span className="hidden md:inline">Back to Dashboard</span>
+                        </Link>
+                    </Button>
                </div>
                
                <div className="flex items-center gap-2">
-                     <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                         className="text-slate-300 hover:bg-slate-800 hover:text-white"
-                      >
-                        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                        <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                        <span className="sr-only">Toggle theme</span>
-                      </Button>
-                    
                     {currentUser ? (
                         <>
                             <Link href="/profile">
@@ -403,7 +481,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         <div className="flex-shrink-0 p-2 border-b">
                             <TabsList className={cn("grid w-full", (runResult || isRunning) ? "grid-cols-4" : "grid-cols-3")}>
                                 <TabsTrigger value="description">Description</TabsTrigger>
-                                <TabsTrigger value="code">Code</TabsTrigger>
+                                <TabsTrigger value="code" onClick={() => setActiveTab('code')}>Code</TabsTrigger>
                                 {(runResult || isRunning) && <TabsTrigger value="result">Result</TabsTrigger>}
                                 <TabsTrigger value="submissions">Submissions</TabsTrigger>
                             </TabsList>
@@ -429,6 +507,40 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                )}
             </main>
         </div>
+        <AlertDialog open={isPenaltyDialogOpen} onOpenChange={setIsPenaltyDialogOpen}>
+            <AlertDialogContent>
+              {penaltyDialogContent && (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className={cn(
+                        "text-2xl text-center mb-2",
+                         penaltyDialogContent.type === 'penalty' && "text-destructive"
+                    )}>
+                        {penaltyDialogContent.title}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-center">
+                      {penaltyDialogContent.description}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  
+                  {penaltyDialogContent.type === 'penalty' && penaltyDialogContent.points && (
+                    <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-red-500">
+                        <span>- {penaltyDialogContent.points}</span>
+                        <BulletCoin className="h-7 w-7" />
+                    </div>
+                  )}
+
+                  <AlertDialogFooter>
+                     <AlertDialogAction onClick={() => setIsPenaltyDialogOpen(false)} className="w-full">
+                        Okay
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </>
+              )}
+            </AlertDialogContent>
+        </AlertDialog>
     </ChallengeContext.Provider>
   );
 }
+
+    
