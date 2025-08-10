@@ -5,26 +5,22 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, KeyRound, Search } from 'lucide-react';
+import { User, KeyRound, Search, Code } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import type { UserData } from '@/lib/types';
 
-type UserData = {
-    email: string;
-    name: string;
-    studentId: string;
-    points: number;
-    branch: string;
-    year: string;
-    // Password is not stored or displayed in admin panel for security
-    imageUrl?: string;
-};
 
 const BRANCH_MAP: Record<string, string> = {
     cse: 'CSE',
+    csd: 'CSE (Data Science)',
+    cse_aiml: 'CSE (AI & ML)',
+    aiml: 'AI & ML',
+    aids: 'AI & DS',
+    it: 'IT',
     ece: 'ECE',
     eee: 'EEE',
     mech: 'Mechanical',
@@ -48,15 +44,19 @@ export default function ManageUsersPage() {
                 const usersList = querySnapshot.docs.map(doc => {
                     const data = doc.data();
                     return {
+                        uid: doc.id,
                         email: data.email,
                         name: data.name,
                         studentId: data.studentId,
                         points: data.points || 0,
-                        branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
-                        year: data.year ? `${data.year} Year` : 'N/A',
+                        branch: data.branch,
+                        year: data.year,
+                        section: data.section,
+                        preferredLanguages: data.preferredLanguages || [],
+                        profileComplete: data.profileComplete,
                         imageUrl: data.imageUrl,
-                    };
-                });
+                    } as UserData;
+                }).filter(user => !user.isAdmin);
                 setUsers(usersList);
             } catch (error) {
                 console.error("Error fetching users: ", error);
@@ -91,7 +91,7 @@ export default function ManageUsersPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>All Users</CardTitle>
-                    <CardDescription>A list of all registered users on the platform.</CardDescription>
+                    <CardDescription>A list of all registered student users on the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -103,6 +103,7 @@ export default function ManageUsersPage() {
                                     <TableHead>User</TableHead>
                                     <TableHead>Student ID</TableHead>
                                     <TableHead>Branch & Year</TableHead>
+                                    <TableHead>Languages</TableHead>
                                     <TableHead className="text-right">Score</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -125,8 +126,22 @@ export default function ManageUsersPage() {
                                             <Badge variant="outline">{user.studentId}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <p>{user.branch}</p>
-                                            <p className="text-sm text-muted-foreground">{user.year}</p>
+                                            <p>{user.branch ? BRANCH_MAP[user.branch] || user.branch : 'N/A'}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {user.year ? `${user.year} Year` : ''}
+                                                {user.section ? `, Sec ${user.section}` : ''}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.preferredLanguages && user.preferredLanguages.length > 0 ? (
+                                                    user.preferredLanguages.map(lang => (
+                                                        <Badge key={lang} variant="secondary">{lang}</Badge>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">None</span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">{user.points}</TableCell>
                                     </TableRow>
@@ -143,3 +158,5 @@ export default function ManageUsersPage() {
         </div>
     );
 }
+
+    
