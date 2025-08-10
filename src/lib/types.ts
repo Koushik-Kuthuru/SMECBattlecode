@@ -13,6 +13,7 @@ export type UserData = {
     profileComplete: boolean;
     preferredLanguages?: string[];
     isAdmin?: boolean;
+    lastSeen?: Timestamp;
 };
 
 export type Event = {
