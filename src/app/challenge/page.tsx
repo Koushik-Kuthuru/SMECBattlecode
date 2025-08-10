@@ -1,4 +1,3 @@
-
 "use client";
 
 // This is a placeholder file. The actual content is in the [id] directory.
