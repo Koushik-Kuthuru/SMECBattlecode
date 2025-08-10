@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
@@ -95,33 +95,33 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-sm border-slate-300 shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome Back!</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
+          <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
+          <CardDescription className="text-slate-600">Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="student-id">Student ID</Label>
-              <Input id="student-id" type="text" placeholder="YOUR_ID" required value={studentId} onChange={handleStudentIdChange} />
+              <Input id="student-id" type="text" placeholder="YOUR_ID" required value={studentId} onChange={handleStudentIdChange} className="bg-white/50" />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
+                <Link href="/forgot-password" className="ml-auto inline-block text-sm text-primary hover:underline">
                   Forgot your password?
                 </Link>
               </div>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/50" />
             </div>
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="underline">
+            <Link href="/register" className="font-semibold text-primary hover:underline">
               Sign up
             </Link>
           </div>
