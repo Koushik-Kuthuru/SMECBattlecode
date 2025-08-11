@@ -10,11 +10,12 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus } from "lucide-react";
+import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Bot } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import Link from 'next/link';
 import { evaluateCode } from "@/ai/flows/evaluate-code";
+import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
 
 type ChallengeDetailPageProps = {
   clonedCode: { code: string; language: string } | null;
@@ -85,7 +86,6 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
     setIsSaving(true);
     try {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-        // Ensure that even if solution is null or undefined, we save an empty string.
         await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
         
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
@@ -104,14 +104,30 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
   
   const handleRunCode = async () => {
     if (!challenge) return;
+    
+    // AI check
+    try {
+        const aiResult = await detectAiGeneratedCode({ code: solution, programmingLanguage: language });
+        if(aiResult.isAiGenerated) {
+            toast({
+                variant: 'destructive',
+                title: 'AI Generated Code Detected',
+                description: "Using AI to solve challenges is against the rules. Please write your own code.",
+                duration: 8000
+            })
+        }
+    } catch(err) {
+        // fail silently
+        console.error("AI detection failed", err);
+    }
 
-    const visibleTestCases = challenge.testCases?.filter(tc => !tc.isHidden);
+    const visibleTestCases = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
     
     if (!visibleTestCases || visibleTestCases.length === 0) {
         toast({
             variant: "destructive",
             title: "Missing Test Cases",
-            description: "This challenge has no visible test cases to run against. You can still submit.",
+            description: "This challenge has no example test cases to run against. You can still submit.",
         });
         return;
     }
@@ -128,9 +144,9 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
         });
         setRunResult(result);
         if (result.allPassed) {
-            toast({ title: "All Visible Tests Passed!", description: "You can now try submitting your solution." });
+            toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Some test cases did not pass. Check the results." });
+             toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);
@@ -168,7 +184,6 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
       
       const submissionStatus = result.allPassed ? 'Accepted' : 'Failed';
 
-      // Auto-save the submitted code
       const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
       await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
       const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
@@ -282,7 +297,7 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
                   </Button>
               </div>
            ) : (
-            <div /> // Placeholder to keep submit button on the right
+            <div />
            )}
            <div className="flex items-center gap-2">
             <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
