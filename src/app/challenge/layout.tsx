@@ -10,10 +10,10 @@ import React, { useEffect, useState, createContext, useContext, useCallback } fr
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp, deleteField } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
-  ResizableHandleWithHandle,
+  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
@@ -71,7 +71,6 @@ type ChallengeContextType = {
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
   navLinks: NavLinks;
-  cloneSubmission: (code: string, language: string) => void;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -109,16 +108,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
   const [navLinks, setNavLinks] = useState<NavLinks>({ prev: null, next: null });
-  const [clonedCode, setClonedCode] = useState<{code: string, language: string} | null>(null);
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  const cloneSubmission = useCallback((code: string, language: string) => {
-    setClonedCode({ code, language });
-    setActiveTab(isDesktop ? 'description' : 'code');
-  }, [isDesktop]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
@@ -296,7 +289,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setIsRunning,
       isChallengeCompleted,
       navLinks,
-      cloneSubmission,
   };
   
   const difficultyColors = {
@@ -367,6 +359,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 <TableHead>Status</TableHead>
                 <TableHead>Language</TableHead>
                 <TableHead>Time</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -380,6 +373,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                   <TableCell className="font-medium">{submission.language}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                  </TableCell>
+                  <TableCell className="text-right">
                   </TableCell>
                 </TableRow>
               ))}
@@ -426,7 +421,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                               <h3 className="font-semibold mb-2">Input</h3>
                               <Textarea readOnly value={res.testCaseInput} className="font-mono text-sm" />
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid md:grid-cols-2 gap-4">
                               <div>
                                   <h3 className="font-semibold mb-2">Your Output</h3>
                                   <Textarea readOnly value={res.actualOutput} className="font-mono text-sm" />
@@ -475,17 +470,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </div>
   );
 
-  const renderChildren = () => {
-    // Pass cloned code as a prop to children if it exists
-    return React.Children.map(children, child => {
-      if (React.isValidElement(child)) {
-        // @ts-ignore
-        return React.cloneElement(child, { clonedCode, setClonedCode });
-      }
-      return child;
-    });
-  };
-
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
@@ -525,10 +509,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                      <ResizablePanel defaultSize={50} minSize={30}>
                        {leftPanel}
                      </ResizablePanel>
-                     <ResizableHandleWithHandle />
+                     <ResizableHandle />
                      <ResizablePanel defaultSize={50} minSize={30}>
                        <div className="h-full w-full flex p-2">
-                          {renderChildren()}
+                          {children}
                        </div>
                      </ResizablePanel>
                  </ResizablePanelGroup>
@@ -549,7 +533,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             </TabsContent>
                              <TabsContent value="code" className="mt-0 h-full">
                                 <div className="h-full w-full flex">
-                                    {renderChildren()}
+                                    {children}
                                 </div>
                             </TabsContent>
                             <TabsContent value="result" className="mt-0 h-full">
@@ -603,6 +587,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
 
 
 
