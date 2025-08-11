@@ -217,7 +217,7 @@ export default function ProfilePage() {
     <div className="container mx-auto max-w-4xl py-8">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Your Profile</h1>
-        <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
+        <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto hidden md:inline-flex">
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
         </Button>
       </div>
@@ -317,6 +317,11 @@ export default function ProfilePage() {
                     </div>
                 </CardContent>
             </Card>
+             <div className="md:hidden mt-6">
+                <Button onClick={handleSave} disabled={isSaving} className="w-full">
+                    {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
+                </Button>
+            </div>
         </div>
 
         <aside className="md:col-span-1 space-y-6">
@@ -361,5 +366,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
