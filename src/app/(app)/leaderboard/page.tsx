@@ -128,7 +128,7 @@ export default function LeaderboardPage() {
                         </DialogHeader>
                         <div className="space-y-6 py-4">
                             <div>
-                                <p className="mb-4 text-sm text-muted-foreground">
+                                <p className="text-sm text-muted-foreground mb-4">
                                     Points are awarded for each correctly solved challenge. Your code must pass all test cases. The points depend on the challenge difficulty.
                                 </p>
                                 <Table>
@@ -188,7 +188,7 @@ export default function LeaderboardPage() {
                 <Skeleton className="h-40 w-1/4 rounded-t-lg" />
              </div>
           ) : leaderboardData.length > 0 ? (
-            <div className="mb-8">
+            <div className="mb-8 hidden md:block">
               <div className="relative flex justify-center items-end gap-2 md:gap-4 min-h-[260px]">
                 {/* Podium Backgrounds */}
                 <div className="absolute bottom-0 h-36 w-full bg-gradient-to-t from-primary/20 to-transparent" />
@@ -260,7 +260,7 @@ export default function LeaderboardPage() {
                     <TableHead>Rank</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead className="text-right">Points</TableHead>
-                    <TableHead className="text-right">Branch & Year</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Branch & Year</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -282,7 +282,7 @@ export default function LeaderboardPage() {
                             <span>{user.points.toLocaleString()}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground hidden md:table-cell">
                         {getFormattedBranchAndYear(user)}
                       </TableCell>
                     </TableRow>
