@@ -163,7 +163,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-slate-900 text-white">
-           <h1 className="text-xl font-bold">Welcome 👋</h1>
+           <h1 className="text-xl font-bold">SMEC Battlecode</h1>
            <div className="flex items-center gap-4">
               <Sheet>
                  <SheetTrigger asChild>
