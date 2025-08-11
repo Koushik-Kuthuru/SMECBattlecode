@@ -3,6 +3,7 @@
 
 import { AnalyticsDashboard } from '@/components/admin/analytics-dashboard';
 import { LeaderboardPodium } from '@/components/admin/leaderboard-podium';
+import { ServerHealthMonitor } from '@/components/admin/server-health-monitor';
 import { app } from '@/lib/firebase';
 import { UserData } from '@/lib/types';
 import { getFirestore, collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
@@ -53,9 +54,10 @@ export default function AdminDashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
-      <AnalyticsDashboard users={users} isLoading={isLoading} />
-      <div className="mt-8">
+      <div className="space-y-8">
+        <AnalyticsDashboard users={users} isLoading={isLoading} />
         <LeaderboardPodium users={users} isLoading={isLoading} />
+        <ServerHealthMonitor />
       </div>
     </div>
   );
