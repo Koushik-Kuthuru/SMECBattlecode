@@ -77,9 +77,9 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
     setSolution(newCode);
   };
   
-  const handleSave = async (showToast = true) => {
+  const handleSave = async () => {
     if (!user || !challenge) {
-       if (showToast) toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
+       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
        return;
     }
     setIsSaving(true);
@@ -91,12 +91,12 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
         await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
         
-        if(showToast) toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
+        toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
         
         setInitialSolution(solution || '');
     } catch (error) {
         console.error("Failed to save solution:", error);
-         if(showToast) toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
+         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
     } finally {
         setIsSaving(false);
     }
@@ -150,8 +150,6 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
     setActiveTab('result');
 
     try {
-      await handleSave(false); // Auto-save on submit without showing toast
-
       const allTestCases = challenge.testCases || [];
       if (allTestCases.length === 0) {
          toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
