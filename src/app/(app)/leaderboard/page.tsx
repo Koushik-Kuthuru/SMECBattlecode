@@ -266,7 +266,7 @@ export default function LeaderboardPage() {
                 <TableBody>
                   {leaderboardData.map((user) => (
                     <TableRow key={user.uid} className={cn(currentUser?.uid === user.uid && 'bg-primary/10 hover:bg-primary/20')}>
-                      <TableCell className="font-bold">{user.rank}</TableCell>
+                      <TableCell className="font-bold">#{user.rank}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                            <Avatar className="w-8 h-8">
