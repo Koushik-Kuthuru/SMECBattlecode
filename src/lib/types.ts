@@ -6,6 +6,7 @@ export type UserData = {
     email: string;
     studentId: string;
     points: number;
+    penalties?: number;
     branch: string;
     year: string;
     section: string;

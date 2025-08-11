@@ -2,14 +2,14 @@
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
   ResizableHandleWithHandle,
@@ -91,6 +91,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
   const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
@@ -100,6 +101,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
+  const [navLinks, setNavLinks] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -132,24 +134,36 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [auth]);
 
   useEffect(() => {
-    if (!challengeId) return;
-    setIsChallengeLoading(true);
-    const fetchChallenge = async () => {
+    const fetchChallengesData = async () => {
+      setIsChallengeLoading(true);
       try {
-        const docRef = doc(db, "challenges", challengeId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setChallenge({ id: docSnap.id, ...docSnap.data() } as Challenge);
+        const challengesCollection = collection(db, 'challenges');
+        const q = query(challengesCollection, orderBy("title"));
+        const snapshot = await getDocs(q);
+        const challengesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge)).filter(c => c.isEnabled !== false);
+        setAllChallenges(challengesList);
+
+        const currentChallengeIndex = challengesList.findIndex(c => c.id === challengeId);
+
+        if (currentChallengeIndex !== -1) {
+            setChallenge(challengesList[currentChallengeIndex]);
+            setNavLinks({
+                prev: currentChallengeIndex > 0 ? challengesList[currentChallengeIndex - 1].id! : null,
+                next: currentChallengeIndex < challengesList.length - 1 ? challengesList[currentChallengeIndex + 1].id! : null
+            });
         } else {
-          console.error("No such challenge found in Firestore!");
+            setChallenge(null);
         }
+
       } catch (error) {
-        console.error("Error fetching challenge:", error);
+        console.error("Error fetching challenges:", error);
       } finally {
         setIsChallengeLoading(false);
       }
     };
-    fetchChallenge();
+    if (challengeId) {
+      fetchChallengesData();
+    }
   }, [challengeId]);
   
   useEffect(() => {
@@ -203,25 +217,28 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const handleVisibilityChange = useCallback(async () => {
       if (document.hidden && currentUser && challenge && !isChallengeCompleted) {
           try {
-              const userDocRef = doc(db, `users/${currentUser.uid}`);
-              
               await runTransaction(db, async (transaction) => {
+                  const userDocRef = doc(db, `users/${currentUser.uid}`);
                   const userDoc = await transaction.get(userDocRef);
                   
                   if (!userDoc.exists()) {
                       throw "User document does not exist!";
                   }
 
-                  const userData = userDoc.data();
-                  let currentPoints = userData.points || 0;
-                  
                   const difficultyPenaltyMap = { 'Easy': 2, 'Medium': 5, 'Hard': 15 };
                   const penaltyPoints = difficultyPenaltyMap[challenge.difficulty] || 5;
                   
-                  const newPoints = currentPoints - penaltyPoints;
+                  // Update total points and total penalties
+                  transaction.update(userDocRef, { 
+                    points: increment(-penaltyPoints),
+                    penalties: increment(penaltyPoints),
+                  });
                   
-                  transaction.update(userDocRef, { points: newPoints });
-                  
+                  // Update daily penalties
+                  const today = new Date().toISOString().split('T')[0];
+                  const dailyPointsRef = doc(db, `users/${currentUser.uid}/daily_points`, today);
+                  transaction.set(dailyPointsRef, { penalties: increment(penaltyPoints) }, { merge: true });
+
                   setPenaltyDialogContent({
                       type: 'penalty',
                       title: "Penalty Applied for Tab Switching",
@@ -449,6 +466,21 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                </div>
                
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild disabled={!navLinks.prev}>
+                        <Link href={navLinks.prev ? `/challenge/${navLinks.prev}` : '#'}>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Previous
+                        </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild disabled={!navLinks.next}>
+                        <Link href={navLinks.next ? `/challenge/${navLinks.next}` : '#'}>
+                            Next
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                        </Link>
+                    </Button>
+                </div>
+
                <div className="flex items-center gap-2">
                     {currentUser ? (
                         <>
@@ -477,7 +509,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                      </ResizablePanel>
                      <ResizableHandleWithHandle />
                      <ResizablePanel defaultSize={50} minSize={30}>
-                       <div className="h-full w-full flex">
+                       <div className="h-full w-full flex p-2">
                           {children}
                        </div>
                      </ResizablePanel>

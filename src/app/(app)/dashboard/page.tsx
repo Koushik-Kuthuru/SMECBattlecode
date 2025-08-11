@@ -16,7 +16,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from "embla-carousel-autoplay";
 import { cn } from '@/lib/utils';
 import { UserData, Event } from '@/lib/types';
-import { ArrowRight, Badge as BadgeIcon, Calendar, CheckCircle, Circle, Flame, RefreshCw, Trophy, User, Wifi } from 'lucide-react';
+import { ArrowRight, Badge as BadgeIcon, Calendar, CheckCircle, Circle, Flame, RefreshCw, Trophy, User, Wifi, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { BulletCoin } from '@/components/icons';
@@ -96,6 +96,7 @@ export default function DashboardPage() {
   const [userRank, setUserRank] = useState<number | null>(null);
   const [userToChase, setUserToChase] = useState<UserData | null>(null);
   const [todaysPoints, setTodaysPoints] = useState(0);
+  const [todaysPenalty, setTodaysPenalty] = useState(0);
   
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -127,7 +128,14 @@ export default function DashboardPage() {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
         const unsubscribePoints = onSnapshot(dailyPointsRef, (docSnap) => {
-            setTodaysPoints(docSnap.exists() ? docSnap.data().points : 0);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setTodaysPoints(data.points || 0);
+                setTodaysPenalty(data.penalties || 0);
+            } else {
+                setTodaysPoints(0);
+                setTodaysPenalty(0);
+            }
         });
 
         // Challenge status listeners
@@ -515,12 +523,12 @@ export default function DashboardPage() {
                     <CardTitle>Mission Report</CardTitle>
                     <CardDescription>Your performance summary.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                   <div className="flex items-center justify-around text-center">
+                <CardContent className="space-y-4">
+                   <div className="flex items-center justify-around text-center border-b pb-4">
                         <div>
                             <p className="text-sm text-muted-foreground">Points Today</p>
                             <div className="flex items-center justify-center gap-2 mt-1">
-                                <Flame className="h-6 w-6 text-orange-500" />
+                                <BulletCoin className="h-6 w-6 text-primary" />
                                 <span className="text-2xl font-bold">{todaysPoints}</span>
                             </div>
                         </div>
@@ -530,6 +538,23 @@ export default function DashboardPage() {
                              <div className="flex items-center justify-center gap-2 mt-1">
                                 <BulletCoin className="h-6 w-6 text-primary" />
                                 <span className="text-2xl font-bold">{currentUser?.points ?? 0}</span>
+                            </div>
+                        </div>
+                   </div>
+                   <div className="flex items-center justify-around text-center pt-2">
+                         <div>
+                            <p className="text-sm text-muted-foreground">Penalty Today</p>
+                             <div className="flex items-center justify-center gap-2 mt-1 text-destructive">
+                                <AlertTriangle className="h-5 w-5" />
+                                <span className="text-2xl font-bold">{todaysPenalty}</span>
+                            </div>
+                        </div>
+                         <Separator orientation="vertical" className="h-12" />
+                         <div>
+                            <p className="text-sm text-muted-foreground">Lifetime Penalty</p>
+                             <div className="flex items-center justify-center gap-2 mt-1 text-destructive">
+                                <AlertTriangle className="h-5 w-5" />
+                                <span className="text-2xl font-bold">{currentUser?.penalties ?? 0}</span>
                             </div>
                         </div>
                    </div>
