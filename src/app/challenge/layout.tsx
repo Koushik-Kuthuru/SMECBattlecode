@@ -367,7 +367,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 <TableHead>Status</TableHead>
                 <TableHead>Language</TableHead>
                 <TableHead>Time</TableHead>
-                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -381,11 +380,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                   <TableCell className="font-medium">{submission.language}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => cloneSubmission(submission.code, submission.language)}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -609,6 +603,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
 
 
 
