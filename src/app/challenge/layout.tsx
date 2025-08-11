@@ -173,27 +173,27 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   useEffect(() => {
       if (!currentUser || !challengeId) return;
 
+      const setInProgress = async () => {
+          const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
+          const completedSnap = await getDoc(completedDocRef);
+          
+          if (!completedSnap.exists() || !completedSnap.data()?.[challengeId]) {
+              const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
+              await setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
+          }
+      };
+      
+      setInProgress();
+      
       const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
       const unsubscribeCompleted = onSnapshot(completedDocRef, (docSnap) => {
-          if (docSnap.exists() && docSnap.data()[challengeId]) {
-              setIsChallengeCompleted(true);
-          } else {
-              setIsChallengeCompleted(false);
-          }
-      });
-      
-      const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
-      const unsubscribeInProgress = onSnapshot(inProgressRef, (docSnap) => {
-          if (docSnap.exists() && docSnap.data()[challengeId] && !isChallengeCompleted) {
-            // Mark as in-progress when visiting the page if not already completed
-          }
+          setIsChallengeCompleted(!!docSnap.data()?.[challengeId]);
       });
 
       return () => {
         unsubscribeCompleted();
-        unsubscribeInProgress();
       }
-  }, [currentUser, challengeId, isChallengeCompleted]);
+  }, [currentUser, challengeId]);
 
   useEffect(() => {
     if (!currentUser || !challengeId) return;
