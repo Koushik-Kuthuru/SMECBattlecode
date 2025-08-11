@@ -124,8 +124,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/dashboard" className="flex items-center gap-3">
                     <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
                     <div>
-                        <p className="text-lg font-bold leading-tight">SMEC</p>
-                        <p className="text-sm text-slate-300 leading-tight">Battlecode</p>
+                        <p className="font-bold leading-tight">SMEC</p>
+                        <p className="text-xs text-slate-300 leading-tight">Battlecode</p>
                     </div>
                 </Link>
            </div>
