@@ -120,11 +120,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full overflow-hidden flex-col md:flex-row">
         {/* Desktop Sidebar */}
         <aside className="w-64 flex-shrink-0 bg-slate-900 text-white flex-col hidden md:flex">
-           <div className="p-4 flex flex-col items-center text-center">
-                <Link href="/dashboard" className="flex flex-col items-center gap-2 font-semibold mb-8">
+           <div className="p-4 flex items-center justify-center h-20 mb-4">
+                <Link href="/dashboard" className="flex items-center gap-3">
+                    <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
                     <div>
-                        <p className="text-xl font-bold">SMEC</p>
-                        <p className="text-md text-slate-300">Battlecode</p>
+                        <p className="text-lg font-bold leading-tight">SMEC</p>
+                        <p className="text-sm text-slate-300 leading-tight">Battlecode</p>
                     </div>
                 </Link>
            </div>

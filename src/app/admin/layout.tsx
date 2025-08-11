@@ -67,10 +67,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex h-screen w-full overflow-hidden flex-col md:flex-row">
         {/* Desktop Sidebar */}
         <aside className="w-64 flex-shrink-0 bg-slate-900 text-white flex-col hidden md:flex">
-           <div className="p-4">
-            <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold px-2 mb-8">
-                <SmecBattleCodeLogo className="h-8 w-8" />
-                <span className="text-xl">SMEC Admin</span>
+           <div className="p-4 flex items-center justify-center h-20 mb-4">
+             <Link href="/admin/dashboard" className="flex items-center gap-3">
+                <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+                <div>
+                    <p className="text-lg font-bold leading-tight">SMEC</p>
+                    <p className="text-sm text-slate-300 leading-tight">Admin</p>
+                </div>
               </Link>
            </div>
             <ScrollArea className="flex-1 px-4">
