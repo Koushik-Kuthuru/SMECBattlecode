@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getAuth, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Toaster } from '@/components/ui/toaster';
@@ -124,6 +124,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </Button>
                  </SheetTrigger>
                  <SheetContent side="right" className="bg-slate-900 text-white w-64 p-4">
+                    <SheetHeader>
+                      <SheetTitle className="text-white">Admin Navigation</SheetTitle>
+                    </SheetHeader>
                     <nav className="flex flex-col gap-4 mt-8">
                        {navLinks.map((link) => (
                         <Link

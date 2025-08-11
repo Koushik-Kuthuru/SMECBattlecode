@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
@@ -172,6 +172,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </Button>
                  </SheetTrigger>
                  <SheetContent side="right" className="bg-slate-900 text-white w-64 p-4">
+                    <SheetHeader>
+                      <SheetTitle className="text-white">Navigation</SheetTitle>
+                    </SheetHeader>
                     <nav className="flex flex-col gap-4 mt-8">
                        {navLinks.map((link) => (
                         <Link
