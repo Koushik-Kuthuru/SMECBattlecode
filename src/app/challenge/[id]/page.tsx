@@ -14,6 +14,7 @@ import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight } from "lucide-r
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import Link from 'next/link';
+import { evaluateCode } from "@/ai/flows/evaluate-code";
 
 export default function ChallengeDetail() {
   const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, navLinks } = useChallenge();
@@ -65,7 +66,7 @@ export default function ChallengeDetail() {
   
   const handleSave = async () => {
     if (!user || !challenge) {
-       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress.", position: 'center' });
+       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
        return;
     }
     setIsSaving(true);
@@ -74,11 +75,11 @@ export default function ChallengeDetail() {
         await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
         await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
-        toast({ title: "Progress Saved!", description: "Your code has been saved successfully.", position: 'center' });
+        toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
         setInitialSolution(solution);
     } catch (error) {
         console.error("Failed to save solution:", error);
-         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again.", position: 'center' });
+         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
     } finally {
         setIsSaving(false);
     }
@@ -96,7 +97,6 @@ export default function ChallengeDetail() {
             variant: "destructive",
             title: "Missing Test Cases",
             description: "This challenge has no visible test cases to run against. You can still submit.",
-            position: 'center',
         });
         return;
     }
@@ -113,13 +113,13 @@ export default function ChallengeDetail() {
         });
         setRunResult(result);
         if (result.allPassed) {
-            toast({ title: "All Visible Tests Passed!", description: "You can now try submitting your solution.", position: 'center' });
+            toast({ title: "All Visible Tests Passed!", description: "You can now try submitting your solution." });
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Some test cases did not pass. Check the results.", position: 'center' });
+             toast({ variant: "destructive", title: "Tests Failed", description: "Some test cases did not pass. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);
-        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again.", position: 'center' });
+        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
     } finally {
         setIsRunning(false);
     }
@@ -127,7 +127,7 @@ export default function ChallengeDetail() {
   
   const handleSubmit = async () => {
     if (!user || !challenge || !challengeId) {
-        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit.", position: 'center' });
+        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
     setIsRunning(true);
@@ -137,7 +137,7 @@ export default function ChallengeDetail() {
     try {
       const allTestCases = challenge.testCases || [];
       if (allTestCases.length === 0) {
-         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist.", position: 'center' });
+         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
          setIsRunning(false);
          return;
       }
@@ -188,9 +188,9 @@ export default function ChallengeDetail() {
                     [challenge.id!]: { completedAt: Timestamp.now() }
                 }, { merge: true });
 
-                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!`, position: 'center' });
+                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!` });
             } else {
-                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge.", position: 'center' });
+                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
             }
 
             // Update progress status
@@ -200,12 +200,12 @@ export default function ChallengeDetail() {
         
         setActiveTab('submissions');
       } else {
-        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones).", position: 'center' });
+        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones)." });
       }
 
     } catch (error) {
       console.error("Error submitting code:", error);
-      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission.", position: 'center' });
+      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
     } finally {
       setIsRunning(false);
       setShowNavButtons(true);
