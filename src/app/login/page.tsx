@@ -153,10 +153,12 @@ export default function LoginPage() {
               </Link>
             </div>
             
-            <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                onChange={setRecaptchaToken}
-            />
+            <div className="flex justify-center">
+                <ReCAPTCHA
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    onChange={setRecaptchaToken}
+                />
+            </div>
 
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}

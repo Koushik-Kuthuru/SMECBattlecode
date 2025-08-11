@@ -199,10 +199,12 @@ export default function RegisterPage() {
               <Input id="email" type="email" placeholder="Email Address" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
              
-             <ReCAPTCHA
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                onChange={setRecaptchaToken}
-             />
+             <div className="flex justify-center">
+                <ReCAPTCHA
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    onChange={setRecaptchaToken}
+                />
+             </div>
 
             <Button type="submit" className="w-full" onClick={handleRegister} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</> : 'Sign Up'}
