@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -10,11 +11,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { challenges as initialChallenges, type Challenge } from '@/lib/data';
-import { PlusCircle, Trash2, Edit, ArrowDownAZ, ArrowDownUp, ShieldOff, Shield } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, ArrowDownAZ, ArrowDownUp, ShieldOff, Shield, Code } from 'lucide-react';
 import { CodeEditor } from '@/components/code-editor';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, runTransaction, getDoc, deleteField } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+
 
 type SortType = 'title' | 'difficulty';
 
@@ -29,9 +42,11 @@ const defaultFormData: FormData = {
   points: 10,
   description: '',
   tags: '',
+  starterCode: '',
   solution: '',
   examples: [{ input: '', output: '', explanation: '' }],
   testCases: [{ input: '', output: '', isHidden: false }],
+  isEnabled: true,
 };
 
 export default function ManageChallengesPage() {
@@ -43,6 +58,9 @@ export default function ManageChallengesPage() {
   const [languageFilter, setLanguageFilter] = useState('All');
   const [sortType, setSortType] = useState<SortType>('title');
   const [formData, setFormData] = useState<FormData>(defaultFormData);
+  const [isStarterCodeEditorVisible, setIsStarterCodeEditorVisible] = useState(false);
+  const [isSolutionEditorVisible, setIsSolutionEditorVisible] = useState(false);
+  const [challengeToDelete, setChallengeToDelete] = useState<string | null>(null);
   
   const db = getFirestore(app);
 
@@ -87,8 +105,12 @@ export default function ManageChallengesPage() {
     fetchChallenges();
   }, [fetchChallenges]);
   
-  const handleInputChange = useCallback((field: keyof Omit<FormData, 'examples' | 'testCases'>, value: string | number) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'examples' | 'testCases'>, value: string | number | boolean) => {
     setFormData(prev => ({...prev, [field]: value}));
+  }, []);
+
+  const handleStarterCodeChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, starterCode: value }));
   }, []);
 
   const handleSolutionChange = useCallback((value: string) => {
@@ -123,22 +145,30 @@ export default function ManageChallengesPage() {
     setEditingChallengeId(null);
     setFormData(defaultFormData);
     setIsFormVisible(true);
+    setIsStarterCodeEditorVisible(false);
+    setIsSolutionEditorVisible(false);
   };
   
   const handleEditClick = (challenge: Challenge) => {
       setEditingChallengeId(challenge.id!);
       setFormData({
+        ...defaultFormData, // ensure all fields are present
         ...challenge,
         tags: Array.isArray(challenge.tags) ? challenge.tags.join(', ') : '',
         testCases: challenge.testCases || [{ input: '', output: '', isHidden: false }],
+        isEnabled: challenge.isEnabled !== false, // Default to true if undefined
       });
       setIsFormVisible(true);
+      setIsStarterCodeEditorVisible(false);
+      setIsSolutionEditorVisible(false);
   }
 
   const handleCancel = () => {
     setIsFormVisible(false);
     setEditingChallengeId(null);
     setFormData(defaultFormData);
+    setIsStarterCodeEditorVisible(false);
+    setIsSolutionEditorVisible(false);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,23 +212,61 @@ export default function ManageChallengesPage() {
     }
   };
   
-  const handleDelete = async (challengeId: string) => {
-    if (!window.confirm("Are you sure you want to delete this challenge?")) return;
+  const handleDelete = async () => {
+    if (!challengeToDelete) return;
+
+    // First, get all user documents. This is done outside the transaction.
+    const usersSnapshot = await getDocs(collection(db, "users"));
 
     try {
-        await deleteDoc(doc(db, "challenges", challengeId));
+        await runTransaction(db, async (transaction) => {
+            const challengeRef = doc(db, "challenges", challengeToDelete);
+            
+            // For each user, prepare to delete their challenge-related data.
+            for (const userDoc of usersSnapshot.docs) {
+                const userId = userDoc.id;
+
+                // Path refs
+                const solutionRef = doc(db, `users/${userId}/solutions`, challengeToDelete);
+                const submissionsPath = `users/${userId}/submissions/${challengeToDelete}/attempts`;
+                const inProgressRef = doc(db, `users/${userId}/challengeData/inProgress`);
+                const completedRef = doc(db, `users/${userId}/challengeData/completed`);
+
+                // This is a simplified approach. For a large number of users, 
+                // you'd want to handle this in a batched server-side process.
+                // We read all potentially affected documents for a user.
+                const submissionsSnapshot = await getDocs(collection(db, submissionsPath));
+
+                // WRITES: Now perform all writes based on the reads.
+                transaction.delete(solutionRef);
+
+                submissionsSnapshot.forEach(submissionDoc => {
+                    transaction.delete(submissionDoc.ref);
+                });
+
+                // Use field deletion for progress/completion tracking
+                transaction.update(inProgressRef, { [challengeToDelete]: deleteField() });
+                transaction.update(completedRef, { [challengeToDelete]: deleteField() });
+            }
+
+            // Finally, delete the main challenge document.
+            transaction.delete(challengeRef);
+        });
+
         toast({
             title: "Challenge Deleted",
-            description: "The challenge has been removed successfully.",
+            description: "The challenge and all associated user data have been removed.",
         });
         fetchChallenges(); // Refresh the list
     } catch (error) {
-        console.error("Error deleting challenge: ", error);
+        console.error("Error deleting challenge transactionally: ", error);
         toast({
             variant: "destructive",
             title: "Error Deleting Challenge",
-            description: "Could not delete the challenge from Firestore.",
+            description: "Could not delete the challenge. Please check console for details.",
         });
+    } finally {
+        setChallengeToDelete(null);
     }
   };
 
@@ -339,14 +407,44 @@ export default function ManageChallengesPage() {
                 </div>
 
                 <div className="space-y-2">
-                   <Label>Solution Code</Label>
-                   <div className="h-64 rounded-md border">
-                     <CodeEditor
-                       value={formData.solution}
-                       onChange={handleSolutionChange}
-                       language={formData.language.toLowerCase()}
-                     />
-                   </div>
+                    <Label>Starter Code</Label>
+                    {isStarterCodeEditorVisible ? (
+                        <div className="h-64 rounded-md border">
+                            <CodeEditor
+                                value={formData.starterCode}
+                                onChange={handleStarterCodeChange}
+                                language={formData.language.toLowerCase()}
+                            />
+                        </div>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={() => setIsStarterCodeEditorVisible(true)}>
+                            <Code className="mr-2 h-4 w-4" />
+                            View/Edit Starter Code
+                        </Button>
+                    )}
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Solution Code</Label>
+                    {isSolutionEditorVisible ? (
+                        <div className="h-64 rounded-md border">
+                            <CodeEditor
+                                value={formData.solution}
+                                onChange={handleSolutionChange}
+                                language={formData.language.toLowerCase()}
+                            />
+                        </div>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={() => setIsSolutionEditorVisible(true)}>
+                            <Code className="mr-2 h-4 w-4" />
+                            View/Edit Solution
+                        </Button>
+                    )}
+                </div>
+                
+                <div className="flex items-center space-x-2 pt-4">
+                    <Switch id="isEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleInputChange('isEnabled', checked)} />
+                    <Label htmlFor="isEnabled">Enable this challenge</Label>
                 </div>
 
                 <div className="flex gap-4 pt-4">
@@ -360,6 +458,7 @@ export default function ManageChallengesPage() {
   }
 
   return (
+    <>
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Challenges</h1>
@@ -414,11 +513,14 @@ export default function ManageChallengesPage() {
                       <p className="text-sm text-muted-foreground">{challenge.difficulty} - {challenge.points} Points - {challenge.language}</p>
                     </div>
                      <div className="flex items-center gap-2">
+                        <Badge variant={challenge.isEnabled !== false ? 'default' : 'secondary'}>
+                            {challenge.isEnabled !== false ? 'Enabled' : 'Disabled'}
+                        </Badge>
                         <Button variant="outline" size="sm" onClick={() => handleEditClick(challenge)}>
                              <Edit className="mr-2 h-4 w-4" />
                              Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(challenge.id!)}>
+                        <Button variant="destructive" size="sm" onClick={() => setChallengeToDelete(challenge.id!)}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
@@ -434,5 +536,22 @@ export default function ManageChallengesPage() {
         </CardContent>
       </Card>
     </div>
+     <AlertDialog open={!!challengeToDelete} onOpenChange={(open) => !open && setChallengeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the challenge and all associated user data (solutions, progress, submissions, etc.) from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setChallengeToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

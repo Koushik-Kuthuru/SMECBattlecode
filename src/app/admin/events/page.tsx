@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Event } from '@/lib/types';
@@ -19,7 +20,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-type FormData = Omit<Event, 'id' | 'status' | 'startDate' | 'endDate'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status'> & {
   startDate: Date;
   endDate: Date;
 };
@@ -50,9 +51,9 @@ export default function ManageEventsPage() {
   const eventsCollectionRef = collection(db, 'events');
 
   useEffect(() => {
-    const q = query(eventsCollectionRef, orderBy('startDate', 'desc'));
+    const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), startDate: (doc.data().startDate as Timestamp), endDate: (doc.data().endDate as Timestamp) } as Event));
+      const eventsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
       setEvents(eventsList);
       setIsLoading(false);
     }, (error) => {
@@ -68,13 +69,9 @@ export default function ManageEventsPage() {
     return () => unsubscribe();
   }, [db, toast]);
 
-  const handleInputChange = (field: keyof Omit<FormData, 'startDate' | 'endDate' | 'enrolled'>, value: string | boolean) => {
+  const handleInputChange = (field: keyof Omit<FormData, 'startDate' | 'endDate'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  const handleNumberInputChange = (field: 'enrolled', value: string) => {
-    setFormData(prev => ({ ...prev, [field]: parseInt(value, 10) || 0 }));
-  }
 
   const handleDateChange = (field: 'startDate' | 'endDate', value?: Date) => {
     if (value) {
@@ -194,7 +191,7 @@ export default function ManageEventsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor='enrolled'>Enrolled Count</Label>
-                  <Input id='enrolled' type="number" placeholder="0" value={formData.enrolled} onChange={(e) => handleNumberInputChange('enrolled', e.target.value)} required />
+                  <Input id='enrolled' type="number" placeholder="0" value={formData.enrolled} onChange={(e) => handleInputChange('enrolled', parseInt(e.target.value, 10) || 0)} required />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">

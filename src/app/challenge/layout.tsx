@@ -9,7 +9,7 @@ import React, { useEffect, useState, createContext, useContext, useCallback } fr
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
   ResizableHandleWithHandle,
@@ -581,5 +581,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
+    
 
     

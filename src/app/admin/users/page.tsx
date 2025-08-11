@@ -5,22 +5,34 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, KeyRound, Search, Code } from 'lucide-react';
+import { User, KeyRound, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import type { UserData } from '@/lib/types';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
+type UserData = {
+    uid: string;
+    email: string;
+    name: string;
+    studentId: string;
+    points: number;
+    branch: string;
+    year: string;
+    imageUrl?: string;
+    lastSeen?: Timestamp;
+};
 
 const BRANCH_MAP: Record<string, string> = {
     cse: 'CSE',
     csd: 'CSE (Data Science)',
     cse_aiml: 'CSE (AI & ML)',
-    aiml: 'AI & ML',
-    aids: 'AI & DS',
-    it: 'IT',
+    aiml: 'AI & Machine Learning',
+    aids: 'AI & Data Science',
+    it: 'Info. Tech.',
     ece: 'ECE',
     eee: 'EEE',
     mech: 'Mechanical',
@@ -34,39 +46,39 @@ export default function ManageUsersPage() {
     const db = getFirestore(app);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setIsLoading(true);
-            try {
-                const usersCollection = collection(db, 'users');
-                const q = query(usersCollection, orderBy('points', 'desc'));
-                const querySnapshot = await getDocs(q);
+        const usersCollection = collection(db, 'users');
+        const q = query(usersCollection, orderBy('points', 'desc'));
 
-                const usersList = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        uid: doc.id,
-                        email: data.email,
-                        name: data.name,
-                        studentId: data.studentId,
-                        points: data.points || 0,
-                        branch: data.branch,
-                        year: data.year,
-                        section: data.section,
-                        preferredLanguages: data.preferredLanguages || [],
-                        profileComplete: data.profileComplete,
-                        imageUrl: data.imageUrl,
-                    } as UserData;
-                }).filter(user => !user.isAdmin);
-                setUsers(usersList);
-            } catch (error) {
-                console.error("Error fetching users: ", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const usersList = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    uid: doc.id,
+                    email: data.email,
+                    name: data.name,
+                    studentId: data.studentId,
+                    points: data.points || 0,
+                    branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
+                    year: data.year ? `${data.year} Year` : 'N/A',
+                    imageUrl: data.imageUrl,
+                    lastSeen: data.lastSeen,
+                };
+            });
+            setUsers(usersList);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching users: ", error);
+            setIsLoading(false);
+        });
 
-        fetchUsers();
+        return () => unsubscribe();
     }, [db]);
+
+    const isOnline = (lastSeen?: Timestamp) => {
+        if (!lastSeen) return false;
+        // 5 minutes threshold
+        return (new Date().getTime() - lastSeen.toDate().getTime()) < 5 * 60 * 1000;
+    };
 
     const filteredUsers = users.filter(user => 
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,7 +103,7 @@ export default function ManageUsersPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>All Users</CardTitle>
-                    <CardDescription>A list of all registered student users on the platform.</CardDescription>
+                    <CardDescription>A list of all registered users on the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -103,13 +115,14 @@ export default function ManageUsersPage() {
                                     <TableHead>User</TableHead>
                                     <TableHead>Student ID</TableHead>
                                     <TableHead>Branch & Year</TableHead>
-                                    <TableHead>Languages</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Last Seen</TableHead>
                                     <TableHead className="text-right">Score</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredUsers.map(user => (
-                                    <TableRow key={user.email}>
+                                    <TableRow key={user.uid}>
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <Avatar>
@@ -126,22 +139,17 @@ export default function ManageUsersPage() {
                                             <Badge variant="outline">{user.studentId}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <p>{user.branch ? BRANCH_MAP[user.branch] || user.branch : 'N/A'}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {user.year ? `${user.year} Year` : ''}
-                                                {user.section ? `, Sec ${user.section}` : ''}
-                                            </p>
+                                            <p>{user.branch}</p>
+                                            <p className="text-sm text-muted-foreground">{user.year}</p>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-wrap gap-1">
-                                                {user.preferredLanguages && user.preferredLanguages.length > 0 ? (
-                                                    user.preferredLanguages.map(lang => (
-                                                        <Badge key={lang} variant="secondary">{lang}</Badge>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">None</span>
-                                                )}
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn("h-2.5 w-2.5 rounded-full", isOnline(user.lastSeen) ? "bg-green-500" : "bg-slate-400")} />
+                                                <span>{isOnline(user.lastSeen) ? 'Online' : 'Offline'}</span>
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.lastSeen ? formatDistanceToNow(user.lastSeen.toDate(), { addSuffix: true }) : 'Never'}
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">{user.points}</TableCell>
                                     </TableRow>
