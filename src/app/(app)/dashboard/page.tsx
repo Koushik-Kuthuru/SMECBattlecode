@@ -385,12 +385,12 @@ export default function DashboardPage() {
                       {advertisements.map((ad) => (
                         <CarouselItem key={ad.id}>
                           <Card className="bg-slate-900 text-white border-0 overflow-hidden">
-                            <CardContent className="p-0 flex flex-col sm:flex-row items-stretch justify-between gap-0 h-48 md:h-64">
-                               <div className="w-full sm:w-1/2 h-full">
+                            <CardContent className="p-0 flex items-stretch h-40 md:h-64">
+                               <div className="hidden sm:block sm:w-1/2 h-full">
                                   <img src={ad.imageUrl || 'https://placehold.co/600x400.png'} alt={ad.title} className="w-full h-full object-cover" data-ai-hint="advertisement event" />
                                 </div>
                               <div className="w-full sm:w-1/2 p-4 md:p-6 flex flex-col justify-center">
-                                  <h3 className="text-base md:text-2xl font-bold leading-tight line-clamp-2">{ad.title}</h3>
+                                  <h3 className="text-lg md:text-2xl font-bold leading-tight line-clamp-2">{ad.title}</h3>
                                   <p className="text-white/80 text-xs md:text-sm mt-2 line-clamp-2 md:line-clamp-3">{ad.description}</p>
                                   <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto mt-4 text-xs md:text-sm">
                                     <Link href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer">
