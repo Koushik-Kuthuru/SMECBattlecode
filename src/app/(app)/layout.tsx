@@ -20,6 +20,7 @@ type CurrentUser = {
   uid: string;
   name: string;
   email: string;
+  studentId: string;
   imageUrl?: string;
 }
 
@@ -51,6 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             uid: user.uid,
             name: userData.name,
             email: userData.email,
+            studentId: userData.studentId,
             imageUrl: userData.imageUrl,
           });
 
@@ -121,7 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            <div className="p-4">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2 mb-8">
                 <SmecBattleCodeLogo className="h-8 w-8" />
-                <span className="text-xl">SMEC Battle Code</span>
+                <span className="text-xl">SMEC Battlecode</span>
               </Link>
            </div>
             <ScrollArea className="flex-1 px-4">
@@ -154,7 +156,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           </Avatar>
                           <div>
                             <p className="font-semibold text-sm">{currentUser.name}</p>
-                            <p className="text-xs text-slate-400">{currentUser.email}</p>
+                            <p className="text-xs text-slate-400">{currentUser.studentId}</p>
                           </div>
                      </Link>
                  </div>
