@@ -193,7 +193,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       const unsubscribeInProgress = onSnapshot(inProgressRef, (docSnap) => {
           if (docSnap.exists() && docSnap.data()[challengeId] && !isChallengeCompleted) {
             // Mark as in-progress when visiting the page if not already completed
-            setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
           }
       });
 
@@ -360,35 +359,45 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
 
   const submissionsPanel = (
-    <ScrollArea className="h-full p-2">
-    {submissions.length > 0 ? (
-      <div className="space-y-3">
-        {submissions.map((submission) => (
-          <div key={submission.id} className="bg-muted/50 p-3 rounded-lg border flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                  {submission.status}
-                </Badge>
-                <p className="text-sm font-medium">{submission.language}</p>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-              </p>
-            </div>
-            <Button size="icon" variant="ghost" onClick={() => cloneSubmission(submission.code, submission.language)}>
-              <Copy className="h-4 w-4" />
-            </Button>
+     <ScrollArea className="h-full">
+        {submissions.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Language</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {submissions.map((submission) => (
+                <TableRow key={submission.id}>
+                  <TableCell>
+                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                      {submission.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{submission.language}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => cloneSubmission(submission.code, submission.language)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+              <AlertCircle className="h-10 w-10 mb-4" />
+              <p className="font-semibold">No Submissions Yet</p>
+              <p>Your submission history for this challenge will appear here.</p>
           </div>
-        ))}
-      </div>
-    ) : (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-          <AlertCircle className="h-10 w-10 mb-4" />
-          <p className="font-semibold">No Submissions Yet</p>
-          <p>Your submission history for this challenge will appear here.</p>
-      </div>
-    )}
+        )}
     </ScrollArea>
   );
 
@@ -600,6 +609,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
 
 
 
