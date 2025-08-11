@@ -10,40 +10,65 @@ import { AuthLayout } from '@/components/auth-layout';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { app, db } from '@/lib/firebase';
 import { ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [sentToEmail, setSentToEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const { toast } = useToast();
   const auth = getAuth(app);
 
   const handlePasswordReset = async () => {
-    if (!email) {
+    if (!studentId) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Please enter your email address.',
+        description: 'Please enter your Student ID.',
       });
       return;
     }
     setIsLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("studentId", "==", studentId.toUpperCase()));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No account found with that Student ID.',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const userDoc = querySnapshot.docs[0];
+      const userEmail = userDoc.data().email;
+
+      await sendPasswordResetEmail(auth, userEmail);
+      setSentToEmail(userEmail);
       setIsSent(true);
     } catch (error: any) {
       console.error("Password Reset Error: ", error);
        toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Could not send password reset email. Please check the address and try again.',
+        description: 'Could not send password reset email. Please check the ID and try again.',
       });
     } finally {
       setIsLoading(false);
     }
   };
+  
+  const handleStudentIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setStudentId(e.target.value.toUpperCase().slice(0, 10));
+  };
+
 
   return (
     <AuthLayout>
@@ -52,8 +77,8 @@ export default function ForgotPasswordPage() {
           <CardTitle className="text-2xl">Forgot Your Password?</CardTitle>
           <CardDescription>
             {isSent
-              ? `A password reset link has been sent to ${email}.`
-              : 'No problem. Enter your email address and we’ll send you a link to reset it.'}
+              ? `A password reset link has been sent to your registered email: ${sentToEmail}.`
+              : 'No problem. Enter your Student ID and we’ll send you a link to reset it.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -67,14 +92,14 @@ export default function ForgotPasswordPage() {
           ) : (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="student-id">Student ID</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
+                  id="student-id"
+                  type="text"
+                  placeholder="YOUR_ID"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={studentId}
+                  onChange={handleStudentIdChange}
                 />
               </div>
               <Button type="submit" className="w-full" onClick={handlePasswordReset} disabled={isLoading}>
