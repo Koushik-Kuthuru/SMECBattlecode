@@ -190,7 +190,7 @@ export default function ProfilePage() {
       } catch (error: any) {
           console.error("Error changing email: ", error);
           let description = 'Could not change your email.';
-          if (error.code === 'auth/wrong-password') {
+          if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             description = 'Incorrect password. Please try again.';
           } else if (error.code === 'auth/email-already-in-use') {
             description = 'This email address is already in use by another account.';
