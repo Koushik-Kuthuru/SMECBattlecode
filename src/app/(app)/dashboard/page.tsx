@@ -94,7 +94,7 @@ export default function DashboardPage() {
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [userRank, setUserRank] = useState<number | null>(null);
-  const [topUser, setTopUser] = useState<UserData | null>(null);
+  const [userToChase, setUserToChase] = useState<UserData | null>(null);
   const [todaysPoints, setTodaysPoints] = useState(0);
   
   const auth = getAuth(app);
@@ -139,17 +139,22 @@ export default function DashboardPage() {
         // Leaderboard listener
         const usersQuery = query(collection(db, 'users'), orderBy('points', 'desc'));
         const unsubscribeLeaderboard = onSnapshot(usersQuery, (snapshot) => {
-            let rank = -1;
-            snapshot.docs.forEach((doc, index) => {
-                if (doc.id === user.uid) {
-                    rank = index + 1;
+            const allUsers = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserData));
+            const currentUserIndex = allUsers.findIndex(u => u.uid === user.uid);
+
+            if (currentUserIndex !== -1) {
+                const rank = currentUserIndex + 1;
+                setUserRank(rank);
+
+                if (rank > 1) {
+                    const userToChaseData = allUsers[currentUserIndex - 1];
+                    setUserToChase(userToChaseData);
+                } else {
+                    setUserToChase(null); // User is #1
                 }
-            });
-            setUserRank(rank);
-            if (snapshot.docs.length > 0 && snapshot.docs[0].id !== user.uid) {
-                setTopUser(snapshot.docs[0].data() as UserData);
             } else {
-                setTopUser(null);
+                 setUserRank(null);
+                 setUserToChase(null);
             }
         });
 
@@ -497,9 +502,9 @@ export default function DashboardPage() {
                         <p className="text-slate-800 font-bold text-5xl">#{userRank ?? 'N/A'}</p>
                         <p className="text-xs text-slate-500 font-semibold tracking-widest">RANK</p>
                     </div>
-                    {topUser && (
+                    {userToChase && (
                          <div className="text-sm text-center bg-muted p-2 rounded-lg mt-4">
-                            <p>You are chasing <span className="font-semibold">{topUser.name}</span> with {topUser.points} points! 🔥</p>
+                            <p>You are chasing <span className="font-semibold">{userToChase.name}</span> with {userToChase.points} points! 🔥</p>
                          </div>
                     )}
                 </CardContent>
