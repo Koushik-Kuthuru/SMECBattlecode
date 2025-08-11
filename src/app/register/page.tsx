@@ -17,6 +17,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
 
+function RecaptchaIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-10 w-10">
+            <path fill="#4285F4" d="M39,24V9.2C39,8.5,38.5,8,37.8,8h-26C11.3,8,11,8.3,10.7,8.8l-5.9,9.9C4.3,19.6,4,20.6,4,21.7V37c0,1.1,0.9,2,2,2h20.5c0,0,0.1,0,0.1,0c0.3,0,0.6-0.1,0.8-0.3l11.4-11.4C39,27.1,39,25.6,39,24z"/>
+            <path fill="#9C27B0" d="M38.8,38.8C38.6,39,38.3,39,38,39c-0.1,0-0.1,0-0.1,0H17.4c-0.7,0-1.4-0.6-1.4-1.4V25.9c0-0.5,0.4-1,1-1.1l11.7-2.1c0.5-0.1,1.1,0.2,1.2,0.8l1.7,7.8c0.2,0.8,1,1.3,1.8,1.2c0.8-0.2,1.3-1,1.2-1.8l-1.7-7.8c-0.4-2-2.3-3.2-4.2-2.8L16.5,21H14v-2h2.5c2.4,0,4.6,1.4,5.5,3.6l1.7,7.8c0.1,0.3,0.3,0.5,0.6,0.5c0.1,0,0.2,0,0.2,0c0.3-0.1,0.5-0.3,0.5-0.6l-1.7-7.8c-0.1-0.7,0.3-1.3,1-1.4l11.7-2.1c0.1,0,0.2,0,0.3,0c0.6,0,1.1,0.5,1,1.1l-1.4,6.4h2.5v2h-3.2L38.8,38.8z"/>
+        </svg>
+    )
+}
+
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -168,11 +177,19 @@ export default function RegisterPage() {
             <div className="grid gap-2">
               <Input id="email" type="email" placeholder="Email Address" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-             <div className="flex items-center space-x-2 my-2">
-                <Checkbox id="robot-check" checked={isVerified} onCheckedChange={(checked) => setIsVerified(!!checked)} />
-                <Label htmlFor="robot-check" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                   I'm not a robot
-                </Label>
+             
+             <div className="flex items-center justify-between space-x-2 my-2 p-3 rounded-md bg-gray-100 border border-gray-300">
+                <div className="flex items-center gap-4">
+                    <Checkbox id="robot-check" checked={isVerified} onCheckedChange={(checked) => setIsVerified(!!checked)} className="h-7 w-7" />
+                    <Label htmlFor="robot-check" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                       I'm not a robot
+                    </Label>
+                </div>
+                <div className="flex flex-col items-center">
+                    <RecaptchaIcon />
+                    <p className="text-xs text-gray-500">reCAPTCHA</p>
+                    <p className="text-[10px] text-gray-400">Privacy - Terms</p>
+                </div>
             </div>
 
             <Button type="submit" className="w-full" onClick={handleRegister} disabled={isLoading}>
