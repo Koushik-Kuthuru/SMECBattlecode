@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,21 +8,21 @@ import { BulletCoin } from '@/components/icons';
 
 export default function AboutPage() {
   return (
-    <div className="container mx-auto max-w-4xl py-8">
+    <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-3xl">
+          <CardTitle className="flex items-center gap-2 text-2xl md:text-3xl">
             <Info className="h-8 w-8 text-primary" />
             About SMEC Battle Code
           </CardTitle>
-          <CardDescription className="text-lg">
+          <CardDescription className="text-md md:text-lg">
             Your arena for mastering code, competing with peers, and achieving excellence.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8 text-base">
+        <CardContent className="space-y-8 text-base text-muted-foreground">
           
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2 text-card-foreground">
               <ThumbsUp className="h-6 w-6 text-blue-500" />
               Our Mission
             </h2>
@@ -33,7 +34,7 @@ export default function AboutPage() {
           <Separator />
 
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2 text-card-foreground">
               <BulletCoin className="h-6 w-6 text-yellow-500" />
               How It Works: Challenges & Scoring
             </h2>
@@ -59,7 +60,7 @@ export default function AboutPage() {
           <Separator />
 
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-2 text-card-foreground">
                 <ShieldCheck className="h-6 w-6 text-red-600" />
                 Academic Integrity & Rules
             </h2>
