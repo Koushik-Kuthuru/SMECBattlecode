@@ -61,7 +61,8 @@ export const challenges: Challenge[] = [
             if complement in num_map:
                 return [num_map[complement], i]
             num_map[num] = i
-`
+`,
+    isEnabled: true,
   },
   {
     title: 'Reverse Linked List',
@@ -99,7 +100,6 @@ export const challenges: Challenge[] = [
 class Solution {
     public ListNode reverseList(ListNode head) {
         // Write your code here
-        return null;
     }
 }`,
     solution: `/**
@@ -124,7 +124,8 @@ class Solution {
         }
         return prev;
     }
-}`
+}`,
+    isEnabled: true,
   },
   {
     title: 'FizzBuzz',
@@ -149,11 +150,13 @@ class Solution {
         { input: '5', output: '["1","2","Fizz","4","Buzz"]' },
         { input: '15', output: '["1","2","Fizz","4","Buzz","Fizz","7","8","Fizz","Buzz","11","Fizz","13","14","FizzBuzz"]', isHidden: true },
     ],
-    starterCode: `class Solution {
+    starterCode: `#include <vector>
+#include <string>
+
+class Solution {
 public:
-    vector<string> fizzBuzz(int n) {
+    std::vector<std::string> fizzBuzz(int n) {
         // Write your code here
-        return {};
     }
 };`,
     solution: `class Solution {
@@ -173,7 +176,8 @@ public:
         }
         return answer;
     }
-};`
+};`,
+    isEnabled: true,
   },
   {
     title: 'Container With Most Water',
@@ -204,7 +208,6 @@ public:
  */
 var maxArea = function(height) {
     // Write your code here
-    return 0;
 };`,
     solution: `/**
  * @param {number[]} height
@@ -224,7 +227,8 @@ var maxArea = function(height) {
         }
     }
     return max;
-};`
+};`,
+    isEnabled: true,
   },
   {
     title: 'Longest Substring Without Repeating Characters',
@@ -257,8 +261,8 @@ var maxArea = function(height) {
     ],
     starterCode: `class Solution:
     def lengthOfLongestSubstring(self, s: str) -> int:
-        // Write your code here
-        return 0
+        # Write your code here
+        pass
 `,
     solution: `class Solution:
     def lengthOfLongestSubstring(self, s: str) -> int:
@@ -271,7 +275,8 @@ var maxArea = function(height) {
                 left += 1
             char_set.add(s[right])
             max_length = max(max_length, right - left + 1)
-        return max_length`
+        return max_length`,
+    isEnabled: true,
   },
   {
     title: 'Validate Binary Search Tree',
@@ -314,7 +319,6 @@ var maxArea = function(height) {
 class Solution {
     public boolean isValidBST(TreeNode root) {
         // Write your code here
-        return false;
     }
 }`,
     solution: `/**
@@ -356,7 +360,8 @@ class Solution {
         }
         return true;
     }
-}`
+}`,
+    isEnabled: true,
   },
   {
     title: 'Median of Two Sorted Arrays',
@@ -381,9 +386,10 @@ class Solution {
         { input: 'nums1 = [0,0], nums2 = [0,0]', output: '0.0', isHidden: true },
         { input: 'nums1 = [], nums2 = [1]', output: '1.0', isHidden: true },
     ],
-    starterCode: `double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Size) {
+    starterCode: `#include <math.h>
+
+double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Size) {
     // Write your code here
-    return 0.0;
 }`,
     solution: `double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Size) {
     if (nums1Size > nums2Size) {
@@ -416,7 +422,8 @@ class Solution {
         }
     }
     return 0.0;
-}`
+}`,
+    isEnabled: true,
   },
   {
     title: 'Trapping Rain Water',
@@ -444,7 +451,7 @@ class Solution {
     starterCode: `class Solution:
     def trap(self, height: list[int]) -> int:
         # Write your code here
-        return 0
+        pass
 `,
     solution: `class Solution:
     def trap(self, height: list[int]) -> int:
@@ -464,7 +471,8 @@ class Solution {
                 right -= 1
                 right_max = max(right_max, height[right])
                 water += right_max - height[right]
-        return water`
+        return water`,
+    isEnabled: true,
   },
   {
     title: 'Regular Expression Matching',
@@ -493,11 +501,13 @@ class Solution {
         { input: 's = "ab", p = ".*"', output: 'true' },
         { input: 's = "mississippi", p = "mis*is*p*."', output: 'false', isHidden: true },
     ],
-    starterCode: `class Solution {
+    starterCode: `#include <string>
+#include <vector>
+
+class Solution {
 public:
-    bool isMatch(string s, string p) {
+    bool isMatch(std::string s, std::string p) {
         // Write your code here
-        return false;
     }
 };`,
     solution: `class Solution {
@@ -525,7 +535,8 @@ public:
         }
         return dp[m][n];
     }
-};`
+};`,
+    isEnabled: true,
   },
   {
     title: 'Merge k Sorted Lists',
@@ -559,10 +570,11 @@ public:
  *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
  * }
  */
+import java.util.PriorityQueue;
+
 class Solution {
     public ListNode mergeKLists(ListNode[] lists) {
         // Write your code here
-        return null;
     }
 }`,
     solution: `/**
@@ -597,7 +609,8 @@ class Solution {
         }
         return dummy.next;
     }
-}`
+}`,
+    isEnabled: true,
   },
 ];
 
