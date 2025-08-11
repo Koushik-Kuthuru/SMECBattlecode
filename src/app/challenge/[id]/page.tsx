@@ -168,6 +168,12 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
       
       const submissionStatus = result.allPassed ? 'Accepted' : 'Failed';
 
+      // Auto-save the submitted code
+      const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+      await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
+      const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+      await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
+
       const submissionsRef = collection(db, `users/${user.uid}/submissions/${challengeId}/attempts`);
       await addDoc(submissionsRef, {
         code: solution,
