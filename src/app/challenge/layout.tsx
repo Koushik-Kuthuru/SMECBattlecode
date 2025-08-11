@@ -359,7 +359,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 <TableHead>Status</TableHead>
                 <TableHead>Language</TableHead>
                 <TableHead>Time</TableHead>
-                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -373,8 +372,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                   <TableCell className="font-medium">{submission.language}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                  </TableCell>
-                  <TableCell className="text-right">
                   </TableCell>
                 </TableRow>
               ))}
@@ -407,14 +404,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               </h2>
               <p className="text-muted-foreground">{runResult.feedback}</p>
               <Tabs value={activeResultTab} onValueChange={setActiveResultTab}>
-                  <TabsList>
-                      {runResult.results.map((res, i) => (
-                          <TabsTrigger key={i} value={String(i)} className="flex items-center gap-2">
-                              Test Case {i + 1}
-                              {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                          </TabsTrigger>
-                      ))}
-                  </TabsList>
+                  <div className="relative w-full overflow-x-auto">
+                    <TabsList className="inline-flex justify-start">
+                        {runResult.results.map((res, i) => (
+                            <TabsTrigger key={i} value={String(i)} className="flex items-center gap-2">
+                                Test Case {i + 1}
+                                {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                  </div>
                   {runResult.results.map((res, i) => (
                       <TabsContent key={i} value={String(i)} className="mt-4 space-y-4">
                           <div>
@@ -587,6 +586,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
 
 
 
