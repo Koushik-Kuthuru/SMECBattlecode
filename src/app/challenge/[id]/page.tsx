@@ -308,7 +308,7 @@ export default function ChallengeDetail() {
              {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
            </Button>
            <Button size="sm" variant="default" onClick={handleSubmit} disabled={isRunning}>
-             {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Bug className="mr-2 h-4 w-4" />} Submit
+             {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
            </Button>
        </div>
     </div>
