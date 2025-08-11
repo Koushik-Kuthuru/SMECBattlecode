@@ -3,7 +3,7 @@
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Clone } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -71,6 +71,7 @@ type ChallengeContextType = {
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
   navLinks: NavLinks;
+  cloneSubmission: (code: string, language: string) => void;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -108,11 +109,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
   const [navLinks, setNavLinks] = useState<NavLinks>({ prev: null, next: null });
+  const [clonedCode, setClonedCode] = useState<{code: string, language: string} | null>(null);
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
+  const cloneSubmission = useCallback((code: string, language: string) => {
+    setClonedCode({ code, language });
+    setActiveTab(isDesktop ? 'description' : 'code');
+  }, [isDesktop]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
@@ -281,7 +287,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     )
   }
 
-  const contextValue = {
+  const contextValue: ChallengeContextType = {
       challenge,
       runResult,
       setRunResult,
@@ -291,6 +297,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setIsRunning,
       isChallengeCompleted,
       navLinks,
+      cloneSubmission,
+  };
+  
+  const difficultyColors = {
+    Easy: 'text-green-500 border-green-500/50 bg-green-500/10',
+    Medium: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10',
+    Hard: 'text-red-500 border-red-500/50 bg-red-500/10',
   };
 
   const descriptionPanel = (
@@ -306,10 +319,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     ) : challenge ? (
         <>
           <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
-          <div className="flex items-center gap-4 mb-4">
-              <Badge variant={challenge.difficulty === 'Easy' ? 'secondary' : challenge.difficulty === 'Medium' ? 'outline' : 'destructive'}>{challenge.difficulty}</Badge>
+          <div className="flex items-center gap-4 mb-4 flex-wrap">
+              <Badge variant="outline" className={cn("text-xs", difficultyColors[challenge.difficulty])}>{challenge.difficulty}</Badge>
               <p className="text-sm text-muted-foreground">Language: {challenge.language}</p>
-              <p className="text-sm font-bold text-primary">{challenge.points} Points</p>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+                <BulletCoin className="h-4 w-4" />
+                <span>{challenge.points} Points</span>
+              </div>
           </div>
           <p className="text-base mb-6 whitespace-pre-wrap">{challenge.description}</p>
           
@@ -344,37 +360,34 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
 
   const submissionsPanel = (
-    <ScrollArea className="h-full">
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Language</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <ScrollArea className="h-full p-2">
+    {submissions.length > 0 ? (
+      <div className="space-y-3">
         {submissions.map((submission) => (
-          <TableRow key={submission.id}>
-            <TableCell>
-              {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-            </TableCell>
-            <TableCell>
-              <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                {submission.status}
-              </Badge>
-            </TableCell>
-            <TableCell>{submission.language}</TableCell>
-          </TableRow>
+          <div key={submission.id} className="bg-muted/50 p-3 rounded-lg border flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2">
+                <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                  {submission.status}
+                </Badge>
+                <p className="text-sm font-medium">{submission.language}</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+              </p>
+            </div>
+            <Button size="icon" variant="ghost" onClick={() => cloneSubmission(submission.code, submission.language)}>
+              <Clone className="h-4 w-4" />
+            </Button>
+          </div>
         ))}
-      </TableBody>
-    </Table>
-    {submissions.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+      </div>
+    ) : (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
           <AlertCircle className="h-10 w-10 mb-4" />
           <p className="font-semibold">No Submissions Yet</p>
           <p>Your submission history for this challenge will appear here.</p>
-        </div>
+      </div>
     )}
     </ScrollArea>
   );
@@ -459,6 +472,17 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </div>
   );
 
+  const renderChildren = () => {
+    // Pass cloned code as a prop to children if it exists
+    return React.Children.map(children, child => {
+      if (React.isValidElement(child)) {
+        // @ts-ignore
+        return React.cloneElement(child, { clonedCode, setClonedCode });
+      }
+      return child;
+    });
+  };
+
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
@@ -501,7 +525,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                      <ResizableHandleWithHandle />
                      <ResizablePanel defaultSize={50} minSize={30}>
                        <div className="h-full w-full flex p-2">
-                          {children}
+                          {renderChildren()}
                        </div>
                      </ResizablePanel>
                  </ResizablePanelGroup>
@@ -522,7 +546,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             </TabsContent>
                              <TabsContent value="code" className="mt-0 h-full">
                                 <div className="h-full w-full flex">
-                                    {children}
+                                    {renderChildren()}
                                 </div>
                             </TabsContent>
                             <TabsContent value="result" className="mt-0 h-full">
@@ -576,4 +600,5 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
 

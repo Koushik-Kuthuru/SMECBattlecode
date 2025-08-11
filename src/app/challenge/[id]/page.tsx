@@ -16,7 +16,12 @@ import { useChallenge } from "../layout";
 import Link from 'next/link';
 import { evaluateCode } from "@/ai/flows/evaluate-code";
 
-export default function ChallengeDetail() {
+type ChallengeDetailPageProps = {
+  clonedCode: { code: string; language: string } | null;
+  setClonedCode: (code: { code: string; language: string } | null) => void;
+};
+
+export default function ChallengeDetail({ clonedCode, setClonedCode }: ChallengeDetailPageProps) {
   const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, navLinks } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
@@ -28,6 +33,14 @@ export default function ChallengeDetail() {
   const [showNavButtons, setShowNavButtons] = useState(false);
   
   const auth = getAuth(app);
+
+  useEffect(() => {
+    if (clonedCode) {
+      setSolution(clonedCode.code);
+      setLanguage(clonedCode.language);
+      setClonedCode(null);
+    }
+  }, [clonedCode, setClonedCode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
