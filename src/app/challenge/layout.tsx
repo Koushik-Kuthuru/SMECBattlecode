@@ -3,7 +3,7 @@
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Clone } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -377,7 +377,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               </p>
             </div>
             <Button size="icon" variant="ghost" onClick={() => cloneSubmission(submission.code, submission.language)}>
-              <Clone className="h-4 w-4" />
+              <Copy className="h-4 w-4" />
             </Button>
           </div>
         ))}
@@ -600,5 +600,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
+
 
 
