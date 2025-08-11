@@ -12,7 +12,7 @@ import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase
 import { getFirestore, doc, getDoc, collection, getDocs, setDoc, addDoc, writeBatch, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import Autoplay from "embla-carousel-autoplay";
 import { cn } from '@/lib/utils';
 import { UserData, Event } from '@/lib/types';
@@ -98,12 +98,27 @@ export default function DashboardPage() {
   const [todaysPoints, setTodaysPoints] = useState(0);
   const [todaysPenalty, setTodaysPenalty] = useState(0);
   
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>()
+  const [currentSlide, setCurrentSlide] = useState(0)
+
   const auth = getAuth(app);
   const db = getFirestore(app);
   const ITEMS_PER_PAGE = 10;
-   const autoplay = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: true })
+  const autoplay = useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
   );
+
+  useEffect(() => {
+    if (!carouselApi) {
+      return
+    }
+ 
+    setCurrentSlide(carouselApi.selectedScrollSnap())
+ 
+    carouselApi.on("select", () => {
+      setCurrentSlide(carouselApi.selectedScrollSnap())
+    })
+  }, [carouselApi])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
@@ -357,38 +372,52 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-2 space-y-8">
             {advertisements.length > 0 && (
-              <Carousel
-                plugins={[autoplay.current]}
-                onMouseEnter={autoplay.current.stop}
-                onMouseLeave={autoplay.current.reset}
-                className="w-full"
-                opts={{ loop: true }}
-              >
-                <CarouselContent>
-                  {advertisements.map((ad) => (
-                    <CarouselItem key={ad.id}>
-                      <Card className="bg-slate-900 text-white border-0 overflow-hidden">
-                        <CardContent className="p-0 flex flex-col md:flex-row items-stretch justify-between gap-0 h-64">
-                           <div className="w-full md:w-1/2 h-full">
-                              <img src={ad.imageUrl || 'https://placehold.co/600x400.png'} alt={ad.title} className="w-full h-full object-cover" data-ai-hint="advertisement event" />
-                            </div>
-                          <div className="w-full md:w-1/2 p-6 flex flex-col justify-center">
-                              <h3 className="text-xl md:text-2xl font-bold leading-tight">{ad.title}</h3>
-                              <p className="text-muted-foreground text-white/80 text-sm md:text-base mt-2">{ad.description}</p>
-                              <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white w-full md:w-auto mt-6">
-                                <Link href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer">
-                                  {ad.buttonText || 'Learn More'}
-                                </Link>
-                              </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-4 hidden md:flex" />
-                <CarouselNext className="right-4 hidden md:flex" />
-              </Carousel>
+                <div className="relative">
+                  <Carousel
+                    setApi={setCarouselApi}
+                    plugins={[autoplay.current]}
+                    onMouseEnter={autoplay.current.stop}
+                    onMouseLeave={autoplay.current.reset}
+                    className="w-full"
+                    opts={{ loop: true }}
+                  >
+                    <CarouselContent>
+                      {advertisements.map((ad) => (
+                        <CarouselItem key={ad.id}>
+                          <Card className="bg-slate-900 text-white border-0 overflow-hidden">
+                            <CardContent className="p-0 flex flex-col md:flex-row items-stretch justify-between gap-0 h-64">
+                               <div className="w-full md:w-1/2 h-full">
+                                  <img src={ad.imageUrl || 'https://placehold.co/600x400.png'} alt={ad.title} className="w-full h-full object-cover" data-ai-hint="advertisement event" />
+                                </div>
+                              <div className="w-full md:w-1/2 p-6 flex flex-col justify-center">
+                                  <h3 className="text-xl md:text-2xl font-bold leading-tight">{ad.title}</h3>
+                                  <p className="text-muted-foreground text-white/80 text-sm md:text-base mt-2">{ad.description}</p>
+                                  <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white w-full md:w-auto mt-6">
+                                    <Link href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer">
+                                      {ad.buttonText || 'Learn More'}
+                                    </Link>
+                                  </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                  <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2">
+                      {advertisements.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => carouselApi?.scrollTo(i)}
+                          className={cn(
+                            "h-2 w-2 rounded-full transition-all",
+                            i === currentSlide ? "w-4 bg-white" : "bg-white/50 hover:bg-white"
+                          )}
+                          aria-label={`Go to slide ${i + 1}`}
+                        />
+                      ))}
+                  </div>
+                </div>
             )}
 
             <Card>
