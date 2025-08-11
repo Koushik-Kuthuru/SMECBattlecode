@@ -74,7 +74,7 @@ export default function ChallengeDetail() {
   }, [challenge, user]);
 
   const saveProgress = useCallback(async (code: string, lang: string) => {
-    if (!user || !challenge || !challengeId || isChallengeCompleted || typeof code !== 'string') return;
+    if (!user || !challenge || !challengeId || isChallengeCompleted || code === undefined) return;
     
     setSaveStatus('saving');
     try {
