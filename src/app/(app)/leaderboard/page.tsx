@@ -269,11 +269,14 @@ export default function LeaderboardPage() {
                       <TableCell className="font-bold">#{user.rank}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                           <Avatar className="w-8 h-8">
+                          <Avatar className="w-8 h-8">
                             <AvatarImage src={user.imageUrl} />
                             <AvatarFallback><User /></AvatarFallback>
                           </Avatar>
-                          {user.name}
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-xs text-muted-foreground md:hidden">{getFormattedBranchAndYear(user)}</p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
