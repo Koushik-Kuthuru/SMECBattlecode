@@ -1,3 +1,4 @@
+
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
@@ -11,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, orderBy, query, limit, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -22,17 +23,11 @@ type CurrentUser = {
   imageUrl?: string;
 }
 
-type UserStats = {
-  rank: number;
-  points: number;
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const auth = getAuth(app);
@@ -59,22 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             imageUrl: userData.imageUrl,
           });
 
-          // Fetch leaderboard to calculate rank
-          const usersCollection = collection(db, 'users');
-          const q = query(usersCollection, orderBy('points', 'desc'));
-          const querySnapshot = await getDocs(q);
-          
-          let rank = 0;
-          querySnapshot.docs.forEach((doc, index) => {
-            if (doc.id === user.uid) {
-              rank = index + 1;
-            }
-          });
-          setUserStats({ rank, points: userData.points || 0 });
-
         } else {
-           // This case might happen if a user is created in Auth but not in Firestore
-           // Or if the admin logic needs adjustment. For now, we log out.
            await signOut(auth);
            router.push('/login');
         }
