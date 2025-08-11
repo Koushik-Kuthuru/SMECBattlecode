@@ -17,12 +17,7 @@ import Link from 'next/link';
 import { evaluateCode } from "@/ai/flows/evaluate-code";
 import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
 
-type ChallengeDetailPageProps = {
-  clonedCode: { code: string; language: string } | null;
-  setClonedCode: (code: { code: string; language: string } | null) => void;
-};
-
-export default function ChallengeDetail({ clonedCode, setClonedCode }: ChallengeDetailPageProps) {
+export default function ChallengeDetail() {
   const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, navLinks } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
@@ -35,14 +30,6 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
   const [showNavButtons, setShowNavButtons] = useState(false);
   
   const auth = getAuth(app);
-
-  useEffect(() => {
-    if (clonedCode) {
-      setSolution(clonedCode.code);
-      setLanguage(clonedCode.language);
-      setClonedCode(null);
-    }
-  }, [clonedCode, setClonedCode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
