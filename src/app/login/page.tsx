@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
+import { SmecBattleCodeLogo } from '@/components/icons';
 
 export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
@@ -95,31 +97,39 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <Card className="bg-white/80 backdrop-blur-sm border-slate-300 shadow-lg">
+      <Card className="w-full max-w-sm border-0 shadow-none bg-transparent">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
+            <div className="flex justify-center mb-4">
+               <div className="flex items-center gap-3">
+                    <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+                    <div>
+                        <p className="font-bold leading-tight">SMEC</p>
+                        <p className="text-xs text-slate-500 leading-tight">Battlecode</p>
+                    </div>
+                </div>
+            </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back!</CardTitle>
           <CardDescription className="text-slate-600">Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="student-id">Student ID</Label>
-              <Input id="student-id" type="text" placeholder="YOUR_ID" required value={studentId} onChange={handleStudentIdChange} className="bg-white/50" />
+              <Input id="student-id" placeholder="Student ID" required value={studentId} onChange={handleStudentIdChange} />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="sr-only">Password</Label>
                 <Link href="/forgot-password" className="ml-auto inline-block text-sm text-primary hover:underline">
                   Forgot your password?
                 </Link>
               </div>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/50" />
+              <Input id="password" type="password" placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}
             </Button>
           </div>
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-6 text-center text-sm">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="font-semibold text-primary hover:underline">
               Sign up
