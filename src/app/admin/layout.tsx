@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     await signOut(auth);
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
-    router.push('/admin-login');
+    router.push('/');
   }
 
   const navLinks = [

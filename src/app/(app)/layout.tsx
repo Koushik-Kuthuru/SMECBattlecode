@@ -96,7 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('currentUser'); // For admin logout
-    router.push('/login');
+    router.push('/');
   }
 
   const navLinks = [
