@@ -481,6 +481,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         </Link>
                     </Button>
                </div>
+                <div className="absolute left-1/2 -translate-x-1/2">
+                    <h1 className="text-lg font-semibold">Missions</h1>
+                </div>
 
                <div className="flex items-center gap-2">
                     {currentUser ? (
