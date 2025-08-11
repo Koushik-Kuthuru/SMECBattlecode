@@ -15,10 +15,12 @@ import { getFirestore, collection, query, where, getDocs } from 'firebase/firest
 import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
+import ReCAPTCHA from "react-google-recaptcha";
 
 export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -38,7 +40,34 @@ export default function LoginPage() {
       return;
     }
 
+    if (!recaptchaToken) {
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Please complete the reCAPTCHA verification.',
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
+      // Verify reCAPTCHA token
+      const recaptchaResponse = await fetch('/api/verify-recaptcha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: recaptchaToken }),
+      });
+      const recaptchaData = await recaptchaResponse.json();
+      if (!recaptchaData.success) {
+          toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Failed to verify reCAPTCHA. Please try again.',
+          });
+          setIsLoading(false);
+          return;
+      }
+
       // Find user by student ID in Firestore
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("studentId", "==", studentId.toUpperCase()));
@@ -125,6 +154,12 @@ export default function LoginPage() {
               </div>
               <Input id="password" type="password" placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
+            
+            <ReCAPTCHA
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                onChange={setRecaptchaToken}
+            />
+
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}
             </Button>
