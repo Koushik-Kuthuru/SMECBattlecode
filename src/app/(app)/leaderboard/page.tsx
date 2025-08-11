@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Info, ShieldCheck, Trophy, User, CheckCircle } from 'lucide-react';
-import { getFirestore, collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
