@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Info, ShieldCheck, Trophy, User, X, CheckCircle } from 'lucide-react';
-import { getFirestore, collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { Info, ShieldCheck, Trophy, User, CheckCircle } from 'lucide-react';
+import { getFirestore, collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { app, db } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BulletCoin } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 
 const BRANCH_MAP: Record<string, string> = {
     cse: 'CSE',
@@ -49,30 +49,41 @@ const getFormattedBranchAndYear = (user: LeaderboardEntry) => {
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const db = getFirestore(app);
+  const auth = getAuth(app);
 
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, [auth]);
+  
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setIsLoading(true);
       try {
         const usersCollection = collection(db, 'users');
-        const q = query(usersCollection, orderBy('points', 'desc'), limit(3));
+        const q = query(usersCollection, orderBy('points', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        const sortedUsers: LeaderboardEntry[] = querySnapshot.docs.map((doc, index) => {
-          const data = doc.data();
-          return {
-            rank: index + 1,
-            uid: doc.id,
-            name: data.name,
-            points: data.points || 0,
-            email: data.email,
-            imageUrl: data.imageUrl,
-            branch: data.branch,
-            year: data.year,
-          };
-        });
+        const sortedUsers: LeaderboardEntry[] = querySnapshot.docs
+            .filter(doc => !doc.data().isAdmin)
+            .map((doc, index) => {
+              const data = doc.data();
+              return {
+                rank: index + 1,
+                uid: doc.id,
+                name: data.name,
+                points: data.points || 0,
+                email: data.email,
+                imageUrl: data.imageUrl,
+                branch: data.branch,
+                year: data.year,
+              };
+            });
         setLeaderboardData(sortedUsers);
       } catch (error) {
         console.error("Error fetching leaderboard: ", error);
@@ -89,6 +100,8 @@ export default function LeaderboardPage() {
       leaderboardData.find(u => u.rank === 1),
       leaderboardData.find(u => u.rank === 3)
   ];
+  
+  const otherUsers = leaderboardData.slice(3);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -237,8 +250,48 @@ export default function LeaderboardPage() {
               <p>Complete some challenges to get on the board!</p>
             </div>
           )}
+          
+           {otherUsers.length > 0 && (
+                <div className="mt-8 border-t pt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[80px]">Rank</TableHead>
+                                <TableHead>Learner</TableHead>
+                                <TableHead>Details</TableHead>
+                                <TableHead className="text-right">Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {otherUsers.map((user) => (
+                                <TableRow key={user.uid} className={cn(currentUser?.uid === user.uid && 'bg-primary/10 hover:bg-primary/20')}>
+                                    <TableCell className="font-bold text-center text-lg">{user.rank}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={user.imageUrl} />
+                                                <AvatarFallback><User /></AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{user.name}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{getFormattedBranchAndYear(user)}</TableCell>
+                                    <TableCell className="text-right font-bold">
+                                         <div className="flex items-center justify-end font-semibold gap-1">
+                                            <BulletCoin className="h-4 w-4 text-primary" />
+                                            <span>{user.points.toLocaleString()}</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    
