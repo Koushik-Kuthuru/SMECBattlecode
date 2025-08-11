@@ -21,7 +21,7 @@ export default function ChallengeDetail() {
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('python');
-  const [initialSolution, setInitialSolution] = useState("");
+  const [lastSavedSolution, setLastSavedSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const { id: challengeId } = useParams();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -52,7 +52,7 @@ export default function ChallengeDetail() {
         }
       }
       setSolution(userCode);
-      setInitialSolution(userCode);
+      setLastSavedSolution(userCode);
       setSaveStatus('saved');
     };
 
@@ -71,7 +71,7 @@ export default function ChallengeDetail() {
       await setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
       
       setSaveStatus('saved');
-      setInitialSolution(code); // Update the reset point to the last saved code
+      setLastSavedSolution(code); // Update the reset point to the last saved code
     } catch (error) {
       console.error("Failed to save solution:", error);
       setSaveStatus('error');
@@ -79,7 +79,7 @@ export default function ChallengeDetail() {
   }, [user, challenge, challengeId, isChallengeCompleted]);
 
   useEffect(() => {
-    if (solution !== initialSolution && saveStatus !== 'saving') {
+    if (solution !== lastSavedSolution && saveStatus !== 'saving') {
         setSaveStatus('unsaved');
     }
 
@@ -87,7 +87,7 @@ export default function ChallengeDetail() {
         clearTimeout(debounceTimer.current);
     }
     
-    if (solution !== initialSolution && !isChallengeCompleted) {
+    if (solution !== lastSavedSolution && !isChallengeCompleted) {
         debounceTimer.current = setTimeout(() => {
             saveProgress(solution, language);
         }, 2000); // Auto-save after 2 seconds of inactivity
@@ -98,7 +98,7 @@ export default function ChallengeDetail() {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [solution, language, initialSolution, saveProgress, isChallengeCompleted]);
+  }, [solution, language, lastSavedSolution, saveProgress, isChallengeCompleted]);
 
   const handleSolutionChange = (newCode: string) => {
     setSolution(newCode);
@@ -223,9 +223,9 @@ export default function ChallengeDetail() {
   }
 
   const handleReset = () => {
-      if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
-          setSolution(initialSolution);
-          setSaveStatus('saved');
+      if(window.confirm("Are you sure you want to reset your code to the original starter code? This will discard your current changes.") && challenge) {
+          setSolution(challenge.starterCode);
+          setSaveStatus('unsaved'); // Mark as unsaved to trigger auto-save
       }
   };
 
@@ -262,7 +262,7 @@ export default function ChallengeDetail() {
          <div className="flex items-center gap-4">
            {!isChallengeCompleted && getStatusIndicator()}
            <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleReset} disabled={isRunning || solution === initialSolution}>
+            <Button variant="outline" size="sm" onClick={handleReset} disabled={isRunning}>
                 <RefreshCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
            </div>
