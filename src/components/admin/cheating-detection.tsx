@@ -5,104 +5,41 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, Eye, X } from 'lucide-react';
+import { ShieldAlert, Eye, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CodeEditor } from '../code-editor';
+import { getFirestore, collection, collectionGroup, getDocs, query, doc, getDoc } from 'firebase/firestore';
+import { app, db } from '@/lib/firebase';
+import { compareCode } from '@/ai/flows/compare-code';
+import { Challenge } from '@/lib/data';
+import { UserData } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
-// Placeholder data for demonstration
-const suspiciousActivities = [
-  {
-    challenge: 'Two Sum',
-    users: ['Alice', 'Bob'],
-    similarity: 98,
-    timestamp: '2024-05-20 10:30:15',
-    code: {
-        Alice: `class Solution:
-    def twoSum(self, nums: list[int], target: int) -> list[int]:
-        num_map = {}
-        for i, num in enumerate(nums):
-            complement = target - num
-            if complement in num_map:
-                return [num_map[complement], i]
-            num_map[num] = i`,
-        Bob: `class Solution:
-    def twoSum(self, nums: list[int], target: int) -> list[int]:
-        num_map = {}
-        for i, num in enumerate(nums):
-            complement = target - num
-            if complement in num_map:
-                return [num_map[complement], i]
-            num_map[num] = i`,
-    },
-    language: 'python'
-  },
-  {
-    challenge: 'Reverse Linked List',
-    users: ['Charlie', 'David'],
-    similarity: 95,
-    timestamp: '2024-05-20 09:45:22',
-    code: {
-        Charlie: `var reverseList = function(head) {
-    let prev = null;
-    let curr = head;
-    while (curr) {
-        let nextTemp = curr.next;
-        curr.next = prev;
-        prev = curr;
-        curr = nextTemp;
-    }
-    return prev;
-};`,
-        David: `var reverseList = function(head) {
-    let prev = null;
-    let curr = head;
-    while (curr != null) {
-        let nextTemp = curr.next;
-        curr.next = prev;
-        prev = curr;
-        curr = nextTemp;
-    }
-    return prev;
-};`
-    },
-    language: 'javascript'
-  },
-  {
-    challenge: 'FizzBuzz',
-    users: ['Eve', 'Frank'],
-    similarity: 100,
-    timestamp: '2024-05-19 18:12:45',
-     code: {
-        Eve: `vector<string> fizzBuzz(int n) {
-    vector<string> res;
-    for(int i = 1; i <= n; i++){
-        if(i % 15 == 0) res.push_back("FizzBuzz");
-        else if(i % 3 == 0) res.push_back("Fizz");
-        else if(i % 5 == 0) res.push_back("Buzz");
-        else res.push_back(to_string(i));
-    }
-    return res;
-}`,
-        Frank: `vector<string> fizzBuzz(int n) {
-    vector<string> res;
-    for(int i = 1; i <= n; i++){
-        if(i % 15 == 0) res.push_back("FizzBuzz");
-        else if(i % 3 == 0) res.push_back("Fizz");
-        else if(i % 5 == 0) res.push_back("Buzz");
-        else res.push_back(to_string(i));
-    }
-    return res;
-}`
-    },
-    language: 'c++'
-  },
-];
 
-type SuspiciousActivity = (typeof suspiciousActivities)[0];
+type Submission = {
+    userId: string;
+    userName: string;
+    challengeId: string;
+    code: string;
+    language: string;
+};
+
+type SuspiciousActivity = {
+    challenge: string;
+    challengeId: string;
+    users: { id: string, name: string }[];
+    similarity: number;
+    timestamp: string;
+    code: { [key: string]: string };
+    language: string;
+};
 
 export function CheatingDetection() {
   const [selectedActivity, setSelectedActivity] = useState<SuspiciousActivity | null>(null);
+  const [suspiciousActivities, setSuspiciousActivities] = useState<SuspiciousActivity[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const getSimilarityColor = (similarity: number) => {
     if (similarity > 95) return 'text-red-600';
@@ -110,15 +47,112 @@ export function CheatingDetection() {
     return 'text-green-600';
   };
 
+  const runDetection = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            // 1. Fetch all challenges and users
+            const challengesSnapshot = await getDocs(collection(db, 'challenges'));
+            const challenges: Record<string, Challenge> = {};
+            challengesSnapshot.forEach(doc => challenges[doc.id] = { id: doc.id, ...doc.data() } as Challenge);
+
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            const users: Record<string, UserData> = {};
+            usersSnapshot.forEach(doc => users[doc.id] = { uid: doc.id, ...doc.data() } as UserData);
+
+            // 2. Fetch all solutions
+            const solutionsSnapshot = await getDocs(collectionGroup(db, 'solutions'));
+            const solutionsByChallenge: Record<string, Submission[]> = {};
+
+            solutionsSnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                const pathParts = docSnap.ref.path.split('/');
+                const userId = pathParts[1];
+                const challengeId = pathParts[3];
+
+                if (!solutionsByChallenge[challengeId]) {
+                    solutionsByChallenge[challengeId] = [];
+                }
+                solutionsByChallenge[challengeId].push({
+                    userId,
+                    userName: users[userId]?.name || 'Unknown User',
+                    challengeId,
+                    code: data.code,
+                    language: data.language,
+                });
+            });
+
+            // 3. Compare solutions and find suspicious ones
+            const detectedActivities: SuspiciousActivity[] = [];
+            for (const challengeId in solutionsByChallenge) {
+                const submissions = solutionsByChallenge[challengeId];
+                if (submissions.length < 2) continue;
+
+                for (let i = 0; i < submissions.length; i++) {
+                    for (let j = i + 1; j < submissions.length; j++) {
+                        const subA = submissions[i];
+                        const subB = submissions[j];
+
+                        // Simple check to avoid comparing identical code or empty snippets
+                        if (subA.code === subB.code || !subA.code || !subB.code) continue;
+
+                        try {
+                            const result = await compareCode({
+                                code1: subA.code,
+                                code2: subB.code,
+                                language: subA.language,
+                            });
+                            
+                            if (result.similarity > 90) { // Threshold for suspicion
+                                detectedActivities.push({
+                                    challenge: challenges[challengeId]?.title || 'Unknown Challenge',
+                                    challengeId,
+                                    users: [{ id: subA.userId, name: subA.userName }, { id: subB.userId, name: subB.userName }],
+                                    similarity: result.similarity,
+                                    timestamp: new Date().toISOString(),
+                                    code: {
+                                        [subA.userName]: subA.code,
+                                        [subB.userName]: subB.code,
+                                    },
+                                    language: subA.language,
+                                });
+                            }
+                        } catch (aiError) {
+                            console.error(`AI comparison failed for challenge ${challengeId}`, aiError);
+                        }
+                    }
+                }
+            }
+            
+            setSuspiciousActivities(detectedActivities.sort((a, b) => b.similarity - a.similarity));
+
+        } catch (error) {
+            console.error("Error running cheating detection:", error);
+            toast({
+                variant: 'destructive',
+                title: "Detection Failed",
+                description: "Could not fetch and compare submissions.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+
   return (
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6" />
-            <CardTitle>Cheating Detection</CardTitle>
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <ShieldAlert className="h-6 w-6" />
+                <CardTitle>Cheating Detection</CardTitle>
+            </div>
+            <Button onClick={runDetection} disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isLoading ? 'Running...' : 'Run Detection'}
+            </Button>
         </div>
-        <CardDescription>Potentially suspicious submissions based on code similarity.</CardDescription>
+        <CardDescription>Potentially suspicious submissions based on AI-powered code similarity analysis.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border rounded-lg overflow-hidden">
@@ -133,28 +167,43 @@ export function CheatingDetection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suspiciousActivities.map((activity, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{activity.challenge}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {activity.users.map(user => <Badge key={user} variant="secondary">{user}</Badge>)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getSimilarityColor(activity.similarity)}>
-                      {activity.similarity}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{activity.timestamp}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedActivity(activity)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Review
-                    </Button>
-                  </TableCell>
+              {isLoading ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="text-center h-24">
+                       <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                       <p>Analyzing submissions...</p>
+                    </TableCell>
                 </TableRow>
-              ))}
+              ) : suspiciousActivities.length > 0 ? (
+                suspiciousActivities.map((activity, index) => (
+                    <TableRow key={index}>
+                    <TableCell className="font-medium">{activity.challenge}</TableCell>
+                    <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                        {activity.users.map(user => <Badge key={user.id} variant="secondary">{user.name}</Badge>)}
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant="outline" className={getSimilarityColor(activity.similarity)}>
+                        {activity.similarity}%
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedActivity(activity)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Review
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                 <TableRow>
+                    <TableCell colSpan={5} className="text-center h-24">
+                        No suspicious activities detected.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
