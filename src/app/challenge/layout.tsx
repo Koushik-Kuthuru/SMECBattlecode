@@ -582,16 +582,3 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
-
-    
-
-    
-
-
-
-
-
-
-
-
-
