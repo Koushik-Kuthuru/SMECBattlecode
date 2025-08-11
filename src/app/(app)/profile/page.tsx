@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, Upload, Mail, KeyRound, LogOut, CaseSensitive, Loader2 } from 'lucide-react';
+import { User, Upload, Mail, KeyRound, LogOut, CaseSensitive, Loader2, Settings } from 'lucide-react';
 import { getAuth, onAuthStateChanged, updateEmail, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
@@ -216,156 +217,150 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="container mx-auto max-w-2xl py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl">Profile</CardTitle>
-          <CardDescription>Manage your personal and account information.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
-              <AvatarFallback>
-                <User className="h-12 w-12" />
-              </AvatarFallback>
-            </Avatar>
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="mr-2 h-4 w-4" />
-              Change Picture
-            </Button>
-            <Input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-                <Label>Name</Label>
-                <Input value={currentUser.name} disabled />
-            </div>
-             <div className="space-y-2">
-                <Label>Student ID</Label>
-                <Input value={currentUser.studentId} disabled />
-            </div>
-          </div>
-           <div className="space-y-2">
-                <Label>Email</Label>
-                <Input value={currentUser.email} disabled />
-            </div>
+    <div className="container mx-auto max-w-4xl py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Your Profile</h1>
+        <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
+        </Button>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch</Label>
-            <Select value={profile.branch} onValueChange={(value) => handleInputChange('branch', value)}>
-                <SelectTrigger id="branch">
-                    <SelectValue placeholder="Select your branch" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="cse">Computer Science Engineering</SelectItem>
-                    <SelectItem value="csd">CSE (Data Science)</SelectItem>
-                    <SelectItem value="cse_aiml">CSE (AI & ML)</SelectItem>
-                    <SelectItem value="aiml">AI & Machine Learning</SelectItem>
-                    <SelectItem value="aids">AI & Data Science</SelectItem>
-                    <SelectItem value="it">Information Technology</SelectItem>
-                    <SelectItem value="ece">Electronics & Communication</SelectItem>
-                    <SelectItem value="eee">Electrical & Electronics</SelectItem>
-                    <SelectItem value="mech">Mechanical Engineering</SelectItem>
-                    <SelectItem value="civil">Civil Engineering</SelectItem>
-                </SelectContent>
-            </Select>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-2 space-y-8">
+            {/* Personal Information */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>Update your public profile details.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center gap-6">
+                        <Avatar className="h-24 w-24">
+                          <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
+                          <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
+                        </Avatar>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Change Picture
+                        </Button>
+                        <Input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                    </div>
 
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <Label htmlFor="year">Year</Label>
-                 <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)}>
-                    <SelectTrigger id="year">
-                        <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="1">1st Year</SelectItem>
-                        <SelectItem value="2">2nd Year</SelectItem>
-                        <SelectItem value="3">3rd Year</SelectItem>
-                        <SelectItem value="4">4th Year</SelectItem>
-                    </SelectContent>
-                </Select>
-             </div>
-             <div className="space-y-2">
-                <Label htmlFor="section">Section</Label>
-                <Select value={profile.section} onValueChange={(value) => handleInputChange('section', value)}>
-                    <SelectTrigger id="section">
-                        <SelectValue placeholder="Select section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="A">Section A</SelectItem>
-                        <SelectItem value="B">Section B</SelectItem>
-                        <SelectItem value="C">Section C</SelectItem>
-                        <SelectItem value="D">Section D</SelectItem>
-                    </SelectContent>
-                </Select>
-             </div>
-          </div>
-          
-           <div className="space-y-2">
-                <Label>Preferred Programming Languages</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 rounded-lg border p-4">
-                    {LANGUAGES.map(lang => (
-                        <div key={lang} className="flex items-center gap-2">
-                            <Checkbox 
-                                id={`prof-lang-${lang}`}
-                                checked={profile.preferredLanguages.includes(lang)}
-                                onCheckedChange={(checked) => handleLanguageChange(lang, !!checked)}
-                            />
-                            <Label htmlFor={`prof-lang-${lang}`} className="font-normal">{lang}</Label>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>Name</Label>
+                            <Input value={currentUser.name} disabled />
                         </div>
-                    ))}
-                </div>
-            </div>
-          
-          <Button onClick={handleSave} className="w-full md:w-auto" disabled={isSaving}>
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Profile Changes'}
-          </Button>
+                         <div className="space-y-2">
+                            <Label>Student ID</Label>
+                            <Input value={currentUser.studentId} disabled />
+                        </div>
+                    </div>
 
-          <Separator />
-          
-           <div>
-              <h3 className="text-lg font-medium mb-4">Account Settings</h3>
-               <div className="space-y-4 rounded-lg border p-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-email">
-                        <Mail className="inline-block mr-2 h-4 w-4" />
-                        Change Email Address
-                    </Label>
-                    <Input id="new-email" type="email" placeholder="new.email@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-                  </div>
-                   <div className="space-y-2">
-                    <Label htmlFor="password-for-email">
-                        <KeyRound className="inline-block mr-2 h-4 w-4" />
-                        Enter Current Password to Confirm
-                    </Label>
-                    <Input id="password-for-email" type="password" value={passwordForEmail} onChange={(e) => setPasswordForEmail(e.target.value)} />
-                  </div>
-                  <Button onClick={handleChangeEmail} disabled={isChangingEmail || newEmail === currentUser.email}>
-                    {isChangingEmail ? 'Updating Email...' : 'Update Email'}
-                  </Button>
-              </div>
-           </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="branch">Branch</Label>
+                        <Select value={profile.branch} onValueChange={(value) => handleInputChange('branch', value)}>
+                            <SelectTrigger id="branch"><SelectValue placeholder="Select your branch" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="cse">Computer Science Engineering</SelectItem>
+                                <SelectItem value="csd">CSE (Data Science)</SelectItem>
+                                <SelectItem value="cse_aiml">CSE (AI & ML)</SelectItem>
+                                <SelectItem value="aiml">AI & Machine Learning</SelectItem>
+                                <SelectItem value="aids">AI & Data Science</SelectItem>
+                                <SelectItem value="it">Information Technology</SelectItem>
+                                <SelectItem value="ece">Electronics & Communication</SelectItem>
+                                <SelectItem value="eee">Electrical & Electronics</SelectItem>
+                                <SelectItem value="mech">Mechanical Engineering</SelectItem>
+                                <SelectItem value="civil">Civil Engineering</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-           <Separator />
-            <div className="pt-2">
-                <Button variant="destructive-outline" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                </Button>
-            </div>
-        </CardContent>
-      </Card>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="year">Year</Label>
+                             <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)}>
+                                <SelectTrigger id="year"><SelectValue placeholder="Select year" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">1st Year</SelectItem>
+                                    <SelectItem value="2">2nd Year</SelectItem>
+                                    <SelectItem value="3">3rd Year</SelectItem>
+                                    <SelectItem value="4">4th Year</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="section">Section</Label>
+                            <Select value={profile.section} onValueChange={(value) => handleInputChange('section', value)}>
+                                <SelectTrigger id="section"><SelectValue placeholder="Select section" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="A">Section A</SelectItem>
+                                    <SelectItem value="B">Section B</SelectItem>
+                                    <SelectItem value="C">Section C</SelectItem>
+                                    <SelectItem value="D">Section D</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Preferred Programming Languages</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 rounded-lg border p-4">
+                            {LANGUAGES.map(lang => (
+                                <div key={lang} className="flex items-center gap-2">
+                                    <Checkbox 
+                                        id={`prof-lang-${lang}`}
+                                        checked={profile.preferredLanguages.includes(lang)}
+                                        onCheckedChange={(checked) => handleLanguageChange(lang, !!checked)}
+                                    />
+                                    <Label htmlFor={`prof-lang-${lang}`} className="font-normal">{lang}</Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+
+        <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-8">
+            {/* Account Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5"/> Account Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" value={currentUser.email} disabled className="mt-1" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="new-email">Change Email Address</Label>
+                        <Input id="new-email" type="email" placeholder="new.email@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="password-for-email">Current Password</Label>
+                        <Input id="password-for-email" type="password" value={passwordForEmail} onChange={(e) => setPasswordForEmail(e.target.value)} />
+                    </div>
+                    <Button onClick={handleChangeEmail} disabled={isChangingEmail || newEmail === currentUser.email} className="w-full">
+                        {isChangingEmail ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Updating...</> : 'Update Email'}
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Logout */}
+            <Card>
+                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><LogOut className="h-5 w-5"/> Logout</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">Are you sure you want to log out of your account?</p>
+                    <Button variant="destructive-outline" onClick={handleLogout} className="w-full">
+                        Logout
+                    </Button>
+                </CardContent>
+            </Card>
+        </aside>
+      </div>
     </div>
   );
 }
-
-    
