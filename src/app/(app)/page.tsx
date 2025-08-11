@@ -1,5 +1,5 @@
-// This page is intentionally left blank.
-// The root of the app is the landing page at /
+import { redirect } from 'next/navigation';
+
 export default function AppPage() {
-  return null;
+  redirect('/dashboard');
 }

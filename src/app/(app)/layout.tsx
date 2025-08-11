@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
@@ -10,9 +11,9 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, orderBy, query, limit, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -20,8 +21,12 @@ type CurrentUser = {
   uid: string;
   name: string;
   email: string;
-  studentId: string;
   imageUrl?: string;
+}
+
+type UserStats = {
+  rank: number;
+  points: number;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const auth = getAuth(app);
@@ -52,11 +58,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             uid: user.uid,
             name: userData.name,
             email: userData.email,
-            studentId: userData.studentId,
             imageUrl: userData.imageUrl,
           });
 
+          // Fetch leaderboard to calculate rank
+          const usersCollection = collection(db, 'users');
+          const q = query(usersCollection, orderBy('points', 'desc'));
+          const querySnapshot = await getDocs(q);
+          
+          let rank = 0;
+          querySnapshot.docs.forEach((doc, index) => {
+            if (doc.id === user.uid) {
+              rank = index + 1;
+            }
+          });
+          setUserStats({ rank, points: userData.points || 0 });
+
         } else {
+           // This case might happen if a user is created in Auth but not in Firestore
+           // Or if the admin logic needs adjustment. For now, we log out.
            await signOut(auth);
            router.push('/login');
         }
@@ -96,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('currentUser'); // For admin logout
-    router.push('/');
+    router.push('/login');
   }
 
   const navLinks = [
@@ -120,14 +140,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full overflow-hidden flex-col md:flex-row">
         {/* Desktop Sidebar */}
         <aside className="w-64 flex-shrink-0 bg-slate-900 text-white flex-col hidden md:flex">
-           <div className="p-4 flex items-center justify-center h-20 mb-4">
-                <Link href="/dashboard" className="flex items-center gap-3">
-                    <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
-                    <div>
-                        <p className="font-bold leading-tight">SMEC</p>
-                        <p className="text-xs text-slate-300 leading-tight">Battlecode</p>
-                    </div>
-                </Link>
+           <div className="p-4">
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2 mb-8">
+                <SmecBattleCodeLogo className="h-8 w-8" />
+                <span className="text-xl">SMEC Battle Code</span>
+              </Link>
            </div>
             <ScrollArea className="flex-1 px-4">
                 <nav className="flex flex-col gap-2">
@@ -150,20 +167,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mt-auto flex flex-col gap-4 p-4">
                  
                  <div className="border-t border-slate-700 pt-4">
-                     <Link href="/profile" className="flex items-center justify-between gap-3 group">
-                         <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
-                                <AvatarFallback>
-                                <User />
-                                </AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-semibold text-sm">{currentUser.name}</p>
-                                <p className="text-xs text-slate-400">{currentUser.studentId}</p>
-                            </div>
-                         </div>
-                         <ArrowRight className="h-5 w-5 text-slate-500 group-hover:text-white transition-colors" />
+                     <Link href="/profile" className="flex items-center gap-3">
+                         <Avatar className="h-10 w-10">
+                            <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
+                            <AvatarFallback>
+                              <User />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-sm">{currentUser.name}</p>
+                            <p className="text-xs text-slate-400">{currentUser.email}</p>
+                          </div>
                      </Link>
                  </div>
             </div>
@@ -171,18 +185,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-slate-900 text-white">
-           <h1 className="text-xl font-bold">SMEC Battlecode</h1>
+           <h1 className="text-xl font-bold">Welcome 👋</h1>
            <div className="flex items-center gap-4">
               <Sheet>
                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-12 w-12 hover:bg-slate-700">
+                    <Button variant="ghost" size="icon" className="h-12 w-12">
                         <Menu className="h-7 w-7" />
                     </Button>
                  </SheetTrigger>
                  <SheetContent side="right" className="bg-slate-900 text-white w-64 p-4">
-                    <SheetHeader>
-                      <SheetTitle className="text-white">Navigation</SheetTitle>
-                    </SheetHeader>
                     <nav className="flex flex-col gap-4 mt-8">
                        {navLinks.map((link) => (
                         <Link

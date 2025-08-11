@@ -363,7 +363,7 @@ export default function DashboardPage() {
   return (
     <div className="flex-1 space-y-8">
         <div className="flex items-center justify-between space-y-2 md:hidden">
-            <h2 className="text-3xl font-bold tracking-tight">Welcome {currentUser?.name?.split(' ')[0]} 👋</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Welcome {currentUser?.name ? currentUser.name.split(' ')[0] : ''} 👋</h2>
         </div>
         <div className="hidden md:flex items-center justify-between space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Welcome {currentUser?.name} 👋</h2>
