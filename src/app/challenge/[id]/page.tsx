@@ -59,8 +59,10 @@ export default function ChallengeDetail() {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
         const solSnap = await getDoc(solRef);
         if (solSnap.exists()) {
-          userCode = solSnap.data().code;
-          setLanguage(solSnap.data().language || challenge.language.toLowerCase());
+          const data = solSnap.data();
+          // Ensure data.code is not undefined before setting
+          userCode = typeof data.code === 'string' ? data.code : challenge.starterCode;
+          setLanguage(data.language || challenge.language.toLowerCase());
         }
       }
       setSolution(userCode);
@@ -72,7 +74,7 @@ export default function ChallengeDetail() {
   }, [challenge, user]);
 
   const saveProgress = useCallback(async (code: string, lang: string) => {
-    if (!user || !challenge || !challengeId || isChallengeCompleted) return;
+    if (!user || !challenge || !challengeId || isChallengeCompleted || typeof code !== 'string') return;
     
     setSaveStatus('saving');
     try {
