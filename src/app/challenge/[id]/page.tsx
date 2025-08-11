@@ -1,6 +1,6 @@
 
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { CodeEditor } from "@/components/code-editor";
 import { app, db } from "@/lib/firebase";
@@ -9,20 +9,23 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Bug, Loader2 } from "lucide-react";
+import { Save, RefreshCcw, Code, Bug, Loader2, CheckCircle, AlertTriangle, Circle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import { evaluateCode, type EvaluateCodeOutput } from "@/ai/flows/evaluate-code";
 
+type SaveStatus = 'unsaved' | 'saving' | 'saved' | 'error';
+
 export default function ChallengeDetail() {
-  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning } = useChallenge();
+  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, isChallengeCompleted } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('python');
   const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const { id: challengeId } = useParams();
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   
   const auth = getAuth(app);
 
@@ -38,7 +41,6 @@ export default function ChallengeDetail() {
 
     const fetchSolution = async () => {
       setLanguage(challenge.language.toLowerCase());
-
       let userCode = challenge.starterCode; // Default to starter code
 
       if (user) {
@@ -51,57 +53,73 @@ export default function ChallengeDetail() {
       }
       setSolution(userCode);
       setInitialSolution(userCode);
+      setSaveStatus('saved');
     };
 
     fetchSolution();
   }, [challenge, user]);
 
+  const saveProgress = useCallback(async (code: string, lang: string) => {
+    if (!user || !challenge || !challengeId || isChallengeCompleted) return;
+    
+    setSaveStatus('saving');
+    try {
+      const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+      await setDoc(solRef, { code, language: lang, updatedAt: serverTimestamp() }, { merge: true });
+
+      const inProgressRef = doc(db, `users/${user.uid}/challengeData/inProgress`);
+      await setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
+      
+      setSaveStatus('saved');
+      setInitialSolution(code); // Update the reset point to the last saved code
+    } catch (error) {
+      console.error("Failed to save solution:", error);
+      setSaveStatus('error');
+    }
+  }, [user, challenge, challengeId, isChallengeCompleted]);
+
+  useEffect(() => {
+    if (solution !== initialSolution && saveStatus !== 'saving') {
+        setSaveStatus('unsaved');
+    }
+
+    if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+    }
+    
+    if (solution !== initialSolution && !isChallengeCompleted) {
+        debounceTimer.current = setTimeout(() => {
+            saveProgress(solution, language);
+        }, 2000); // Auto-save after 2 seconds of inactivity
+    }
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [solution, language, initialSolution, saveProgress, isChallengeCompleted]);
 
   const handleSolutionChange = (newCode: string) => {
     setSolution(newCode);
   };
   
-  const handleSave = async () => {
-    if (!user || !challenge) {
-       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress.", position: 'center' });
-       return;
-    }
-    setIsSaving(true);
-    try {
-        const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-        await setDoc(solRef, { code: solution, language, updatedAt: new Date() }, { merge: true });
-        const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-        await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
-        toast({ title: "Progress Saved!", description: "Your code has been saved successfully.", position: 'center' });
-        setInitialSolution(solution);
-    } catch (error) {
-        console.error("Failed to save solution:", error);
-         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again.", position: 'center' });
-    } finally {
-        setIsSaving(false);
-    }
-  };
-  
   const handleRunCode = async () => {
     if (!challenge) return;
-
     const visibleTestCases = challenge.testCases?.filter(tc => !tc.isHidden);
     
-    console.log("Running with challenge data:", challenge);
-
     if (!visibleTestCases || visibleTestCases.length === 0) {
         toast({
             variant: "destructive",
             title: "Missing Test Cases",
             description: "This challenge has no visible test cases to run against. You can still submit.",
-            position: 'center',
         });
         return;
     }
     
     setIsRunning(true);
-    setRunResult(null); // Clear previous results
-    setActiveTab('result'); // Switch to result tab
+    setRunResult(null); 
+    setActiveTab('result'); 
     try {
         const result = await evaluateCode({
             code: solution,
@@ -111,13 +129,13 @@ export default function ChallengeDetail() {
         });
         setRunResult(result);
         if (result.allPassed) {
-            toast({ title: "All Visible Tests Passed!", description: "You can now try submitting your solution.", position: 'center' });
+            toast({ title: "All Visible Tests Passed!", description: "You can now try submitting your solution." });
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Some test cases did not pass. Check the results.", position: 'center' });
+             toast({ variant: "destructive", title: "Tests Failed", description: "Some test cases did not pass. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);
-        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again.", position: 'center' });
+        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
     } finally {
         setIsRunning(false);
     }
@@ -125,7 +143,7 @@ export default function ChallengeDetail() {
   
   const handleSubmit = async () => {
     if (!user || !challenge || !challengeId) {
-        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit.", position: 'center' });
+        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
     setIsRunning(true);
@@ -135,7 +153,7 @@ export default function ChallengeDetail() {
     try {
       const allTestCases = challenge.testCases || [];
       if (allTestCases.length === 0) {
-         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist.", position: 'center' });
+         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
          setIsRunning(false);
          return;
       }
@@ -160,7 +178,6 @@ export default function ChallengeDetail() {
       });
       
       if (result.allPassed) {
-        // Use a transaction to ensure atomicity
         await runTransaction(db, async (transaction) => {
             const userRef = doc(db, "users", user.uid);
             const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
@@ -173,48 +190,59 @@ export default function ChallengeDetail() {
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
             if (!completedData[challenge.id!]) {
-                // Not completed before, award points
                 transaction.update(userRef, { points: increment(challenge.points) });
                 
-                // Track daily points
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = new Date().toISOString().split('T')[0];
                 const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
                 transaction.set(dailyPointsRef, { points: increment(challenge.points) }, { merge: true });
 
-                // Mark as completed
                 transaction.set(completedChallengesDocRef, { 
                     [challenge.id!]: { completedAt: Timestamp.now() }
                 }, { merge: true });
 
-                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!`, position: 'center' });
+                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!` });
             } else {
-                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge.", position: 'center' });
+                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
             }
 
-            // Update progress status
             const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-            transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
+            transaction.set(inProgressRef, { [challengeId]: false }, { merge: true });
         });
         
         setActiveTab('submissions');
       } else {
-        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones).", position: 'center' });
+        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones)." });
       }
 
     } catch (error) {
       console.error("Error submitting code:", error);
-      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission.", position: 'center' });
+      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
     } finally {
       setIsRunning(false);
     }
   }
 
-
   const handleReset = () => {
       if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
           setSolution(initialSolution);
+          setSaveStatus('saved');
       }
   };
+
+  const getStatusIndicator = () => {
+    switch(saveStatus) {
+        case 'saved':
+            return <span className="flex items-center gap-1.5 text-sm text-green-600"><CheckCircle className="h-4 w-4" /> All changes saved</span>;
+        case 'saving':
+            return <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Saving...</span>;
+        case 'unsaved':
+            return <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><Circle className="h-4 w-4" /> Unsaved changes</span>;
+        case 'error':
+            return <span className="flex items-center gap-1.5 text-sm text-red-600"><AlertTriangle className="h-4 w-4" /> Save failed</span>;
+        default:
+            return null;
+    }
+  }
 
   return (
     <div className="h-full w-full flex flex-col bg-background">
@@ -231,13 +259,13 @@ export default function ChallengeDetail() {
                 <SelectItem value="javascript">JavaScript</SelectItem>
              </SelectContent>
          </Select>
-         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning}>
-             <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-           </Button>
-           <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isRunning}>
-            {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
-           </Button>
+         <div className="flex items-center gap-4">
+           {!isChallengeCompleted && getStatusIndicator()}
+           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleReset} disabled={isRunning || solution === initialSolution}>
+                <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+           </div>
          </div>
        </div>
        <div className="flex-grow relative bg-white pr-[2px]">
@@ -248,14 +276,13 @@ export default function ChallengeDetail() {
           />
        </div>
        <div className="flex-shrink-0 p-2 flex justify-end items-center gap-2 border-t bg-muted">
-           <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
+           <Button size="sm" onClick={handleRunCode} disabled={isRunning}>
              {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
            </Button>
-           <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
+           <Button size="sm" variant="default" onClick={handleSubmit} disabled={isRunning}>
              {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Bug className="mr-2 h-4 w-4" />} Submit
            </Button>
        </div>
     </div>
   );
 }
-

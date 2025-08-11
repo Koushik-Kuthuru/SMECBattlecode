@@ -63,6 +63,7 @@ type ChallengeContextType = {
   setActiveTab: React.Dispatch<React.SetStateAction<string>>;
   isRunning: boolean;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
+  isChallengeCompleted: boolean;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -155,21 +156,26 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       if (!currentUser || !challengeId) return;
 
       const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
-      const unsubscribe = onSnapshot(completedDocRef, (docSnap) => {
+      const unsubscribeCompleted = onSnapshot(completedDocRef, (docSnap) => {
           if (docSnap.exists() && docSnap.data()[challengeId]) {
               setIsChallengeCompleted(true);
           } else {
               setIsChallengeCompleted(false);
           }
       });
+      
+      const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
+      const unsubscribeInProgress = onSnapshot(inProgressRef, (docSnap) => {
+          if (docSnap.exists() && docSnap.data()[challengeId] && !isChallengeCompleted) {
+            // Mark as in-progress when visiting the page if not already completed
+            setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
+          }
+      });
 
-      // Mark as in-progress when visiting the page
-      if (!isChallengeCompleted) {
-        const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
-        setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
+      return () => {
+        unsubscribeCompleted();
+        unsubscribeInProgress();
       }
-
-      return () => unsubscribe();
   }, [currentUser, challengeId, isChallengeCompleted]);
 
   useEffect(() => {
@@ -261,6 +267,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setActiveTab,
       isRunning,
       setIsRunning,
+      isChallengeCompleted,
   };
 
   const descriptionPanel = (
