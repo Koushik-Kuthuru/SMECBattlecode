@@ -87,10 +87,10 @@ export default function CompleteProfilePage() {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target && typeof event.target.result === 'string') {
+        if (event.target?.result) {
           setProfile((prev) => ({
             ...prev,
-            imageUrl: event.target.result,
+            imageUrl: event.target.result as string,
             imageFile: file,
           }));
         }
@@ -288,5 +288,3 @@ export default function CompleteProfilePage() {
     </div>
   );
 }
-
-    
