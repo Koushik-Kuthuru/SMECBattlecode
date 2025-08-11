@@ -13,6 +13,18 @@ import { Save, RefreshCcw, Code, Bug, Loader2, CheckCircle, AlertTriangle, Circl
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import { evaluateCode, type EvaluateCodeOutput } from "@/ai/flows/evaluate-code";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 type SaveStatus = 'unsaved' | 'saving' | 'saved' | 'error';
 
@@ -223,7 +235,7 @@ export default function ChallengeDetail() {
   }
 
   const handleReset = () => {
-      if(window.confirm("Are you sure you want to reset your code to the original starter code? This will discard your current changes.") && challenge) {
+      if (challenge) {
           setSolution(challenge.starterCode);
           setSaveStatus('unsaved'); // Mark as unsaved to trigger auto-save
       }
@@ -262,13 +274,29 @@ export default function ChallengeDetail() {
          <div className="flex items-center gap-4">
            {!isChallengeCompleted && getStatusIndicator()}
            <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleReset} disabled={isRunning}>
-                <RefreshCcw className="mr-2 h-4 w-4" /> Reset
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isRunning}>
+                        <RefreshCcw className="mr-2 h-4 w-4" /> Reset
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will discard your current code and revert to the original starter code for this challenge. Your last saved progress will be overwritten.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
            </div>
          </div>
        </div>
-       <div className="flex-grow relative bg-white pr-[2px]">
+       <div className="flex-grow relative bg-white p-2">
           <CodeEditor
             value={solution}
             onChange={handleSolutionChange}
