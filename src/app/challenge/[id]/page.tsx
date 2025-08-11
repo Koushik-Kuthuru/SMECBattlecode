@@ -2,7 +2,7 @@
 
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CodeEditor } from "@/components/code-editor";
 import { app, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, Timestamp, runTransaction, increment } from "firebase/firestore";
@@ -10,13 +10,13 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Bug, Loader2 } from "lucide-react";
+import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
-import { evaluateCode, type EvaluateCodeOutput } from "@/ai/flows/evaluate-code";
+import Link from 'next/link';
 
 export default function ChallengeDetail() {
-  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning } = useChallenge();
+  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, navLinks } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('python');
@@ -24,6 +24,7 @@ export default function ChallengeDetail() {
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const { id: challengeId } = useParams();
+  const [showNavButtons, setShowNavButtons] = useState(false);
   
   const auth = getAuth(app);
 
@@ -36,7 +37,7 @@ export default function ChallengeDetail() {
 
   useEffect(() => {
     if (!challenge) return;
-
+    setShowNavButtons(false); // Reset on challenge change
     const fetchSolution = async () => {
       setLanguage(challenge.language.toLowerCase());
 
@@ -50,8 +51,8 @@ export default function ChallengeDetail() {
           setLanguage(solSnap.data().language || challenge.language.toLowerCase());
         }
       }
-      setSolution(userCode);
-      setInitialSolution(userCode);
+      setSolution(userCode || '');
+      setInitialSolution(userCode || '');
     };
 
     fetchSolution();
@@ -70,7 +71,7 @@ export default function ChallengeDetail() {
     setIsSaving(true);
     try {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-        await setDoc(solRef, { code: solution, language, updatedAt: new Date() }, { merge: true });
+        await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
         await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
         toast({ title: "Progress Saved!", description: "Your code has been saved successfully.", position: 'center' });
@@ -207,6 +208,7 @@ export default function ChallengeDetail() {
       toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission.", position: 'center' });
     } finally {
       setIsRunning(false);
+      setShowNavButtons(true);
     }
   }
 
@@ -248,13 +250,33 @@ export default function ChallengeDetail() {
             language={language}
           />
        </div>
-       <div className="flex-shrink-0 p-2 flex justify-end items-center gap-2 border-t bg-muted">
-           <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
-             {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
-           </Button>
-           <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
-             {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
-           </Button>
+       <div className="flex-shrink-0 p-2 flex justify-between items-center border-t bg-muted">
+           {showNavButtons ? (
+              <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" asChild disabled={!navLinks.prev}>
+                      <Link href={navLinks.prev ? `/challenge/${navLinks.prev}` : '#'}>
+                          <ArrowLeft className="h-4 w-4 mr-2" />
+                          Previous Mission
+                      </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild disabled={!navLinks.next}>
+                      <Link href={navLinks.next ? `/challenge/${navLinks.next}` : '#'}>
+                          Next Mission
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                      </Link>
+                  </Button>
+              </div>
+           ) : (
+            <div /> // Placeholder to keep submit button on the right
+           )}
+           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
+            </Button>
+            <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
+            </Button>
+           </div>
        </div>
     </div>
   );

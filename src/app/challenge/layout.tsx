@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
@@ -55,6 +56,11 @@ export type Submission = {
   } | null;
 };
 
+type NavLinks = {
+  prev: string | null;
+  next: string | null;
+};
+
 type ChallengeContextType = {
   challenge: Challenge | null;
   runResult: EvaluateCodeOutput | null;
@@ -64,6 +70,7 @@ type ChallengeContextType = {
   isRunning: boolean;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
+  navLinks: NavLinks;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -91,7 +98,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
   const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
@@ -101,7 +107,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
-  const [navLinks, setNavLinks] = useState<{ prev: string | null; next: string | null }>({ prev: null, next: null });
+  const [navLinks, setNavLinks] = useState<NavLinks>({ prev: null, next: null });
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -141,7 +147,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         const q = query(challengesCollection, orderBy("title"));
         const snapshot = await getDocs(q);
         const challengesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge)).filter(c => c.isEnabled !== false);
-        setAllChallenges(challengesList);
 
         const currentChallengeIndex = challengesList.findIndex(c => c.id === challengeId);
 
@@ -285,6 +290,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       isRunning,
       setIsRunning,
       isChallengeCompleted,
+      navLinks,
   };
 
   const descriptionPanel = (
@@ -465,21 +471,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         </Link>
                     </Button>
                </div>
-               
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild disabled={!navLinks.prev}>
-                        <Link href={navLinks.prev ? `/challenge/${navLinks.prev}` : '#'}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Previous
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild disabled={!navLinks.next}>
-                        <Link href={navLinks.next ? `/challenge/${navLinks.next}` : '#'}>
-                            Next
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                        </Link>
-                    </Button>
-                </div>
 
                <div className="flex items-center gap-2">
                     {currentUser ? (
