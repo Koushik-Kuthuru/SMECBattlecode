@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,18 +46,67 @@ export default function ProfilePage() {
     imageUrl: '',
     preferredLanguages: [],
   });
-  const [newImage, setNewImage] = useState<File | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [passwordForEmail, setPasswordForEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingEmail, setIsChangingEmail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
   const storage = getStorage(app);
 
+  const showSavingToast = () => toast({
+      title: 'Saving...',
+      description: 'Your changes are being saved automatically.',
+  });
+
+  const saveProfileData = useCallback(async (dataToSave: Partial<ProfileData>) => {
+    if (!currentUser) return;
+    setIsSaving(true);
+    
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userDocRef, dataToSave);
+      toast({
+        title: 'Profile Saved',
+        description: 'Your profile has been automatically updated.',
+      });
+    } catch (error) {
+      console.error("Error auto-saving profile: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not save your changes.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentUser, db, toast]);
+
+  useEffect(() => {
+    // This effect handles auto-saving for text fields and selections
+    if (isLoading) return; // Don't save on initial load
+
+    if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+        // We only want to save the fields that are part of the debounced update
+        const { imageUrl, ...otherProfileData } = profile;
+        saveProfileData(otherProfileData);
+    }, 2000); // 2-second debounce delay
+
+    return () => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+    };
+  }, [profile.branch, profile.year, profile.section, profile.preferredLanguages, saveProfileData, isLoading]);
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
         if (user) {
@@ -95,6 +144,7 @@ export default function ProfilePage() {
   
   const handleInputChange = (field: keyof Omit<ProfileData, 'imageUrl' | 'preferredLanguages'>, value: string) => {
       setProfile(prev => ({...prev, [field]: value}));
+      showSavingToast();
   }
   
   const handleLanguageChange = (language: string, checked: boolean) => {
@@ -104,61 +154,39 @@ export default function ProfilePage() {
             : prev.preferredLanguages.filter(lang => lang !== language);
         return {...prev, preferredLanguages: newLangs};
     });
+    showSavingToast();
   };
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setNewImage(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if(event.target?.result) {
-            setProfile(prev => ({...prev, imageUrl: event.target.result as string}));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !currentUser) return;
+    
+    const file = e.target.files[0];
+    const reader = new FileReader();
 
-  const handleSave = async () => {
-    if (!currentUser) return;
-    setIsSaving(true);
+    reader.onload = async (event) => {
+      if(event.target?.result) {
+        const dataUrl = event.target.result as string;
+        setProfile(prev => ({...prev, imageUrl: dataUrl})); // Show preview immediately
 
-    try {
-        let finalImageUrl = profile.imageUrl;
-
-        if (newImage && profile.imageUrl.startsWith('data:')) {
+        setIsSaving(true);
+        toast({ title: 'Uploading...', description: 'Your new profile picture is being uploaded.' });
+        try {
             const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-            const uploadResult = await uploadString(storageRef, profile.imageUrl, 'data_url');
-            finalImageUrl = await getDownloadURL(uploadResult.ref);
+            const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
+            const finalImageUrl = await getDownloadURL(uploadResult.ref);
+
+            await saveProfileData({ imageUrl: finalImageUrl });
+            
+            setProfile(prev => ({...prev, imageUrl: finalImageUrl}));
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your new picture.' });
+        } finally {
+            setIsSaving(false);
         }
-
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userDocRef, {
-            branch: profile.branch,
-            year: profile.year,
-            section: profile.section,
-            imageUrl: finalImageUrl,
-            preferredLanguages: profile.preferredLanguages,
-        });
-
-        setProfile(prev => ({...prev, imageUrl: finalImageUrl}));
-        
-        toast({
-            title: 'Profile Saved',
-            description: 'Your profile information has been updated.',
-        });
-    } catch (error) {
-        console.error("Error saving profile: ", error);
-         toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not save your profile.',
-         });
-    } finally {
-        setIsSaving(false);
-        setNewImage(null);
-    }
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleChangeEmail = async () => {
@@ -217,9 +245,12 @@ export default function ProfilePage() {
     <div className="container mx-auto max-w-4xl py-8">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Your Profile</h1>
-        <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto hidden md:inline-flex">
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
-        </Button>
+        {isSaving && (
+            <div className="hidden md:flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Saving...</span>
+            </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
@@ -228,7 +259,7 @@ export default function ProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>Update your public profile details.</CardDescription>
+                    <CardDescription>Update your public profile details. Changes are saved automatically.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -236,7 +267,7 @@ export default function ProfilePage() {
                           <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
                           <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
                         </Avatar>
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
                           <Upload className="mr-2 h-4 w-4" />
                           Change Picture
                         </Button>
@@ -318,9 +349,12 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
              <div className="md:hidden mt-6">
-                <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                    {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
-                </Button>
+                {isSaving && (
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground mb-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Auto-saving...</span>
+                    </div>
+                )}
             </div>
         </div>
 
