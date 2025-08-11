@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { User, Upload, Mail, KeyRound, LogOut, CaseSensitive, Loader2, Settings } from 'lucide-react';
-import { getAuth, onAuthStateChanged, updateEmail, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, updateEmail, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser, signOut, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { app } from '@/lib/firebase';
@@ -175,17 +175,14 @@ export default function ProfilePage() {
           const credential = EmailAuthProvider.credential(user.email!, passwordForEmail);
           await reauthenticateWithCredential(user, credential);
           
-          await updateEmail(user, newEmail);
-          
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(userDocRef, { email: newEmail });
+          await verifyBeforeUpdateEmail(user, newEmail);
 
-          setCurrentUser(prev => prev ? {...prev, email: newEmail} : null);
           setPasswordForEmail('');
 
           toast({
-              title: 'Email Changed',
-              description: `Your email has been updated. A verification link was sent to ${newEmail}.`,
+              title: 'Verification Required',
+              description: `A verification link has been sent to ${newEmail}. Please check your inbox to complete the email change.`,
+              duration: 8000,
           });
       } catch (error: any) {
           console.error("Error changing email: ", error);
