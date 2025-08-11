@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -12,13 +13,18 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { SmecBattleCodeLogo } from '@/components/icons';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -26,18 +32,45 @@ export default function RegisterPage() {
   const db = getFirestore(app);
 
   const handleRegister = async () => {
-    setIsLoading(true);
     // Basic validation
-    if (!fullName || !email || !password || !studentId || studentId.length !== 10) {
+    if (!fullName || !email || !password || !studentId || !confirmPassword) {
        toast({
             variant: 'destructive',
             title: 'Registration Failed',
-            description: studentId.length !== 10 ? 'Student ID must be exactly 10 characters.' : 'Please fill in all fields.',
+            description: 'Please fill in all fields.',
         });
-        setIsLoading(false);
+        return;
+    }
+
+    if (studentId.length !== 10) {
+        toast({
+            variant: 'destructive',
+            title: 'Registration Failed',
+            description: 'Student ID must be exactly 10 characters.',
+        });
         return;
     }
     
+    if (password !== confirmPassword) {
+      toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: 'Passwords do not match.',
+      });
+      return;
+    }
+    
+    if (!isVerified) {
+      toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: 'Please verify that you are not a robot.',
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+
     try {
       // Check if student ID already exists
       const usersRef = collection(db, "users");
@@ -69,10 +102,9 @@ export default function RegisterPage() {
         email: email,
         studentId: studentId.toUpperCase(),
         points: 0,
-        profileComplete: false, // Add this flag
+        profileComplete: false,
       });
       
-      // Redirect to complete profile page instead of login
       router.push('/complete-profile');
       toast({
         title: 'Account Created!',
@@ -103,41 +135,54 @@ export default function RegisterPage() {
   const handleStudentIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStudentId(e.target.value.toUpperCase().slice(0, 10));
   };
-
+  
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   return (
     <AuthLayout>
-      <Card className="bg-white/80 backdrop-blur-sm border-slate-300 shadow-lg">
+      <Card className="w-full max-w-sm border-0 shadow-none bg-transparent">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-          <CardDescription className="text-slate-600">Join SMEC Battle Code and start your coding journey.</CardDescription>
+            <div className="flex justify-center mb-4">
+               <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+            </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+          <CardDescription className="text-slate-600">Join SMEC Battlecode and start your coding journey.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="full-name">Full Name</Label>
-              <Input id="full-name" placeholder="John Doe" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-white/50" />
+              <Input id="full-name" placeholder="Full Name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </div>
+             <div className="grid gap-2">
+              <Input id="student-id" placeholder="Student ID" required value={studentId} onChange={handleStudentIdChange} maxLength={10} />
+            </div>
+            <div className="relative grid gap-2">
+              <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+               <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-7 w-7 text-muted-foreground" onClick={togglePasswordVisibility}>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+             <div className="relative grid gap-2">
+              <Input id="confirm-password" type={showPassword ? 'text' : 'password'} placeholder="Confirm Password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white/50" />
+              <Input id="email" type="email" placeholder="Email Address" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="student-id">Student ID</Label>
-              <Input id="student-id" placeholder="Your_Student_ID" required value={studentId} onChange={handleStudentIdChange} maxLength={10} className="bg-white/50" />
+             <div className="flex items-center space-x-2 my-2">
+                <Checkbox id="robot-check" checked={isVerified} onCheckedChange={(checked) => setIsVerified(!!checked)} />
+                <Label htmlFor="robot-check" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                   I'm not a robot
+                </Label>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/50" />
-            </div>
+
             <Button type="submit" className="w-full" onClick={handleRegister} disabled={isLoading}>
-              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</> : 'Create Account'}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</> : 'Sign Up'}
             </Button>
           </div>
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
+          <div className="mt-6 text-center text-sm">
+            Have an account?{' '}
             <Link href="/login" className="font-semibold text-primary hover:underline">
-              Login
+              Sign In
             </Link>
           </div>
         </CardContent>
