@@ -72,11 +72,15 @@ export default function ChallengeDetail() {
     setIsSaving(true);
     try {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+        // Ensure that even if solution is null or undefined, we save an empty string.
         await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
+        
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
         await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
+        
         if(showToast) toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
-        setInitialSolution(solution);
+        
+        setInitialSolution(solution || '');
     } catch (error) {
         console.error("Failed to save solution:", error);
          if(showToast) toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
