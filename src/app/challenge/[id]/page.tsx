@@ -30,7 +30,8 @@ export default function ChallengeDetail({ clonedCode, setClonedCode }: Challenge
   const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const { id: challengeId } = useParams();
+  const params = useParams();
+  const challengeId = params.id as string;
   const [showNavButtons, setShowNavButtons] = useState(false);
   
   const auth = getAuth(app);
