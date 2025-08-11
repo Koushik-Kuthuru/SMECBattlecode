@@ -157,14 +157,14 @@ export default function ProfilePage() {
     showSavingToast();
   };
   
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !currentUser) return;
     
     const file = e.target.files[0];
     const reader = new FileReader();
 
     reader.onload = async (event) => {
-      if(event.target?.result) {
+      if(event.target?.result && typeof event.target.result === 'string') {
         const dataUrl = event.target.result as string;
         setProfile(prev => ({...prev, imageUrl: dataUrl})); // Show preview immediately
 

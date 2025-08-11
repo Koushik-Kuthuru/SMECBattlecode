@@ -13,18 +13,14 @@ import { getFirestore, collection, query, orderBy, onSnapshot, Timestamp } from 
 import { app } from '@/lib/firebase';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import type { UserData as AppUserData } from '@/lib/types';
 
-type UserData = {
-    uid: string;
-    email: string;
-    name: string;
-    studentId: string;
-    points: number;
-    branch: string;
-    year: string;
-    imageUrl?: string;
+
+type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
     lastSeen?: Timestamp;
+    branch: string; // branch is required here, unlike the partial from lib
 };
+
 
 const BRANCH_MAP: Record<string, string> = {
     cse: 'CSE',
@@ -62,8 +58,10 @@ export default function ManageUsersPage() {
                     year: data.year ? `${data.year} Year` : 'N/A',
                     imageUrl: data.imageUrl,
                     lastSeen: data.lastSeen,
-                };
-            });
+                    profileComplete: data.profileComplete,
+                    section: data.section,
+                } as UserData;
+            }).filter(user => !user.isAdmin);
             setUsers(usersList);
             setIsLoading(false);
         }, (error) => {
@@ -81,8 +79,10 @@ export default function ManageUsersPage() {
     };
 
     const filteredUsers = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+        !user.isAdmin && (
+            (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (user.studentId?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        )
     );
 
     return (
@@ -144,7 +144,7 @@ export default function ManageUsersPage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <span className={cn("h-2.5 w-2.5 rounded-full", isOnline(user.lastSeen) ? "bg-green-500" : "bg-slate-400")} />
+                                                <span className={cn("h-2.5 w-2.5 rounded-full", isOnline(user.lastSeen) ? "bg-green-500 animate-pulse" : "bg-slate-400")} />
                                                 <span>{isOnline(user.lastSeen) ? 'Online' : 'Offline'}</span>
                                             </div>
                                         </TableCell>
@@ -166,5 +166,3 @@ export default function ManageUsersPage() {
         </div>
     );
 }
-
-    

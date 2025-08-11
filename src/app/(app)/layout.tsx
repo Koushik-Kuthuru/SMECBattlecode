@@ -22,6 +22,7 @@ type CurrentUser = {
   name: string;
   email: string;
   imageUrl?: string;
+  isAdmin?: boolean;
 }
 
 type UserStats = {
@@ -48,6 +49,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          
+          if (userData.isAdmin) {
+             localStorage.setItem('currentUser', JSON.stringify({
+                uid: user.uid,
+                email: userData.email,
+                name: userData.name,
+                isAdmin: true,
+            }));
+            router.push('/admin/dashboard');
+            return;
+          }
           
           if (!userData.profileComplete) {
               router.push('/complete-profile');
@@ -81,18 +93,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            router.push('/login');
         }
       } else {
-        const adminUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        if (adminUser?.isAdmin && pathname.startsWith('/admin')) {
-          // Allow admin to stay on admin pages
-        } else {
-          router.push('/login');
-        }
+        router.push('/login');
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [auth, db, router, pathname]);
+  }, [auth, db, router]);
 
   // Effect to update user's lastSeen timestamp
   useEffect(() => {
@@ -116,7 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('currentUser'); // For admin logout
-    router.push('/login');
+    router.push('/');
   }
 
   const navLinks = [
