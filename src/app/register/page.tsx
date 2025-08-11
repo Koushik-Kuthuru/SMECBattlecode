@@ -163,19 +163,19 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
-      <Card className="w-full max-w-sm border-0 shadow-none bg-transparent">
+      <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
                <div className="flex items-center gap-3">
                     <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
                     <div>
                         <p className="font-bold leading-tight">SMEC</p>
-                        <p className="text-xs text-slate-500 leading-tight">Battlecode</p>
+                        <p className="text-xs text-muted-foreground leading-tight">Battlecode</p>
                     </div>
                 </div>
             </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
-          <CardDescription className="text-slate-600">Join SMEC Battlecode and start your coding journey.</CardDescription>
+          <CardDescription>Join SMEC Battlecode and start your coding journey.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
