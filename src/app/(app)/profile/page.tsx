@@ -215,9 +215,9 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto max-w-4xl py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">Your Profile</h1>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : 'Save Changes'}
         </Button>
       </div>
@@ -231,7 +231,7 @@ export default function ProfilePage() {
                     <CardDescription>Update your public profile details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
                         <Avatar className="h-24 w-24">
                           <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
                           <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
@@ -273,7 +273,7 @@ export default function ProfilePage() {
                         </Select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="year">Year</Label>
                              <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)}>
@@ -300,9 +300,9 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         <Label>Preferred Programming Languages</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 rounded-lg border p-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 rounded-lg border p-4">
                             {LANGUAGES.map(lang => (
                                 <div key={lang} className="flex items-center gap-2">
                                     <Checkbox 
@@ -361,3 +361,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
