@@ -1,1 +1,5 @@
-// This file is intentionally blank. It can be removed.
+import { redirect } from 'next/navigation';
+
+export default function AppPage() {
+  redirect('/dashboard');
+}

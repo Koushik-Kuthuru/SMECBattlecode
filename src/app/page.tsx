@@ -1,10 +1,9 @@
-
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SmecBattleCodeLogo } from '@/components/icons';
-import { ArrowRight, BookOpen, GraduationCap, Users } from 'lucide-react';
+import { ArrowRight, GraduationCap } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LandingPage() {
