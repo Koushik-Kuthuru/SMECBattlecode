@@ -53,7 +53,7 @@ export default function ChallengeDetail() {
 
     const fetchSolution = async () => {
       setLanguage(challenge.language.toLowerCase());
-      let userCode = challenge.starterCode; // Default to starter code
+      let userCode = challenge.starterCode || ""; // Default to starter code or empty string
 
       if (user) {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
@@ -61,7 +61,7 @@ export default function ChallengeDetail() {
         if (solSnap.exists()) {
           const data = solSnap.data();
           // Ensure data.code is not undefined before setting
-          userCode = typeof data.code === 'string' ? data.code : challenge.starterCode;
+          userCode = typeof data.code === 'string' ? data.code : (challenge.starterCode || "");
           setLanguage(data.language || challenge.language.toLowerCase());
         }
       }
@@ -79,7 +79,7 @@ export default function ChallengeDetail() {
     setSaveStatus('saving');
     try {
       const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-      await setDoc(solRef, { code, language: lang, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(solRef, { code: code ?? "", language: lang, updatedAt: serverTimestamp() }, { merge: true });
 
       const inProgressRef = doc(db, `users/${user.uid}/challengeData/inProgress`);
       await setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
@@ -238,7 +238,7 @@ export default function ChallengeDetail() {
 
   const handleReset = () => {
       if (challenge) {
-          setSolution(challenge.starterCode);
+          setSolution(challenge.starterCode || "");
           setSaveStatus('unsaved'); // Mark as unsaved to trigger auto-save
       }
   };
@@ -286,7 +286,7 @@ export default function ChallengeDetail() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will discard your current code and revert to the original starter code for this challenge. Your last saved progress will be overwritten.
+                            This will discard your current code and revert to the original starter code for this challenge. This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
