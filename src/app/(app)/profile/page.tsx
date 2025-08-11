@@ -326,7 +326,7 @@ export default function ProfilePage() {
             {/* Account Settings */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5"/> Account Settings</CardTitle>
+                    <CardTitle className="flex items-center gap-3"><Settings className="h-6 w-6"/> Account Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
