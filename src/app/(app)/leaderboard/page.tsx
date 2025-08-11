@@ -252,43 +252,39 @@ export default function LeaderboardPage() {
             </div>
           )}
           
-           {otherUsers.length > 0 && (
-                <div className="mt-8 border-t pt-4">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[80px]">Rank</TableHead>
-                                <TableHead>Learner</TableHead>
-                                <TableHead>Details</TableHead>
-                                <TableHead className="text-right">Score</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {otherUsers.map((user) => (
-                                <TableRow key={user.uid} className={cn(currentUser?.uid === user.uid && 'bg-primary/10 hover:bg-primary/20')}>
-                                    <TableCell className="font-bold text-center text-lg">{user.rank}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10">
-                                                <AvatarImage src={user.imageUrl} />
-                                                <AvatarFallback><User /></AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{user.name}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{getFormattedBranchAndYear(user)}</TableCell>
-                                    <TableCell className="text-right font-bold">
-                                         <div className="flex items-center justify-end font-semibold gap-1">
-                                            <BulletCoin className="h-4 w-4 text-primary" />
-                                            <span>{user.points.toLocaleString()}</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
+           {/* Leaderboard Table */}
+            <div className="mt-8">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rank</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Branch & Year</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leaderboardData.map((user) => (
+                    <TableRow key={user.uid} className={cn(currentUser?.uid === user.uid && 'bg-primary/10 hover:bg-primary/20')}>
+                      <TableCell className="font-bold">{user.rank}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                           <Avatar className="w-8 h-8">
+                            <AvatarImage src={user.imageUrl} />
+                            <AvatarFallback><User /></AvatarFallback>
+                          </Avatar>
+                          {user.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{user.points.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {getFormattedBranchAndYear(user)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
         </CardContent>
       </Card>
     </div>
