@@ -276,7 +276,12 @@ export default function LeaderboardPage() {
                           {user.name}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{user.points.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end font-semibold gap-1">
+                            <BulletCoin className="h-4 w-4 text-primary" />
+                            <span>{user.points.toLocaleString()}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {getFormattedBranchAndYear(user)}
                       </TableCell>
