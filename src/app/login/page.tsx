@@ -146,13 +146,11 @@ export default function LoginPage() {
               <Input id="student-id" placeholder="Student ID" required value={studentId} onChange={handleStudentIdChange} />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password" className="sr-only">Password</Label>
-                <Link href="/forgot-password" className="ml-auto inline-block text-sm text-primary hover:underline">
-                  Forgot your password?
-                </Link>
-              </div>
+              <Label htmlFor="password" className="sr-only">Password</Label>
               <Input id="password" type="password" placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Link href="/forgot-password" className="text-right inline-block text-sm text-primary hover:underline">
+                  Forgot your password?
+              </Link>
             </div>
             
             <ReCAPTCHA
