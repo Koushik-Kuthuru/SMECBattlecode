@@ -120,11 +120,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full overflow-hidden flex-col md:flex-row">
         {/* Desktop Sidebar */}
         <aside className="w-64 flex-shrink-0 bg-slate-900 text-white flex-col hidden md:flex">
-           <div className="p-4">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2 mb-8">
-                <SmecBattleCodeLogo className="h-8 w-8" />
-                <span className="text-xl">SMEC Battlecode</span>
-              </Link>
+           <div className="p-4 flex flex-col items-center text-center">
+                <Link href="/dashboard" className="flex flex-col items-center gap-2 font-semibold mb-8">
+                    <SmecBattleCodeLogo className="h-12 w-12" />
+                    <div>
+                        <p className="text-xl font-bold">SMEC</p>
+                        <p className="text-md text-slate-300">Battlecode</p>
+                    </div>
+                </Link>
            </div>
             <ScrollArea className="flex-1 px-4">
                 <nav className="flex flex-col gap-2">
@@ -147,17 +150,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mt-auto flex flex-col gap-4 p-4">
                  
                  <div className="border-t border-slate-700 pt-4">
-                     <Link href="/profile" className="flex items-center gap-3">
-                         <Avatar className="h-10 w-10">
-                            <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
-                            <AvatarFallback>
-                              <User />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-sm">{currentUser.name}</p>
-                            <p className="text-xs text-slate-400">{currentUser.studentId}</p>
-                          </div>
+                     <Link href="/profile" className="flex items-center justify-between gap-3 group">
+                         <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                                <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
+                                <AvatarFallback>
+                                <User />
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold text-sm">{currentUser.name}</p>
+                                <p className="text-xs text-slate-400">{currentUser.studentId}</p>
+                            </div>
+                         </div>
+                         <ArrowRight className="h-5 w-5 text-slate-500 group-hover:text-white transition-colors" />
                      </Link>
                  </div>
             </div>
@@ -169,7 +175,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            <div className="flex items-center gap-4">
               <Sheet>
                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-12 w-12">
+                    <Button variant="ghost" size="icon" className="h-12 w-12 hover:bg-slate-700">
                         <Menu className="h-7 w-7" />
                     </Button>
                  </SheetTrigger>
