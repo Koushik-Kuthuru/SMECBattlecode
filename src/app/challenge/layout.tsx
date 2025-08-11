@@ -110,7 +110,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [navLinks, setNavLinks] = useState<NavLinks>({ prev: null, next: null });
 
   const auth = getAuth(app);
-  const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
