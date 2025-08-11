@@ -16,6 +16,7 @@ import { app } from '@/lib/firebase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
 import ReCAPTCHA from "react-google-recaptcha";
+import { PasswordStrength } from '@/components/password-strength';
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -123,6 +124,7 @@ export default function RegisterPage() {
         email: email,
         studentId: studentId.toUpperCase(),
         points: 0,
+        penalties: 0,
         profileComplete: false,
       });
       
@@ -164,7 +166,13 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm border-0 shadow-none bg-transparent">
         <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-               <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+               <div className="flex items-center gap-3">
+                    <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+                    <div>
+                        <p className="font-bold leading-tight">SMEC</p>
+                        <p className="text-xs text-slate-500 leading-tight">Battlecode</p>
+                    </div>
+                </div>
             </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
           <CardDescription className="text-slate-600">Join SMEC Battlecode and start your coding journey.</CardDescription>
@@ -183,6 +191,7 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
+            {password && <PasswordStrength password={password} />}
              <div className="relative grid gap-2">
               <Input id="confirm-password" type={showPassword ? 'text' : 'password'} placeholder="Confirm Password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
