@@ -10,7 +10,7 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import Link from 'next/link';
@@ -64,9 +64,9 @@ export default function ChallengeDetail() {
     setSolution(newCode);
   };
   
-  const handleSave = async () => {
+  const handleSave = async (showToast = true) => {
     if (!user || !challenge) {
-       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
+       if (showToast) toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
        return;
     }
     setIsSaving(true);
@@ -75,11 +75,11 @@ export default function ChallengeDetail() {
         await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
         const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
         await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
-        toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
+        if(showToast) toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
         setInitialSolution(solution);
     } catch (error) {
         console.error("Failed to save solution:", error);
-         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
+         if(showToast) toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
     } finally {
         setIsSaving(false);
     }
@@ -90,8 +90,6 @@ export default function ChallengeDetail() {
 
     const visibleTestCases = challenge.testCases?.filter(tc => !tc.isHidden);
     
-    console.log("Running with challenge data:", challenge);
-
     if (!visibleTestCases || visibleTestCases.length === 0) {
         toast({
             variant: "destructive",
@@ -135,6 +133,8 @@ export default function ChallengeDetail() {
     setActiveTab('result');
 
     try {
+      await handleSave(false); // Auto-save on submit without showing toast
+
       const allTestCases = challenge.testCases || [];
       if (allTestCases.length === 0) {
          toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
@@ -162,7 +162,6 @@ export default function ChallengeDetail() {
       });
       
       if (result.allPassed) {
-        // Use a transaction to ensure atomicity
         await runTransaction(db, async (transaction) => {
             const userRef = doc(db, "users", user.uid);
             const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
@@ -175,15 +174,12 @@ export default function ChallengeDetail() {
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
             if (!completedData[challenge.id!]) {
-                // Not completed before, award points
                 transaction.update(userRef, { points: increment(challenge.points) });
                 
-                // Track daily points
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const today = new Date().toISOString().split('T')[0];
                 const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
                 transaction.set(dailyPointsRef, { points: increment(challenge.points) }, { merge: true });
 
-                // Mark as completed
                 transaction.set(completedChallengesDocRef, { 
                     [challenge.id!]: { completedAt: Timestamp.now() }
                 }, { merge: true });
@@ -193,7 +189,6 @@ export default function ChallengeDetail() {
                  toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
             }
 
-            // Update progress status
             const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
             transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
         });
@@ -211,7 +206,6 @@ export default function ChallengeDetail() {
       setShowNavButtons(true);
     }
   }
-
 
   const handleReset = () => {
       if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
@@ -238,7 +232,7 @@ export default function ChallengeDetail() {
            <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning}>
              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
            </Button>
-           <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving || isRunning}>
+           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving || isRunning}>
             {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
            </Button>
          </div>
@@ -274,7 +268,7 @@ export default function ChallengeDetail() {
                 {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
             </Button>
             <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
-                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <GitBranchPlus className="mr-2 h-4 w-4" />} Submit
             </Button>
            </div>
        </div>

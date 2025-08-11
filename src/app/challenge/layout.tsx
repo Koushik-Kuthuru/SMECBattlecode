@@ -3,14 +3,14 @@
 'use client'
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
   ResizableHandleWithHandle,
@@ -576,3 +576,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     
 
     
+
