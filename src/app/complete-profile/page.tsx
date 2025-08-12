@@ -86,11 +86,11 @@ export default function CompleteProfilePage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result && typeof event.target.result === 'string') {
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        if (event.target && typeof event.target.result === 'string') {
           setProfile((prev) => ({
             ...prev,
-            imageUrl: event.target.result as string,
+            imageUrl: event.target.result,
             imageFile: file,
           }));
         }
