@@ -80,8 +80,8 @@ export default function ManageUsersPage() {
 
     const filteredUsers = users.filter(user => 
         !user.isAdmin && (
-            (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-            (user.studentId?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+            (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.studentId || '').toLowerCase().includes(searchTerm.toLowerCase())
         )
     );
 
@@ -166,3 +166,5 @@ export default function ManageUsersPage() {
         </div>
     );
 }
+
+    
