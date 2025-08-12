@@ -20,23 +20,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<{name: string, email: string, isAdmin?: boolean} | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const auth = getAuth(app);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-        const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        if (!user || !user.isAdmin) {
-            router.push('/admin-login');
-        } else {
-            setCurrentUser(user);
-        }
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!user || !user.isAdmin) {
+        router.push('/admin-login');
+    } else {
+        setCurrentUser(user);
     }
-  }, [pathname, router, isClient]);
+    setIsLoading(false);
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -55,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/server-health', label: 'Server Health', icon: Server },
   ];
   
-  if (!isClient || !currentUser) {
+  if (isLoading || !currentUser) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             Loading...
