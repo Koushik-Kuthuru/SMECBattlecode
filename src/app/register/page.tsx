@@ -125,13 +125,18 @@ export default function RegisterPage() {
         studentId: studentId.toUpperCase(),
         points: 0,
         penalties: 0,
-        profileComplete: false,
+        profileComplete: true, // Mark profile as complete by default
+        branch: '',
+        year: '',
+        section: '',
+        imageUrl: '',
+        preferredLanguages: [],
       });
       
-      router.push('/complete-profile');
+      router.push('/dashboard');
       toast({
         title: 'Account Created!',
-        description: `Welcome, ${fullName}! Please complete your profile to continue.`,
+        description: `Welcome, ${fullName}!`,
       });
 
 

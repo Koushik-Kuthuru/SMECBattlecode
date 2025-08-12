@@ -61,11 +61,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
           }
           
-          if (!userData.profileComplete) {
-              router.push('/complete-profile');
-              return;
-          }
-
           setCurrentUser({
             uid: user.uid,
             name: userData.name,
