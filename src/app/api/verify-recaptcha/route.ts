@@ -6,6 +6,11 @@ export async function POST(req: NextRequest) {
     const { token } = await req.json();
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
+    if (!secretKey) {
+      console.error('RECAPTCHA_SECRET_KEY is not set');
+      return NextResponse.json({ success: false, message: 'Server configuration error.' }, { status: 500 });
+    }
+
     if (!token) {
       return NextResponse.json({ success: false, message: 'reCAPTCHA token is missing.' }, { status: 400 });
     }
