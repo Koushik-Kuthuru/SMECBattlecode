@@ -30,16 +30,6 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center overflow-hidden">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute top-0 left-0 w-full h-full object-cover z-0"
-            >
-              <source src="/hero-background.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
             <div className="absolute top-0 left-0 w-full h-full bg-black/60 z-10" />
              <div className="relative z-20 text-white container mx-auto flex flex-col items-center justify-center px-4">
                  <div className="animate-fade-in-up">
