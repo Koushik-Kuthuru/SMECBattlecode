@@ -29,9 +29,14 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-black/60 z-10" />
-             <div className="relative z-20 text-white container mx-auto flex flex-col items-center justify-center px-4">
+        <section className="parallax-section relative text-center overflow-hidden">
+            <div 
+              className="parallax-background" 
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080.png')" }}
+              data-ai-hint="abstract technology"
+            ></div>
+            <div className="absolute top-0 left-0 w-full h-full bg-black/60 z-0" />
+             <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4">
                  <div className="animate-fade-in-up">
                     <Badge className="mb-4 bg-white/10 text-white hover:bg-white/20">Exclusive for SMEC Students</Badge>
                     <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
