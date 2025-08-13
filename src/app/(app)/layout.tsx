@@ -21,6 +21,7 @@ type CurrentUser = {
   uid: string;
   name: string;
   email: string;
+  studentId: string;
   imageUrl?: string;
   isAdmin?: boolean;
 }
@@ -65,6 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             uid: user.uid,
             name: userData.name,
             email: userData.email,
+            studentId: userData.studentId,
             imageUrl: userData.imageUrl,
           });
 
@@ -178,7 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           </Avatar>
                           <div>
                             <p className="font-semibold text-sm">{currentUser.name}</p>
-                            <p className="text-xs text-slate-400">{currentUser.email}</p>
+                            <p className="text-xs text-slate-400">{currentUser.studentId}</p>
                           </div>
                      </Link>
                  </div>
