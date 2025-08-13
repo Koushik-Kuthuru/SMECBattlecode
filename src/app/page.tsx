@@ -8,7 +8,7 @@ import { User, ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, 
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LeaderboardUser } from '@/lib/types';
@@ -142,8 +142,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="missions" className="bg-muted py-20 md:py-32">
-            <div className="container mx-auto px-4">
+        <section id="missions" className="relative overflow-hidden bg-background py-20 md:py-32">
+            <div className="absolute inset-0 mission-bg-grid -z-0"></div>
+            <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center mb-12 animate-fade-in-up">
                     <h2 className="text-3xl md:text-4xl font-bold">Start Your Mission</h2>
                     <p className="max-w-xl mx-auto text-muted-foreground mt-4">
@@ -151,46 +152,46 @@ export default function LandingPage() {
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                        <div className="flex items-center gap-4 mb-3">
+                    <div className="group bg-card p-6 rounded-xl shadow-lg border border-transparent hover:border-green-500/50 transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                        <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-green-500/10 rounded-full">
                                 <ListChecks className="h-8 w-8 text-green-500" />
                             </div>
-                            <h3 className="text-2xl font-bold">Easy</h3>
+                            <h3 className="text-2xl font-bold text-green-500">Easy</h3>
                         </div>
                         <p className="text-muted-foreground mb-4">Build a solid foundation with introductory challenges.</p>
-                         <div className="flex flex-wrap gap-2 text-sm">
-                            <Badge variant="secondary">Arrays</Badge>
-                            <Badge variant="secondary">Strings</Badge>
-                            <Badge variant="secondary">Loops</Badge>
+                        <div className="flex flex-wrap gap-2 text-sm">
+                            <Badge variant="outline" className="border-green-500/30">Arrays</Badge>
+                            <Badge variant="outline" className="border-green-500/30">Strings</Badge>
+                            <Badge variant="outline" className="border-green-500/30">Loops</Badge>
                         </div>
                     </div>
-                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-                        <div className="flex items-center gap-4 mb-3">
+                    <div className="group bg-card p-6 rounded-xl shadow-lg border border-transparent hover:border-yellow-500/50 transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                         <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-yellow-500/10 rounded-full">
                                 <Send className="h-8 w-8 text-yellow-500" />
                             </div>
-                            <h3 className="text-2xl font-bold">Medium</h3>
+                            <h3 className="text-2xl font-bold text-yellow-500">Medium</h3>
                         </div>
                         <p className="text-muted-foreground mb-4">Sharpen your skills with problems requiring data structures.</p>
                         <div className="flex flex-wrap gap-2 text-sm">
-                            <Badge variant="secondary">Trees</Badge>
-                            <Badge variant="secondary">Hash Maps</Badge>
-                            <Badge variant="secondary">Two Pointers</Badge>
+                            <Badge variant="outline" className="border-yellow-500/30">Trees</Badge>
+                            <Badge variant="outline" className="border-yellow-500/30">Hash Maps</Badge>
+                            <Badge variant="outline" className="border-yellow-500/30">Two Pointers</Badge>
                         </div>
                     </div>
-                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
-                       <div className="flex items-center gap-4 mb-3">
+                    <div className="group bg-card p-6 rounded-xl shadow-lg border border-transparent hover:border-red-500/50 transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
+                       <div className="flex justify-between items-start mb-4">
                            <div className="p-3 bg-red-500/10 rounded-full">
                                 <Flame className="h-8 w-8 text-red-500" />
                             </div>
-                            <h3 className="text-2xl font-bold">Hard</h3>
+                            <h3 className="text-2xl font-bold text-red-500">Hard</h3>
                         </div>
                         <p className="text-muted-foreground mb-4">Push your limits with complex algorithmic challenges.</p>
                          <div className="flex flex-wrap gap-2 text-sm">
-                            <Badge variant="secondary">DP</Badge>
-                            <Badge variant="secondary">Graphs</Badge>
-                            <Badge variant="secondary">Heaps</Badge>
+                            <Badge variant="outline" className="border-red-500/30">DP</Badge>
+                            <Badge variant="outline" className="border-red-500/30">Graphs</Badge>
+                            <Badge variant="outline" className="border-red-500/30">Heaps</Badge>
                         </div>
                     </div>
                 </div>
