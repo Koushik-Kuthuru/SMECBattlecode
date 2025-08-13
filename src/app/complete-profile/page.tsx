@@ -10,13 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User as UserIcon, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Upload, Loader2 } from 'lucide-react';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 import { SmecBattleCodeLogo } from '@/components/icons';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 
 type ProfileData = {
@@ -91,7 +90,7 @@ export default function CompleteProfilePage() {
         if (event.target?.result) {
           setProfile((prev) => ({
             ...prev,
-            imageUrl: event.target.result as string, // This is the base64 data URL for preview
+            imageUrl: event.target.result as string, 
             imageFile: file,
           }));
         }
@@ -117,7 +116,6 @@ export default function CompleteProfilePage() {
         const uploadResult = await uploadString(storageRef, profile.imageUrl, 'data_url');
         finalImageUrl = await getDownloadURL(uploadResult.ref);
       } else {
-        // Fallback or handle error if image is mandatory and not provided
         toast({ variant: 'destructive', title: 'Error', description: 'Profile picture is required.' });
         setIsSaving(false);
         return;
@@ -143,7 +141,8 @@ export default function CompleteProfilePage() {
         title: 'Error Saving Profile',
         description: 'Could not save your profile. Please try again later.',
       });
-      setIsSaving(false);
+    } finally {
+        setIsSaving(false);
     }
   };
 
