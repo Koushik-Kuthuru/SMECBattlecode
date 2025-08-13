@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { User, ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel, BookCheck, ShieldCheck, Flame, ListChecks, Send } from 'lucide-react';
+import { User, ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel, BookCheck, ShieldCheck, Flame, ListChecks, Send, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LeaderboardUser } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
     const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
@@ -69,14 +70,8 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="parallax-section relative text-center overflow-hidden">
-            <div 
-              className="parallax-background" 
-              style={{ backgroundImage: "url('https://placehold.co/1920x1080.png')" }}
-              data-ai-hint="abstract technology"
-            ></div>
-            <div className="absolute top-0 left-0 w-full h-full bg-black/60 z-0" />
-             <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4">
+        <section className="relative text-center overflow-hidden">
+             <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4 py-24 md:py-40">
                  <div className="animate-fade-in-up">
                     <Badge className="mb-4 bg-white/10 text-white hover:bg-white/20">Exclusive for SMEC Students</Badge>
                     <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
@@ -94,6 +89,11 @@ export default function LandingPage() {
                       </Button>
                     </div>
                 </div>
+            </div>
+             <div 
+              className="absolute inset-0 w-full h-full bg-slate-900 -z-10"
+            >
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 to-slate-900" />
             </div>
         </section>
 
@@ -138,51 +138,89 @@ export default function LandingPage() {
         </section>
 
         <section id="missions" className="bg-muted py-20 md:py-32">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12 animate-fade-in-up">
-              <h2 className="text-3xl md:text-4xl font-bold">Start Your Mission</h2>
-              <p className="max-w-xl mx-auto text-muted-foreground mt-4">
-                Challenges are organized by difficulty to guide your progress.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="p-6 bg-card rounded-lg shadow-md border border-transparent hover:border-green-500 transition-colors animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="p-2 bg-green-500/10 rounded-full">
-                           <ListChecks className="h-8 w-8 text-green-500" />
-                        </div>
-                        <h3 className="text-2xl font-bold">Easy</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">Perfect for beginners to get started with fundamental concepts and build confidence.</p>
-                    <p className="text-sm font-semibold">Languages: C++, Java, Python, JS</p>
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-12 animate-fade-in-up">
+                    <h2 className="text-3xl md:text-4xl font-bold">Start Your Mission</h2>
+                    <p className="max-w-xl mx-auto text-muted-foreground mt-4">
+                        Tackle challenges designed to build your skills from the ground up. Ready to prove your mettle?
+                    </p>
                 </div>
-                <div className="p-6 bg-card rounded-lg shadow-md border border-transparent hover:border-yellow-500 transition-colors animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-                    <div className="flex items-center gap-4 mb-4">
-                         <div className="p-2 bg-yellow-500/10 rounded-full">
-                           <Send className="h-8 w-8 text-yellow-500" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="p-3 bg-green-500/10 rounded-full">
+                                    <ListChecks className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold">Easy</h3>
+                            </div>
+                            <p className="text-muted-foreground mb-4">Build a solid foundation with introductory challenges.</p>
+                             <div className="flex flex-wrap gap-2 text-sm">
+                                <Badge variant="secondary">Arrays</Badge>
+                                <Badge variant="secondary">Strings</Badge>
+                                <Badge variant="secondary">Loops</Badge>
+                            </div>
                         </div>
-                        <h3 className="text-2xl font-bold">Medium</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">Challenge your problem-solving skills with questions that require a solid grasp of data structures.</p>
-                    <p className="text-sm font-semibold">Languages: C++, Java, Python, JS</p>
-                </div>
-                <div className="p-6 bg-card rounded-lg shadow-md border border-transparent hover:border-red-500 transition-colors animate-fade-in-up" style={{animationDelay: '0.6s'}}>
-                     <div className="flex items-center gap-4 mb-4">
-                         <div className="p-2 bg-red-500/10 rounded-full">
-                           <Flame className="h-8 w-8 text-red-500" />
+                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="p-3 bg-yellow-500/10 rounded-full">
+                                    <Send className="h-8 w-8 text-yellow-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold">Medium</h3>
+                            </div>
+                            <p className="text-muted-foreground mb-4">Sharpen your skills with problems requiring data structures.</p>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <Badge variant="secondary">Trees</Badge>
+                                <Badge variant="secondary">Hash Maps</Badge>
+                                <Badge variant="secondary">Two Pointers</Badge>
+                            </div>
                         </div>
-                        <h3 className="text-2xl font-bold">Hard</h3>
+                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
+                           <div className="flex items-center gap-4 mb-3">
+                               <div className="p-3 bg-red-500/10 rounded-full">
+                                    <Flame className="h-8 w-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold">Hard</h3>
+                            </div>
+                            <p className="text-muted-foreground mb-4">Push your limits with complex algorithmic challenges.</p>
+                             <div className="flex flex-wrap gap-2 text-sm">
+                                <Badge variant="secondary">DP</Badge>
+                                <Badge variant="secondary">Graphs</Badge>
+                                <Badge variant="secondary">Heaps</Badge>
+                            </div>
+                        </div>
+                         <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '1s' }}>
+                           <div className="flex items-center gap-4 mb-3">
+                               <div className="p-3 bg-sky-500/10 rounded-full">
+                                    <BrainCircuit className="h-8 w-8 text-sky-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold">AI Missions</h3>
+                            </div>
+                            <p className="text-muted-foreground mb-4">Explore the frontier of AI with specialized coding challenges.</p>
+                             <div className="flex flex-wrap gap-2 text-sm">
+                                <Badge variant="secondary">GenAI</Badge>
+                                <Badge variant="secondary">LangChain</Badge>
+                                <Badge variant="secondary">Embeddings</Badge>
+                            </div>
+                        </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-4">Test your limits with complex problems that demand advanced algorithmic knowledge and creativity.</p>
-                    <p className="text-sm font-semibold">Languages: C++, Java, Python, JS</p>
+                    <div className={cn(
+                        "group relative row-start-1 lg:row-start-auto p-8 rounded-xl overflow-hidden text-center text-white",
+                        "bg-gradient-to-br from-primary via-blue-600 to-indigo-700 shadow-2xl",
+                        "flex flex-col items-center justify-center min-h-[300px] animate-fade-in-up"
+                    )} style={{ animationDelay: '0.2s' }}>
+                        <div className="absolute top-0 left-0 w-full h-full bg-black/20 group-hover:bg-black/40 transition-colors duration-300 z-0"></div>
+                        <div className="relative z-10">
+                            <Star className="h-12 w-12 mx-auto mb-4 text-yellow-300" />
+                            <h3 className="text-2xl font-bold mb-2">Featured Mission</h3>
+                            <p className="text-slate-200 mb-6">A curated weekly challenge to test your skills against the best.</p>
+                            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black" asChild>
+                                <Link href="/register">Accept Challenge</Link>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div className="text-center mt-12 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
-                <Button size="lg" asChild>
-                    <Link href="/register">Start a Mission</Link>
-                </Button>
-            </div>
-          </div>
         </section>
 
         <section id="leaderboard-preview" className="py-20 md:py-32">
