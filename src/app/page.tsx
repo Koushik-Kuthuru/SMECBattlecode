@@ -50,7 +50,7 @@ export default function LandingPage() {
                         <Link href="/register">Join the Battle</Link>
                       </Button>
                       <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black" asChild>
-                        <Link href="/register">Learn More</Link>
+                        <Link href="/about">Learn More</Link>
                       </Button>
                     </div>
                 </div>
@@ -306,7 +306,7 @@ export default function LandingPage() {
                         <li><a href="#features" className="hover:text-white">Features</a></li>
                         <li><a href="#missions" className="hover:text-white">Missions</a></li>
                         <li><a href="#rules" className="hover:text-white">Rules</a></li>
-                        <li><Link href="/register" className="hover:text-white">Leaderboard</Link></li>
+                        <li><Link href="/leaderboard" className="hover:text-white">Leaderboard</Link></li>
                     </ul>
                 </div>
                 <div>
@@ -319,18 +319,18 @@ export default function LandingPage() {
                  <div>
                     <h4 className="font-semibold text-white mb-4">Follow Us</h4>
                     <div className="flex space-x-4">
-                        <a href="/register" className="hover:text-white">Twitter</a>
-                        <a href="/register" className="hover:text-white">LinkedIn</a>
-                        <a href="/register" className="hover:text-white">GitHub</a>
+                        <a href="#" className="hover:text-white">Twitter</a>
+                        <a href="#" className="hover:text-white">LinkedIn</a>
+                        <a href="#" className="hover:text-white">GitHub</a>
                     </div>
                 </div>
             </div>
             <div className="mt-8 pt-8 border-t border-slate-700 text-center text-sm">
                 <p>&copy; {new Date().getFullYear()} SMEC Battle Code. All Rights Reserved.</p>
                  <div className="mt-2">
-                    <Link href="/register" className="hover:text-white underline underline-offset-4">Terms of Service</Link>
+                    <Link href="#" className="hover:text-white underline underline-offset-4">Terms of Service</Link>
                     <span className="mx-2">|</span>
-                    <Link href="/register" className="hover:text-white underline underline-offset-4">Privacy Policy</Link>
+                    <Link href="#" className="hover:text-white underline underline-offset-4">Privacy Policy</Link>
                 </div>
             </div>
         </div>
