@@ -129,10 +129,6 @@ export default function DashboardPage() {
         const unsubscribeUser = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as UserData;
-            if (!userData.profileComplete) {
-                router.push('/complete-profile');
-                return;
-            }
             setCurrentUser({ ...userData, uid: user.uid, email: user.email! });
           } else {
              router.push('/login');

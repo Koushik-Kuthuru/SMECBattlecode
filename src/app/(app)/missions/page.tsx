@@ -115,11 +115,6 @@ export default function MissionsPage() {
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data() as UserData;
 
-          if (!userData.profileComplete) {
-              router.push('/complete-profile');
-              return;
-          }
-
           setCurrentUser({ ...userData, uid: user.uid, email: user.email! });
           
           const completedChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/completed`));
