@@ -97,7 +97,7 @@ export default function LandingPage() {
                       <Button size="lg" asChild>
                         <Link href="/register">Join the Battle</Link>
                       </Button>
-                      <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black" asChild>
+                      <Button size="lg" variant="outline" className="bg-transparent border-white text-black hover:bg-white hover:text-black" asChild>
                         <Link href="/about">Learn More</Link>
                       </Button>
                     </div>
