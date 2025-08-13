@@ -134,12 +134,17 @@ export default function CompleteProfilePage() {
       toast({ title: 'Profile Saved!', description: 'Your profile has been updated successfully.' });
       router.push('/dashboard');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving profile: ", error);
+      let description = 'Could not save your profile. Please try again later.';
+      if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/unauthorized') {
+        description = 'Image upload failed. Please check your Firebase Storage security rules to allow uploads.';
+      }
       toast({
         variant: 'destructive',
         title: 'Error Saving Profile',
-        description: 'Could not save your profile. Please try again later.',
+        description: description,
+        duration: 8000,
       });
     } finally {
         setIsSaving(false);

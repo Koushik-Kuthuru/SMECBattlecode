@@ -178,9 +178,13 @@ export default function ProfilePage() {
             await saveProfileData({ imageUrl: finalImageUrl });
             
             setProfile(prev => ({...prev, imageUrl: finalImageUrl}));
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error uploading image:", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your new picture.' });
+            let description = 'Could not upload your new picture.';
+            if (error.code === 'storage/retry-limit-exceeded' || error.code === 'storage/unauthorized') {
+                description = 'Image upload failed. Please check your Firebase Storage security rules to allow uploads.';
+            }
+            toast({ variant: 'destructive', title: 'Upload Failed', description: description, duration: 8000 });
         } finally {
             setIsSaving(false);
         }
