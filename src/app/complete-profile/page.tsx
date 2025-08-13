@@ -100,54 +100,52 @@ export default function CompleteProfilePage() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!user) return;
 
-    if (!profile.branch || !profile.year || !profile.section || !profile.imageFile) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all the fields, including profile picture.' });
+    if (!profile.branch || !profile.year || !profile.section || !profile.imageFile || profile.preferredLanguages.length === 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all the fields, including profile picture and preferred languages.' });
         return;
     }
     
     setIsSaving(true);
-    toast({ title: 'Saving Profile...', description: 'Please wait a moment.' });
+    
+    const saveData = async () => {
+        try {
+          let finalImageUrl = '';
+          if (profile.imageUrl && profile.imageFile) {
+            const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+            const uploadResult = await uploadString(storageRef, profile.imageUrl, 'data_url');
+            finalImageUrl = await getDownloadURL(uploadResult.ref);
+          } else {
+            finalImageUrl = 'https://placehold.co/128x128.png';
+          }
+    
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+            branch: profile.branch,
+            year: profile.year,
+            section: profile.section,
+            imageUrl: finalImageUrl,
+            profileComplete: true,
+            preferredLanguages: profile.preferredLanguages,
+          });
+          
+          toast({ title: 'Profile Saved!', description: 'Your profile has been updated successfully.' });
 
-    try {
-      let finalImageUrl = '';
-      // Step 1: Upload image to Firebase Storage
-      if (profile.imageUrl && profile.imageFile) {
-        const storageRef = ref(storage, `profile-pictures/${user.uid}`);
-        const uploadResult = await uploadString(storageRef, profile.imageUrl, 'data_url');
-        finalImageUrl = await getDownloadURL(uploadResult.ref);
-      } else {
-         // Fallback if no image is selected, though we are now requiring it.
-        finalImageUrl = 'https://placehold.co/128x128.png';
-      }
-
-      // Step 2: Save all data to Firestore, including the new image URL
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        branch: profile.branch,
-        year: profile.year,
-        section: profile.section,
-        imageUrl: finalImageUrl,
-        profileComplete: true,
-        preferredLanguages: profile.preferredLanguages,
-      });
-
-      // Step 3: Redirect to dashboard on success
-      toast({ title: 'Profile Complete!', description: 'Redirecting you to the dashboard.' });
-      router.push('/dashboard');
-
-    } catch (error) {
-      console.error("Error saving profile: ", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not save your profile. Please try again.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
+        } catch (error) {
+          console.error("Error saving profile: ", error);
+          toast({
+            variant: 'destructive',
+            title: 'Error Saving Profile',
+            description: 'Could not save your profile. Please try again later.',
+          });
+           setIsSaving(false); // only stop loading on error, success redirects
+        }
+    };
+    
+    saveData();
+    router.push('/dashboard');
   };
 
   if (isLoading) {
