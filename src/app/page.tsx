@@ -4,11 +4,54 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, LogIn, ListChecks, Send, Flame, Star, Gavel, BookCheck, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel, BookCheck, ShieldCheck, Flame, ListChecks, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
+
+type LeaderboardUser = {
+  name: string;
+  points: number;
+  imageUrl?: string;
+};
 
 export default function LandingPage() {
+    const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTopUsers = async () => {
+            try {
+                const usersCollection = collection(db, 'users');
+                const q = query(
+                    usersCollection, 
+                    where('isAdmin', '!=', true),
+                    orderBy('points', 'desc'), 
+                    limit(3)
+                );
+                const querySnapshot = await getDocs(q);
+                const users = querySnapshot.docs.map(doc => doc.data() as LeaderboardUser);
+                setTopUsers(users);
+            } catch (error) {
+                console.error("Error fetching top users: ", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTopUsers();
+    }, []);
+
+    const podiumUsers = [
+        topUsers.length > 1 ? topUsers[1] : null, // 2nd
+        topUsers.length > 0 ? topUsers[0] : null, // 1st
+        topUsers.length > 2 ? topUsers[2] : null, // 3rd
+    ];
+
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="container z-10 mx-auto flex items-center justify-between h-20 px-4 md:px-6">
@@ -153,56 +196,76 @@ export default function LandingPage() {
                         See who's leading the charge. Can you dethrone them?
                     </p>
                 </div>
-                <div className="relative flex justify-center items-end gap-4 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                 {isLoading ? (
+                    <div className="relative flex justify-center items-end gap-4 min-h-[320px]">
+                        <Skeleton className="w-1/4 h-48" />
+                        <Skeleton className="w-1/3 h-64" />
+                        <Skeleton className="w-1/4 h-40" />
+                    </div>
+                 ) : (
+                 <div className="relative flex justify-center items-end gap-4 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                     {/* 2nd Place */}
+                    {podiumUsers[0] && (
                     <div className="flex-1 flex flex-col items-center justify-end h-64">
                         <Trophy className="w-16 h-16 text-slate-400" />
                         <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-40 flex flex-col justify-end items-center">
                             <Avatar className="w-20 h-20 -mt-14 border-4 border-card">
-                                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="male student" />
-                                <AvatarFallback>P</AvatarFallback>
+                                <AvatarImage src={podiumUsers[0].imageUrl || "https://placehold.co/100x100.png"} />
+                                <AvatarFallback>
+                                    {podiumUsers[0].name ? podiumUsers[0].name.charAt(0) : 'U'}
+                                </AvatarFallback>
                             </Avatar>
-                            <h3 className="font-bold text-lg mt-2">Praveen</h3>
+                            <h3 className="font-bold text-lg mt-2">{podiumUsers[0].name}</h3>
                             <div className="flex items-center gap-2">
                                 <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-lg">1,180</span>
+                                <span className="font-semibold text-lg">{podiumUsers[0].points.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
+                    )}
                     {/* 1st Place */}
+                    {podiumUsers[1] && (
                     <div className="flex-1 flex flex-col items-center justify-end h-80">
                          <Trophy className="w-24 h-24 text-yellow-400" />
                         <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-48 flex flex-col justify-end items-center">
                              <Avatar className="w-24 h-24 -mt-16 border-4 border-card">
-                                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="male student" />
-                                <AvatarFallback>S</AvatarFallback>
+                                <AvatarImage src={podiumUsers[1].imageUrl || "https://placehold.co/100x100.png"} />
+                                <AvatarFallback>
+                                    {podiumUsers[1].name ? podiumUsers[1].name.charAt(0) : 'U'}
+                                </AvatarFallback>
                             </Avatar>
-                            <h3 className="font-bold text-xl mt-2">Suraj</h3>
+                            <h3 className="font-bold text-xl mt-2">{podiumUsers[1].name}</h3>
                              <div className="flex items-center gap-2">
                                 <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-xl">1,250</span>
+                                <span className="font-semibold text-xl">{podiumUsers[1].points.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
+                    )}
                     {/* 3rd Place */}
+                    {podiumUsers[2] && (
                     <div className="flex-1 flex flex-col items-center justify-end h-56">
                         <Trophy className="w-14 h-14 text-amber-600" />
                          <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-32 flex flex-col justify-end items-center">
                              <Avatar className="w-16 h-16 -mt-10 border-4 border-card">
-                                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="female student" />
-                                <AvatarFallback>A</AvatarFallback>
+                                <AvatarImage src={podiumUsers[2].imageUrl || "https://placehold.co/100x100.png"} />
+                                <AvatarFallback>
+                                    {podiumUsers[2].name ? podiumUsers[2].name.charAt(0) : 'U'}
+                                </AvatarFallback>
                             </Avatar>
-                            <h3 className="font-bold text-md mt-2">Anjali</h3>
+                            <h3 className="font-bold text-md mt-2">{podiumUsers[2].name}</h3>
                             <div className="flex items-center gap-2">
                                 <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-md">1,150</span>
+                                <span className="font-semibold text-md">{podiumUsers[2].points.toLocaleString()}</span>
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
+                 )}
                  <div className="text-center mt-12 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
                     <Button size="lg" variant="outline" asChild>
-                        <Link href="/register">View Full Leaderboard</Link>
+                        <Link href="/leaderboard">View Full Leaderboard</Link>
                     </Button>
                 </div>
             </div>
