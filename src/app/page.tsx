@@ -8,7 +8,7 @@ import { ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel,
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LeaderboardUser } from '@/lib/types';
@@ -21,14 +21,18 @@ export default function LandingPage() {
         const fetchTopUsers = async () => {
             try {
                 const usersCollection = collection(db, 'users');
+                // Fetch more than 3 to account for potential admins in the top ranks
                 const q = query(
-                    usersCollection, 
-                    where('isAdmin', '!=', true),
-                    orderBy('points', 'desc'), 
-                    limit(3)
+                    usersCollection,
+                    orderBy('points', 'desc'),
+                    limit(5)
                 );
                 const querySnapshot = await getDocs(q);
-                const users = querySnapshot.docs.map(doc => doc.data() as LeaderboardUser);
+                // Filter out admins on the client side and take the top 3
+                const users = querySnapshot.docs
+                    .map(doc => doc.data() as LeaderboardUser)
+                    .filter(user => !user.isAdmin)
+                    .slice(0, 3);
                 setTopUsers(users);
             } catch (error) {
                 console.error("Error fetching top users: ", error);
