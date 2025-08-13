@@ -11,12 +11,7 @@ import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type LeaderboardUser = {
-  name: string;
-  points: number;
-  imageUrl?: string;
-};
+import { LeaderboardUser } from '@/lib/types';
 
 export default function LandingPage() {
     const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
@@ -203,69 +198,60 @@ export default function LandingPage() {
                         <Skeleton className="w-1/4 h-40" />
                     </div>
                  ) : (
-                 <div className="relative flex justify-center items-end gap-4 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                 <div className="relative flex justify-center items-end gap-2 md:gap-4 min-h-[260px] animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                     {/* 2nd Place */}
                     {podiumUsers[0] && (
-                    <div className="flex-1 flex flex-col items-center justify-end h-64">
-                        <Trophy className="w-16 h-16 text-slate-400" />
-                        <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-40 flex flex-col justify-end items-center">
-                            <Avatar className="w-20 h-20 -mt-14 border-4 border-card">
-                                <AvatarImage src={podiumUsers[0].imageUrl || "https://placehold.co/100x100.png"} />
-                                <AvatarFallback>
-                                    {podiumUsers[0].name ? podiumUsers[0].name.charAt(0) : 'U'}
-                                </AvatarFallback>
-                            </Avatar>
-                            <h3 className="font-bold text-lg mt-2">{podiumUsers[0].name}</h3>
-                            <div className="flex items-center gap-2">
-                                <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-lg">{podiumUsers[0].points.toLocaleString()}</span>
-                            </div>
+                    <div className="relative text-center flex flex-col items-center w-1/4">
+                        <Trophy className="h-10 w-10 text-slate-400 mb-2" />
+                        <Avatar className="w-20 h-20 border-4 border-slate-400">
+                            <AvatarImage src={podiumUsers[0].imageUrl} />
+                            <AvatarFallback><User /></AvatarFallback>
+                        </Avatar>
+                        <h4 className="font-bold mt-2 truncate w-full">{podiumUsers[0].name}</h4>
+                        <div className="flex items-center justify-center gap-1 text-sm font-semibold">
+                            <BulletCoin className="h-4 w-4 text-primary" />
+                            <span>{podiumUsers[0].points.toLocaleString()}</span>
                         </div>
+                        <div className="bg-slate-100 h-24 w-full rounded-t-lg mt-2 flex items-center justify-center text-3xl font-bold text-slate-500">2</div>
                     </div>
                     )}
                     {/* 1st Place */}
                     {podiumUsers[1] && (
-                    <div className="flex-1 flex flex-col items-center justify-end h-80">
-                         <Trophy className="w-24 h-24 text-yellow-400" />
-                        <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-48 flex flex-col justify-end items-center">
-                             <Avatar className="w-24 h-24 -mt-16 border-4 border-card">
-                                <AvatarImage src={podiumUsers[1].imageUrl || "https://placehold.co/100x100.png"} />
-                                <AvatarFallback>
-                                    {podiumUsers[1].name ? podiumUsers[1].name.charAt(0) : 'U'}
-                                </AvatarFallback>
-                            </Avatar>
-                            <h3 className="font-bold text-xl mt-2">{podiumUsers[1].name}</h3>
-                             <div className="flex items-center gap-2">
-                                <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-xl">{podiumUsers[1].points.toLocaleString()}</span>
-                            </div>
+                    <div className="relative text-center flex flex-col items-center w-1/3 z-10">
+                        <Trophy className="h-12 w-12 text-yellow-400 mb-2" />
+                        <Avatar className="w-28 h-28 border-4 border-yellow-400">
+                            <AvatarImage src={podiumUsers[1].imageUrl} />
+                            <AvatarFallback><User /></AvatarFallback>
+                        </Avatar>
+                        <h4 className="font-bold mt-2 truncate w-full">{podiumUsers[1].name}</h4>
+                        <div className="flex items-center justify-center gap-1 text-sm font-semibold">
+                            <BulletCoin className="h-4 w-4 text-primary" />
+                            <span>{podiumUsers[1].points.toLocaleString()}</span>
                         </div>
+                        <div className="bg-yellow-100 h-32 w-full rounded-t-lg mt-2 flex items-center justify-center text-4xl font-bold text-yellow-600">1</div>
                     </div>
                     )}
                     {/* 3rd Place */}
                     {podiumUsers[2] && (
-                    <div className="flex-1 flex flex-col items-center justify-end h-56">
-                        <Trophy className="w-14 h-14 text-amber-600" />
-                         <div className="bg-card w-full mt-4 p-4 rounded-t-lg shadow-lg text-center h-32 flex flex-col justify-end items-center">
-                             <Avatar className="w-16 h-16 -mt-10 border-4 border-card">
-                                <AvatarImage src={podiumUsers[2].imageUrl || "https://placehold.co/100x100.png"} />
-                                <AvatarFallback>
-                                    {podiumUsers[2].name ? podiumUsers[2].name.charAt(0) : 'U'}
-                                </AvatarFallback>
-                            </Avatar>
-                            <h3 className="font-bold text-md mt-2">{podiumUsers[2].name}</h3>
-                            <div className="flex items-center gap-2">
-                                <BulletCoin className="w-5 h-5" />
-                                <span className="font-semibold text-md">{podiumUsers[2].points.toLocaleString()}</span>
-                            </div>
+                    <div className="relative text-center flex flex-col items-center w-1/4">
+                        <Trophy className="h-8 w-8 text-orange-500 mb-2" />
+                        <Avatar className="w-16 h-16 border-4 border-orange-500">
+                            <AvatarImage src={podiumUsers[2].imageUrl} />
+                            <AvatarFallback><User /></AvatarFallback>
+                        </Avatar>
+                        <h4 className="font-bold mt-2 truncate w-full">{podiumUsers[2].name}</h4>
+                        <div className="flex items-center justify-center gap-1 text-sm font-semibold">
+                            <BulletCoin className="h-4 w-4 text-primary" />
+                            <span>{podiumUsers[2].points.toLocaleString()}</span>
                         </div>
+                        <div className="bg-orange-100 h-20 w-full rounded-t-lg mt-2 flex items-center justify-center text-2xl font-bold text-orange-700">3</div>
                     </div>
                     )}
                 </div>
                  )}
                  <div className="text-center mt-12 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
                     <Button size="lg" variant="outline" asChild>
-                        <Link href="/leaderboard">View Full Leaderboard</Link>
+                        <Link href="/login">View Full Leaderboard</Link>
                     </Button>
                 </div>
             </div>
@@ -369,7 +355,7 @@ export default function LandingPage() {
                         <li><a href="#features" className="hover:text-white">Features</a></li>
                         <li><a href="#missions" className="hover:text-white">Missions</a></li>
                         <li><a href="#rules" className="hover:text-white">Rules</a></li>
-                        <li><Link href="/leaderboard" className="hover:text-white">Leaderboard</Link></li>
+                        <li><Link href="/login" className="hover:text-white">Leaderboard</Link></li>
                     </ul>
                 </div>
                 <div>

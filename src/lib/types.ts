@@ -32,3 +32,9 @@ export type Event = {
     status: 'live' | 'upcoming' | 'past';
     createdAt?: Timestamp;
 };
+
+export type LeaderboardUser = {
+  name: string;
+  points: number;
+  imageUrl?: string;
+};
