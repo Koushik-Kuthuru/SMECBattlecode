@@ -10,36 +10,37 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, Upload, Loader2, Check } from 'lucide-react';
+import { User as UserIcon, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
-import { AuthLayout } from '@/components/auth-layout';
-
-type CurrentUser = {
-  uid: string;
-  name: string;
-  email: string;
-  studentId: string;
-};
+import { SmecBattleCodeLogo } from '@/components/icons';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type ProfileData = {
   branch: string;
   year: string;
   section: string;
   imageUrl: string;
+  imageFile: File | null;
+  preferredLanguages: string[];
 };
+
+const LANGUAGES = ['C', 'C++', 'Java', 'Python', 'JavaScript'];
 
 export default function CompleteProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<ProfileData>({
     branch: '',
     year: '',
     section: '',
     imageUrl: '',
+    imageFile: null,
+    preferredLanguages: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,31 +51,15 @@ export default function CompleteProfilePage() {
   const storage = getStorage(app);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
         const userDoc = await getDoc(userDocRef);
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.profileComplete) {
-            router.push('/dashboard');
-            return;
-          }
-          setCurrentUser({
-            uid: user.uid,
-            name: userData.name,
-            email: userData.email,
-            studentId: userData.studentId,
-          });
-          setProfile({
-            branch: userData.branch || '',
-            year: userData.year || '',
-            section: userData.section || '',
-            imageUrl: userData.imageUrl || '',
-          });
+        if (userDoc.exists() && userDoc.data().profileComplete) {
+          router.push('/dashboard');
         } else {
-          router.push('/login');
+          setUser(currentUser);
         }
       } else {
         router.push('/login');
@@ -85,64 +70,76 @@ export default function CompleteProfilePage() {
     return () => unsubscribe();
   }, [auth, db, router]);
 
-  const handleInputChange = (field: keyof Omit<ProfileData, 'imageUrl'>, value: string) => {
+  const handleInputChange = (field: keyof Omit<ProfileData, 'imageUrl' | 'imageFile' | 'preferredLanguages'>, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
+  };
+  
+  const handleLanguageChange = (language: string, checked: boolean) => {
+    setProfile(prev => {
+        const newLangs = checked 
+            ? [...prev.preferredLanguages, language]
+            : prev.preferredLanguages.filter(lang => lang !== language);
+        return {...prev, preferredLanguages: newLangs};
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !currentUser) return;
-
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      if (event.target?.result && typeof event.target.result === 'string') {
-        const dataUrl = event.target.result as string;
-        setProfile((prev) => ({ ...prev, imageUrl: dataUrl })); // Show preview immediately
-
-        setIsSaving(true);
-        toast({ title: 'Uploading...', description: 'Your new profile picture is being uploaded.' });
-        try {
-          const storageRef = ref(storage, `profile-pictures/${currentUser.uid}`);
-          const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
-          const finalImageUrl = await getDownloadURL(uploadResult.ref);
-          setProfile((prev) => ({ ...prev, imageUrl: finalImageUrl }));
-          toast({ title: 'Image Uploaded!', description: 'Your picture is ready.' });
-        } catch (error) {
-          console.error('Error uploading image:', error);
-          toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your new picture.' });
-        } finally {
-          setIsSaving(false);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setProfile((prev) => ({
+            ...prev,
+            imageUrl: event.target.result as string, // This is the base64 data URL for preview
+            imageFile: file,
+          }));
         }
-      }
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) return;
+  const handleSave = async () => {
+    if (!user) return;
 
-    if (!profile.branch || !profile.year || !profile.section) {
-        toast({ variant: 'destructive', title: 'Incomplete Form', description: 'Please fill out all fields.' });
+    if (!profile.branch || !profile.year || !profile.section || !profile.imageFile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all the fields, including profile picture.' });
         return;
     }
-
+    
     setIsSaving(true);
+    toast({ title: 'Saving Profile...', description: 'Please wait a moment.' });
+
     try {
-      const userDocRef = doc(db, 'users', currentUser.uid);
+      let finalImageUrl = '';
+      // Step 1: Upload image to Firebase Storage
+      if (profile.imageUrl && profile.imageFile) {
+        const storageRef = ref(storage, `profile-pictures/${user.uid}`);
+        const uploadResult = await uploadString(storageRef, profile.imageUrl, 'data_url');
+        finalImageUrl = await getDownloadURL(uploadResult.ref);
+      } else {
+         // Fallback if no image is selected, though we are now requiring it.
+        finalImageUrl = 'https://placehold.co/128x128.png';
+      }
+
+      // Step 2: Save all data to Firestore, including the new image URL
+      const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
-        ...profile,
+        branch: profile.branch,
+        year: profile.year,
+        section: profile.section,
+        imageUrl: finalImageUrl,
         profileComplete: true,
+        preferredLanguages: profile.preferredLanguages,
       });
 
-      toast({
-        title: 'Profile Complete!',
-        description: 'Welcome to SMEC Battle Code!',
-      });
+      // Step 3: Redirect to dashboard on success
+      toast({ title: 'Profile Complete!', description: 'Redirecting you to the dashboard.' });
       router.push('/dashboard');
+
     } catch (error) {
-      console.error('Error saving profile: ', error);
+      console.error("Error saving profile: ", error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -153,44 +150,54 @@ export default function CompleteProfilePage() {
     }
   };
 
-  if (isLoading || !currentUser) {
+  if (isLoading) {
     return (
-      <AuthLayout>
-        <div className="flex justify-center items-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </AuthLayout>
+       <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
+  
+  if (!user) return null;
+
 
   return (
-    <AuthLayout>
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Complete Your Profile</CardTitle>
-          <CardDescription>
-            Welcome, {currentUser.name}! Please provide a few more details to get started.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleFormSubmit} className="space-y-6">
+    <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+            <SmecBattleCodeLogo className="h-16 w-16 text-primary" />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+            <CardDescription>
+              Please provide a few more details to finish setting up your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
+              <Avatar className="h-28 w-28">
+                <AvatarImage src={profile.imageUrl} alt="User Profile" />
                 <AvatarFallback>
-                  <User className="h-12 w-12" />
+                  <UserIcon className="h-12 w-12" />
                 </AvatarFallback>
               </Avatar>
-              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" />
-                {profile.imageUrl ? 'Change Picture' : 'Upload Picture'}
+                Upload Picture
               </Button>
-              <Input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+              <Input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="branch">Branch</Label>
-              <Select value={profile.branch} onValueChange={(value) => handleInputChange('branch', value)} required>
+              <Select value={profile.branch} onValueChange={(value) => handleInputChange('branch', value)}>
                 <SelectTrigger id="branch">
                   <SelectValue placeholder="Select your branch" />
                 </SelectTrigger>
@@ -212,7 +219,7 @@ export default function CompleteProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Year</Label>
-                <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)} required>
+                <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)}>
                   <SelectTrigger id="year">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -226,7 +233,7 @@ export default function CompleteProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="section">Section</Label>
-                <Select value={profile.section} onValueChange={(value) => handleInputChange('section', value)} required>
+                <Select value={profile.section} onValueChange={(value) => handleInputChange('section', value)}>
                   <SelectTrigger id="section">
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
@@ -239,14 +246,29 @@ export default function CompleteProfilePage() {
                 </Select>
               </div>
             </div>
+            
+            <div className="space-y-2">
+                <Label>Preferred Programming Languages</Label>
+                <div className="grid grid-cols-2 gap-2 rounded-lg border p-4">
+                    {LANGUAGES.map(lang => (
+                        <div key={lang} className="flex items-center gap-2">
+                            <Checkbox 
+                                id={`lang-${lang}`}
+                                checked={profile.preferredLanguages.includes(lang)}
+                                onCheckedChange={(checked) => handleLanguageChange(lang, !!checked)}
+                            />
+                            <Label htmlFor={`lang-${lang}`} className="font-normal">{lang}</Label>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
-            <Button type="submit" className="w-full" disabled={isSaving}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-              Save & Continue
+            <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+              {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save and Continue'}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </AuthLayout>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
