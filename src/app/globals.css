@@ -63,40 +63,17 @@ body {
     }
   }
 
-  .parallax-container {
-    perspective: 1px;
-    height: 100vh;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  .parallax-section {
-    position: relative;
-    padding: 0;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-  }
-  
-  .parallax-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-size: cover;
-    background-position: center;
-    transform: translateZ(-1px) scale(2);
-    z-index: -1;
-  }
-
   .mission-bg-grid {
     background-image:
       linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
       linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
     background-size: 4rem 4rem;
     mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 70%, transparent 100%);
+  }
+
+  .leaderboard-bg-grid {
+    background-image: radial-gradient(circle at 1px 1px, hsl(var(--border)) 1px, transparent 0);
+    background-size: 2rem 2rem;
+    mask-image: linear-gradient(to top, transparent, black 25%);
   }
 }

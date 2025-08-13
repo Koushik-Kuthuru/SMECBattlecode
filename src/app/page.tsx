@@ -25,13 +25,12 @@ export default function LandingPage() {
                 const q = query(
                     usersCollection,
                     orderBy('points', 'desc'),
-                    limit(5)
+                    limit(3)
                 );
                 const querySnapshot = await getDocs(q);
                 const users = querySnapshot.docs
                     .map(doc => doc.data() as LeaderboardUser)
-                    .filter(user => !user.isAdmin)
-                    .slice(0, 3);
+                    .filter(user => !user.isAdmin);
                 setTopUsers(users);
             } catch (error) {
                 console.error("Error fetching top users: ", error);
@@ -199,7 +198,7 @@ export default function LandingPage() {
         </section>
 
         <section id="leaderboard-preview" className="relative overflow-hidden bg-background py-20 md:py-32">
-            <div className="absolute inset-0 mission-bg-grid -z-0"></div>
+            <div className="absolute inset-0 leaderboard-bg-grid -z-0"></div>
             <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center mb-12 animate-fade-in-up">
                     <h2 className="text-3xl md:text-4xl font-bold">Ranking Arena</h2>
