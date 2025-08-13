@@ -60,6 +60,7 @@ export default function ManageUsersPage() {
                     lastSeen: data.lastSeen,
                     profileComplete: data.profileComplete,
                     section: data.section,
+                    isAdmin: data.isAdmin,
                 } as UserData;
             }).filter(user => !user.isAdmin);
             setUsers(usersList);
@@ -166,5 +167,3 @@ export default function ManageUsersPage() {
         </div>
     );
 }
-
-    
