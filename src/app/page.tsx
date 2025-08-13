@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel, BookCheck, ShieldCheck, Flame, ListChecks, Send } from 'lucide-react';
+import { User, ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, Gavel, BookCheck, ShieldCheck, Flame, ListChecks, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
@@ -21,14 +21,12 @@ export default function LandingPage() {
         const fetchTopUsers = async () => {
             try {
                 const usersCollection = collection(db, 'users');
-                // Fetch more than 3 to account for potential admins in the top ranks
                 const q = query(
                     usersCollection,
                     orderBy('points', 'desc'),
                     limit(5)
                 );
                 const querySnapshot = await getDocs(q);
-                // Filter out admins on the client side and take the top 3
                 const users = querySnapshot.docs
                     .map(doc => doc.data() as LeaderboardUser)
                     .filter(user => !user.isAdmin)
