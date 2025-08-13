@@ -8,7 +8,7 @@ import { User, ArrowRight, BrainCircuit, Code, Trophy, Calendar, Target, Users, 
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LeaderboardUser } from '@/lib/types';
@@ -198,8 +198,9 @@ export default function LandingPage() {
             </div>
         </section>
 
-        <section id="leaderboard-preview" className="py-20 md:py-32">
-            <div className="container mx-auto px-4">
+        <section id="leaderboard-preview" className="relative overflow-hidden bg-background py-20 md:py-32">
+            <div className="absolute inset-0 mission-bg-grid -z-0"></div>
+            <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center mb-12 animate-fade-in-up">
                     <h2 className="text-3xl md:text-4xl font-bold">Ranking Arena</h2>
                     <p className="max-w-xl mx-auto text-muted-foreground mt-4">
