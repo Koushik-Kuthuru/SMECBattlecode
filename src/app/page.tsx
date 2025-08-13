@@ -145,78 +145,61 @@ export default function LandingPage() {
                         Tackle challenges designed to build your skills from the ground up. Ready to prove your mettle?
                     </p>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="p-3 bg-green-500/10 rounded-full">
-                                    <ListChecks className="h-8 w-8 text-green-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold">Easy</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="p-3 bg-green-500/10 rounded-full">
+                                <ListChecks className="h-8 w-8 text-green-500" />
                             </div>
-                            <p className="text-muted-foreground mb-4">Build a solid foundation with introductory challenges.</p>
-                             <div className="flex flex-wrap gap-2 text-sm">
-                                <Badge variant="secondary">Arrays</Badge>
-                                <Badge variant="secondary">Strings</Badge>
-                                <Badge variant="secondary">Loops</Badge>
-                            </div>
+                            <h3 className="text-2xl font-bold">Easy</h3>
                         </div>
-                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="p-3 bg-yellow-500/10 rounded-full">
-                                    <Send className="h-8 w-8 text-yellow-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold">Medium</h3>
-                            </div>
-                            <p className="text-muted-foreground mb-4">Sharpen your skills with problems requiring data structures.</p>
-                            <div className="flex flex-wrap gap-2 text-sm">
-                                <Badge variant="secondary">Trees</Badge>
-                                <Badge variant="secondary">Hash Maps</Badge>
-                                <Badge variant="secondary">Two Pointers</Badge>
-                            </div>
-                        </div>
-                        <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
-                           <div className="flex items-center gap-4 mb-3">
-                               <div className="p-3 bg-red-500/10 rounded-full">
-                                    <Flame className="h-8 w-8 text-red-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold">Hard</h3>
-                            </div>
-                            <p className="text-muted-foreground mb-4">Push your limits with complex algorithmic challenges.</p>
-                             <div className="flex flex-wrap gap-2 text-sm">
-                                <Badge variant="secondary">DP</Badge>
-                                <Badge variant="secondary">Graphs</Badge>
-                                <Badge variant="secondary">Heaps</Badge>
-                            </div>
-                        </div>
-                         <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '1s' }}>
-                           <div className="flex items-center gap-4 mb-3">
-                               <div className="p-3 bg-sky-500/10 rounded-full">
-                                    <BrainCircuit className="h-8 w-8 text-sky-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold">AI Missions</h3>
-                            </div>
-                            <p className="text-muted-foreground mb-4">Explore the frontier of AI with specialized coding challenges.</p>
-                             <div className="flex flex-wrap gap-2 text-sm">
-                                <Badge variant="secondary">GenAI</Badge>
-                                <Badge variant="secondary">LangChain</Badge>
-                                <Badge variant="secondary">Embeddings</Badge>
-                            </div>
+                        <p className="text-muted-foreground mb-4">Build a solid foundation with introductory challenges.</p>
+                         <div className="flex flex-wrap gap-2 text-sm">
+                            <Badge variant="secondary">Arrays</Badge>
+                            <Badge variant="secondary">Strings</Badge>
+                            <Badge variant="secondary">Loops</Badge>
                         </div>
                     </div>
-                    <div className={cn(
-                        "group relative row-start-1 lg:row-start-auto p-8 rounded-xl overflow-hidden text-center text-white",
-                        "bg-gradient-to-br from-primary via-blue-600 to-indigo-700 shadow-2xl",
-                        "flex flex-col items-center justify-center min-h-[300px] animate-fade-in-up"
-                    )} style={{ animationDelay: '0.2s' }}>
-                        <div className="absolute top-0 left-0 w-full h-full bg-black/20 group-hover:bg-black/40 transition-colors duration-300 z-0"></div>
-                        <div className="relative z-10">
-                            <Star className="h-12 w-12 mx-auto mb-4 text-yellow-300" />
-                            <h3 className="text-2xl font-bold mb-2">Featured Mission</h3>
-                            <p className="text-slate-200 mb-6">A curated weekly challenge to test your skills against the best.</p>
-                            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black" asChild>
-                                <Link href="/register">Accept Challenge</Link>
-                            </Button>
+                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="p-3 bg-yellow-500/10 rounded-full">
+                                <Send className="h-8 w-8 text-yellow-500" />
+                            </div>
+                            <h3 className="text-2xl font-bold">Medium</h3>
+                        </div>
+                        <p className="text-muted-foreground mb-4">Sharpen your skills with problems requiring data structures.</p>
+                        <div className="flex flex-wrap gap-2 text-sm">
+                            <Badge variant="secondary">Trees</Badge>
+                            <Badge variant="secondary">Hash Maps</Badge>
+                            <Badge variant="secondary">Two Pointers</Badge>
+                        </div>
+                    </div>
+                    <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
+                       <div className="flex items-center gap-4 mb-3">
+                           <div className="p-3 bg-red-500/10 rounded-full">
+                                <Flame className="h-8 w-8 text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-bold">Hard</h3>
+                        </div>
+                        <p className="text-muted-foreground mb-4">Push your limits with complex algorithmic challenges.</p>
+                         <div className="flex flex-wrap gap-2 text-sm">
+                            <Badge variant="secondary">DP</Badge>
+                            <Badge variant="secondary">Graphs</Badge>
+                            <Badge variant="secondary">Heaps</Badge>
+                        </div>
+                    </div>
+                     <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '1s' }}>
+                       <div className="flex items-center gap-4 mb-3">
+                           <div className="p-3 bg-sky-500/10 rounded-full">
+                                <BrainCircuit className="h-8 w-8 text-sky-500" />
+                            </div>
+                            <h3 className="text-2xl font-bold">AI Missions</h3>
+                        </div>
+                        <p className="text-muted-foreground mb-4">Explore the frontier of AI with specialized coding challenges.</p>
+                         <div className="flex flex-wrap gap-2 text-sm">
+                            <Badge variant="secondary">GenAI</Badge>
+                            <Badge variant="secondary">LangChain</Badge>
+                            <Badge variant="secondary">Embeddings</Badge>
                         </div>
                     </div>
                 </div>
