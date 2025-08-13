@@ -71,7 +71,17 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <section className="relative text-center overflow-hidden">
-             <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4 py-24 md:py-40">
+             <div 
+              className="absolute inset-0 w-full h-full bg-slate-900 -z-10"
+              style={{ 
+                backgroundImage: 'url(https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?q=80&w=2070&auto=format&fit=crop)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 to-slate-900" />
+            </div>
+            <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4 py-24 md:py-40">
                  <div className="animate-fade-in-up">
                     <Badge className="mb-4 bg-white/10 text-white hover:bg-white/20">Exclusive for SMEC Students</Badge>
                     <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
@@ -89,11 +99,6 @@ export default function LandingPage() {
                       </Button>
                     </div>
                 </div>
-            </div>
-             <div 
-              className="absolute inset-0 w-full h-full bg-slate-900 -z-10"
-            >
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 to-slate-900" />
             </div>
         </section>
 
@@ -145,7 +150,7 @@ export default function LandingPage() {
                         Tackle challenges designed to build your skills from the ground up. Ready to prove your mettle?
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
                         <div className="flex items-center gap-4 mb-3">
                             <div className="p-3 bg-green-500/10 rounded-full">
@@ -186,20 +191,6 @@ export default function LandingPage() {
                             <Badge variant="secondary">DP</Badge>
                             <Badge variant="secondary">Graphs</Badge>
                             <Badge variant="secondary">Heaps</Badge>
-                        </div>
-                    </div>
-                     <div className="bg-card p-8 rounded-xl shadow-lg border border-transparent hover:border-primary transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '1s' }}>
-                       <div className="flex items-center gap-4 mb-3">
-                           <div className="p-3 bg-sky-500/10 rounded-full">
-                                <BrainCircuit className="h-8 w-8 text-sky-500" />
-                            </div>
-                            <h3 className="text-2xl font-bold">AI Missions</h3>
-                        </div>
-                        <p className="text-muted-foreground mb-4">Explore the frontier of AI with specialized coding challenges.</p>
-                         <div className="flex flex-wrap gap-2 text-sm">
-                            <Badge variant="secondary">GenAI</Badge>
-                            <Badge variant="secondary">LangChain</Badge>
-                            <Badge variant="secondary">Embeddings</Badge>
                         </div>
                     </div>
                 </div>
