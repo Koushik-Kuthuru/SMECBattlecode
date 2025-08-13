@@ -236,8 +236,8 @@ export default function LandingPage() {
                     {/* 3rd Place */}
                     {podiumUsers[2] && (
                     <div className="relative text-center flex flex-col items-center w-1/4">
-                        <Trophy className="h-8 w-8 text-orange-500 mb-2" />
-                        <Avatar className="w-16 h-16 border-4 border-orange-500">
+                        <Trophy className="h-8 w-8 text-amber-600 mb-2" />
+                        <Avatar className="w-16 h-16 border-4 border-amber-600">
                             <AvatarImage src={podiumUsers[2].imageUrl} />
                             <AvatarFallback><User /></AvatarFallback>
                         </Avatar>
@@ -246,7 +246,7 @@ export default function LandingPage() {
                             <BulletCoin className="h-4 w-4 text-primary" />
                             <span>{podiumUsers[2].points.toLocaleString()}</span>
                         </div>
-                        <div className="bg-orange-100 h-20 w-full rounded-t-lg mt-2 flex items-center justify-center text-2xl font-bold text-orange-700">3</div>
+                        <div className="bg-amber-100 h-20 w-full rounded-t-lg mt-2 flex items-center justify-center text-2xl font-bold text-amber-800">3</div>
                     </div>
                     )}
                 </div>
