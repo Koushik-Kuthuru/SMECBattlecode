@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  devIndicators: {
+  experimental: {
     allowedDevOrigins: [
         '*.cluster-htdgsbmflbdmov5xrjithceibm.cloudworkstations.dev',
     ],
