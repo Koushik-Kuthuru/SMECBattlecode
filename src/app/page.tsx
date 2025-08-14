@@ -69,21 +69,7 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="relative text-center overflow-hidden">
-             <div className="absolute inset-0 w-full h-full -z-10">
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                    poster="https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?q=80&w=2070&auto=format&fit=crop"
-                >
-                    <source src="https://videos.pexels.com/video-files/4778174/4778174-hd_1920_1080_25fps.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-900/50 to-slate-900" />
-            </div>
+        <section className="relative text-center overflow-hidden bg-slate-900">
             <div className="relative z-10 text-white container mx-auto flex flex-col items-center justify-center px-4 py-24 md:py-40">
                  <div className="animate-fade-in-up">
                     <Badge className="mb-4 bg-white/10 text-white hover:bg-white/20">Exclusive for SMEC Students</Badge>
@@ -97,7 +83,7 @@ export default function LandingPage() {
                       <Button size="lg" asChild>
                         <Link href="/register">Join the Battle</Link>
                       </Button>
-                      <Button size="lg" variant="outline" className="bg-transparent border-white text-black hover:bg-white hover:text-black" asChild>
+                      <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black" asChild>
                         <Link href="/about">Learn More</Link>
                       </Button>
                     </div>
