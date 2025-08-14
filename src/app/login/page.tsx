@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/auth-layout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
@@ -22,10 +22,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const auth = getAuth(app);
   const db = getFirestore(app);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // If user is already logged in, redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        // Otherwise, show the login form
+        setIsCheckingAuth(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, router]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -122,6 +137,16 @@ export default function LoginPage() {
   const handleStudentIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStudentId(e.target.value.toUpperCase().slice(0, 10));
   };
+  
+  if (isCheckingAuth) {
+    return (
+        <AuthLayout>
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        </AuthLayout>
+    );
+  }
 
 
   return (

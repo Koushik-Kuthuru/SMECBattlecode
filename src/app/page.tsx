@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LeaderboardUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,14 @@ import { cn } from '@/lib/utils';
 export default function LandingPage() {
     const [topUsers, setTopUsers] = useState<LeaderboardUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const fetchTopUsers = async () => {
@@ -57,14 +66,22 @@ export default function LandingPage() {
           <span className="text-xl font-bold">SMEC Battle Code</span>
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" asChild>
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/register">
-              Sign Up <ArrowRight className="ml-2 h-4 w-4 hidden sm:inline" />
-            </Link>
-          </Button>
+          {currentUser ? (
+             <Button asChild>
+                <Link href="/dashboard">Go to Dashboard</Link>
+             </Button>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">
+                  Sign Up <ArrowRight className="ml-2 h-4 w-4 hidden sm:inline" />
+                </Link>
+              </Button>
+            </>
+          )}
         </nav>
       </header>
 
