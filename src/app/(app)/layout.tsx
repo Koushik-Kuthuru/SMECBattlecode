@@ -4,7 +4,7 @@
 
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { BarChart, Home, Info, LogOut, Settings, User, Trophy, ArrowRight, Menu, Flame, Calendar } from 'lucide-react';
+import { BarChart, Home, Info, LogOut, Settings, User, Trophy, ArrowRight, Menu, Flame, Calendar, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -128,7 +128,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/missions', label: 'Missions', icon: Flame },
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { href: '/profile', label: 'My Profile', icon: User },
     { href: '/about', label: 'About', icon: Info },
   ];
   
@@ -169,19 +168,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </ScrollArea>
             
             <div className="mt-auto flex flex-col gap-4 p-4">
-                 
                  <div className="border-t border-slate-700 pt-4">
-                     <Link href="/profile" className="flex items-center gap-3">
-                         <Avatar className="h-10 w-10">
-                            <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
-                            <AvatarFallback>
-                              <User />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-sm">{currentUser.name}</p>
-                            <p className="text-xs text-slate-400">{currentUser.studentId}</p>
-                          </div>
+                     <Link href="/profile" className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                         <div className="flex items-center gap-3">
+                             <Avatar className="h-10 w-10">
+                                <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
+                                <AvatarFallback>
+                                  <User />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-semibold text-sm">{currentUser.name}</p>
+                                <p className="text-xs text-slate-400">{currentUser.studentId}</p>
+                              </div>
+                         </div>
+                         <ChevronRight className="h-5 w-5 text-slate-500" />
                      </Link>
                  </div>
             </div>
