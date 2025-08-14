@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, doc, collectionGroup, query, where, Timestamp, onSnapshot } from 'firebase/firestore';
@@ -10,6 +10,8 @@ import { Challenge } from '@/lib/data';
 import { Flame, ListChecks, Users, Wifi } from 'lucide-react';
 import { UserData } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { subDays, subMonths, format } from 'date-fns';
 
 type AnalyticsData = {
   totalUsers: number;
@@ -22,6 +24,8 @@ type ChartData = {
   date: string;
   completions: number;
 }[];
+
+type TimeRange = '7d' | '30d' | '12m';
 
 const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; value: string | number; icon: React.ElementType, isLoading: boolean }) => (
     <Card>
@@ -39,6 +43,8 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
   const [analytics, setAnalytics] = useState<Omit<AnalyticsData, 'totalUsers' | 'activeUsers'> | null>(null);
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+
   const db = getFirestore(app);
   
   const totalUsers = users.length;
@@ -58,17 +64,34 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
        const completedQuery = query(collectionGroup(db, 'challengeData'));
        const unsubscribeCompletions = onSnapshot(completedQuery, (completedSnapshot) => {
             const completionCounts: Record<string, number> = {};
-            const completionsByDay: Record<string, number> = {};
+            const completionsByPeriod: Record<string, number> = {};
+            
             const today = new Date();
-            const dateLabels: string[] = [];
+            let dateLabels: string[] = [];
+            let startDate: Date;
 
-            for (let i = 6; i >= 0; i--) {
-              const date = new Date(today);
-              date.setDate(date.getDate() - i);
-              const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              completionsByDay[formattedDate] = 0;
-              dateLabels.push(formattedDate);
+            if (timeRange === '7d') {
+                startDate = subDays(today, 6);
+                for (let i = 6; i >= 0; i--) {
+                    const date = subDays(today, i);
+                    dateLabels.push(format(date, 'MMM d'));
+                }
+            } else if (timeRange === '30d') {
+                startDate = subDays(today, 29);
+                for (let i = 29; i >= 0; i--) {
+                    const date = subDays(today, i);
+                    dateLabels.push(format(date, 'MMM d'));
+                }
+            } else { // 12m
+                startDate = subMonths(today, 11);
+                startDate.setDate(1); // Start from beginning of the month
+                for (let i = 11; i >= 0; i--) {
+                    const date = subMonths(today, i);
+                    dateLabels.push(format(date, 'MMM yyyy'));
+                }
             }
+            
+            dateLabels.forEach(label => completionsByPeriod[label] = 0);
 
             completedSnapshot.forEach(doc => {
                 if (doc.id === 'completed') {
@@ -78,14 +101,17 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
                         if (completedInfo && completedInfo.completedAt && completedInfo.completedAt instanceof Timestamp) {
                              completionCounts[challengeId] = (completionCounts[challengeId] || 0) + 1;
                              
-                             const completedTimestamp = completedInfo.completedAt;
-                             const sevenDaysAgo = new Date();
-                             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                             if (completedTimestamp.toDate() >= sevenDaysAgo) {
-                                const date = completedTimestamp.toDate();
-                                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                if (completionsByDay[formattedDate] !== undefined) {
-                                    completionsByDay[formattedDate]++;
+                             const completedDate = completedInfo.completedAt.toDate();
+                             if (completedDate >= startDate) {
+                                let formattedDate: string;
+                                if(timeRange === '12m') {
+                                    formattedDate = format(completedDate, 'MMM yyyy');
+                                } else {
+                                    formattedDate = format(completedDate, 'MMM d');
+                                }
+                                
+                                if (completionsByPeriod[formattedDate] !== undefined) {
+                                    completionsByPeriod[formattedDate]++;
                                 }
                              }
                         }
@@ -106,7 +132,7 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
 
             const finalChartData = dateLabels.map(date => ({
                 date,
-                completions: completionsByDay[date] || 0
+                completions: completionsByPeriod[date] || 0
             }));
             setChartData(finalChartData);
             setIsLoading(false);
@@ -119,7 +145,7 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
     };
 
     fetchAnalytics().catch(console.error);
-  }, [db]);
+  }, [db, timeRange]);
 
 
   return (
@@ -132,8 +158,25 @@ export function AnalyticsDashboard({ users, isLoading: isUsersLoading }: { users
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Challenge Completion Trends (Last 7 Days)</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Challenge Completion Trends</CardTitle>
+            <CardDescription>
+                {timeRange === '7d' && 'Completions in the last 7 days.'}
+                {timeRange === '30d' && 'Completions in the last 30 days.'}
+                {timeRange === '12m' && 'Completions in the last 12 months.'}
+            </CardDescription>
+          </div>
+          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="12m">Monthly (1 Year)</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
