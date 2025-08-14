@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -12,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react';
+import { SmecBattleCodeLogo } from '@/components/icons';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -86,8 +89,17 @@ export default function AdminLoginPage() {
     <AuthLayout>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+              <div className="flex items-center gap-3">
+                  <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
+                  <div>
+                      <p className="font-bold leading-tight">SMEC</p>
+                      <p className="text-xs text-muted-foreground leading-tight">Admin Panel</p>
+                  </div>
+              </div>
+          </div>
           <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the admin panel.</CardDescription>
+          <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
@@ -100,7 +112,7 @@ export default function AdminLoginPage() {
               <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Logging in...</> : 'Login'}
             </Button>
           </div>
         </CardContent>
