@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (!user || !user.isAdmin) {
-        router.push('/admin-login');
+        router.push('/login?admin=true');
     } else {
         setCurrentUser(user);
     }

@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
@@ -24,6 +24,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAdminLogin = searchParams.get('admin') === 'true';
   const { toast } = useToast();
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -46,7 +48,9 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setIsLoading(true);
     
-    if (!studentId || !password) {
+    const isEmailLogin = isAdminLogin && studentId.includes('@');
+    
+    if ((!studentId && !isEmailLogin) || !password) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
@@ -68,7 +72,6 @@ export default function LoginPage() {
 
     try {
       if (recaptchaSiteKey) {
-        // Verify reCAPTCHA token
         const recaptchaResponse = await fetch('/api/verify-recaptcha', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -86,51 +89,74 @@ export default function LoginPage() {
         }
       }
 
-      // Find user by student ID in Firestore
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("studentId", "==", studentId.toUpperCase()));
-      const querySnapshot = await getDocs(q);
+      let userEmail = '';
+      if (isEmailLogin) {
+          userEmail = studentId; // For admin, studentId field holds email
+      } else {
+          // Find user by student ID in Firestore
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("studentId", "==", studentId.toUpperCase()));
+          const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'Invalid Student ID or password.',
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-
-      if (userData.isAdmin) {
-          toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'Please use the admin portal to log in.',
-        });
-        setIsLoading(false);
-        return;
+          if (querySnapshot.empty) {
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Invalid Student ID or password.',
+            });
+            setIsLoading(false);
+            return;
+          }
+          userEmail = querySnapshot.docs[0].data().email;
       }
 
-      const userEmail = userData.email;
-
-      // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, userEmail, password);
+      const user = userCredential.user;
       
-      router.push('/dashboard');
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${userData.name}!`,
-      });
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const userData = userDocSnap.data();
 
+      if (isAdminLogin) {
+          if (!userData?.isAdmin) {
+             toast({
+                variant: 'destructive',
+                title: 'Authorization Failed',
+                description: 'You do not have permission to access the admin panel.',
+             });
+             await auth.signOut();
+             setIsLoading(false);
+             return;
+          }
+           localStorage.setItem('currentUser', JSON.stringify({
+                uid: user.uid,
+                email: user.email,
+                name: userData.name,
+                isAdmin: true,
+            }));
+          router.push('/admin/dashboard');
+          toast({ title: 'Admin Login Successful', description: `Welcome back, ${userData.name}!` });
+      } else {
+           if (userData?.isAdmin) {
+              toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Please use the admin portal to log in.',
+              });
+               await auth.signOut();
+              setIsLoading(false);
+              return;
+            }
+          router.push('/dashboard');
+          toast({ title: 'Login Successful', description: `Welcome back, ${userData.name}!` });
+      }
+      
     } catch (error) {
       console.error("Login Error: ", error);
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Invalid Student ID or password.',
+        description: 'Invalid credentials. Please try again.',
       });
     } finally {
         setIsLoading(false);
@@ -138,7 +164,11 @@ export default function LoginPage() {
   };
 
   const handleStudentIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStudentId(e.target.value.toUpperCase().slice(0, 10));
+    if (isAdminLogin) {
+        setStudentId(e.target.value);
+    } else {
+        setStudentId(e.target.value.toUpperCase().slice(0, 10));
+    }
   };
   
   if (isCheckingAuth) {
@@ -151,7 +181,6 @@ export default function LoginPage() {
     );
   }
 
-
   return (
     <AuthLayout>
       <Card className="w-full max-w-sm">
@@ -161,24 +190,31 @@ export default function LoginPage() {
                     <SmecBattleCodeLogo className="h-10 w-10 text-primary" />
                     <div>
                         <p className="font-bold leading-tight">SMEC</p>
-                        <p className="text-xs text-muted-foreground leading-tight">Battlecode</p>
+                        <p className="text-xs text-muted-foreground leading-tight">{isAdminLogin ? 'Admin Panel' : 'Battlecode'}</p>
                     </div>
                 </div>
             </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back!</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">{isAdminLogin ? 'Admin Login' : 'Welcome Back!'}</CardTitle>
           <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Input id="student-id" placeholder="Student ID" required value={studentId} onChange={handleStudentIdChange} />
+              <Input 
+                id="credential"
+                placeholder={isAdminLogin ? 'Email Address' : 'Student ID'}
+                required 
+                value={studentId} 
+                onChange={handleStudentIdChange} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password" className="sr-only">Password</Label>
               <Input id="password" type="password" placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-              <Link href="/forgot-password" className="text-right inline-block text-sm text-primary hover:underline">
-                  Forgot password?
-              </Link>
+              {!isAdminLogin && (
+                <Link href="/forgot-password" className="text-right inline-block text-sm text-primary hover:underline">
+                    Forgot password?
+                </Link>
+              )}
             </div>
             
             {recaptchaSiteKey && (
@@ -194,12 +230,14 @@ export default function LoginPage() {
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}
             </Button>
           </div>
-          <div className="mt-6 text-center text-sm">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="font-semibold text-primary hover:underline">
-              Sign up
-            </Link>
-          </div>
+          {!isAdminLogin && (
+            <div className="mt-6 text-center text-sm">
+                Don&apos;t have an account?{' '}
+                <Link href="/register" className="font-semibold text-primary hover:underline">
+                Sign up
+                </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
     </AuthLayout>

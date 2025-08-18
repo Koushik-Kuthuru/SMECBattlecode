@@ -19,6 +19,7 @@ import type { UserData as AppUserData } from '@/lib/types';
 type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
     lastSeen?: Timestamp;
     branch: string; // branch is required here, unlike the partial from lib
+    isAdmin?: boolean;
 };
 
 
