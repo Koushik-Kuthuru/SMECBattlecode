@@ -10,7 +10,7 @@ import { AuthLayout } from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
@@ -21,6 +21,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const isAdminLogin = searchParams.get('admin') === 'true';
@@ -29,18 +31,18 @@ export default function LoginPage() {
   const db = getFirestore(app);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // If user is already logged in, redirect to dashboard
-        router.push('/dashboard');
-      } else {
-        // Otherwise, show the login form
-        setIsCheckingAuth(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsCheckingAuth(false);
     });
-
     return () => unsubscribe();
-  }, [auth, router]);
+  }, [auth]);
+  
+  useEffect(() => {
+    if (!isCheckingAuth && user) {
+        router.push('/dashboard');
+    }
+  }, [isCheckingAuth, user, router]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -80,9 +82,9 @@ export default function LoginPage() {
       }
 
       const userCredential = await signInWithEmailAndPassword(auth, userEmail, password);
-      const user = userCredential.user;
+      const loggedInUser = userCredential.user;
       
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', loggedInUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
@@ -94,38 +96,45 @@ export default function LoginPage() {
       
       const userData = userDocSnap.data();
 
-      if (isAdminLogin) {
-          if (!userData.isAdmin) {
-             toast({
-                variant: 'destructive',
-                title: 'Authorization Failed',
-                description: 'You do not have permission to access the admin panel.',
-             });
-             await auth.signOut();
-             setIsLoading(false);
-             return;
+      if (userData) {
+          if (isAdminLogin) {
+              if (!userData.isAdmin) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Authorization Failed',
+                    description: 'You do not have permission to access the admin panel.',
+                 });
+                 await auth.signOut();
+                 setIsLoading(false);
+                 return;
+              }
+               if (typeof window !== 'undefined') {
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        uid: loggedInUser.uid,
+                        email: loggedInUser.email,
+                        name: userData.name,
+                        isAdmin: true,
+                    }));
+               }
+              router.push('/admin/dashboard');
+              toast({ title: 'Admin Login Successful', description: `Welcome back, ${userData.name}!` });
+          } else {
+               if (userData.isAdmin) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Login Failed',
+                    description: 'Please use the admin portal to log in.',
+                  });
+                   await auth.signOut();
+                  setIsLoading(false);
+                  return;
+                }
+              router.push('/dashboard');
+              toast({ title: 'Login Successful', description: `Welcome back, ${userData.name}!` });
           }
-           localStorage.setItem('currentUser', JSON.stringify({
-                uid: user.uid,
-                email: user.email,
-                name: userData.name,
-                isAdmin: true,
-            }));
-          router.push('/admin/dashboard');
-          toast({ title: 'Admin Login Successful', description: `Welcome back, ${userData.name}!` });
       } else {
-           if (userData.isAdmin) {
-              toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'Please use the admin portal to log in.',
-              });
-               await auth.signOut();
-              setIsLoading(false);
-              return;
-            }
-          router.push('/dashboard');
-          toast({ title: 'Login Successful', description: `Welcome back, ${userData.name}!` });
+           toast({ variant: 'destructive', title: 'Login Failed', description: 'Could not retrieve user data.' });
+           await auth.signOut();
       }
       
     } catch (error) {
