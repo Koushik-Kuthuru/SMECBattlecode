@@ -31,6 +31,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   const handleRegister = async () => {
     // Basic validation
@@ -61,7 +62,7 @@ export default function RegisterPage() {
       return;
     }
     
-    if (!recaptchaToken) {
+    if (recaptchaSiteKey && !recaptchaToken) {
       toast({
           variant: 'destructive',
           title: 'Registration Failed',
@@ -73,25 +74,27 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Verify reCAPTCHA token with our backend
-      const recaptchaResponse = await fetch('/api/verify-recaptcha', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token: recaptchaToken }),
-      });
+      if (recaptchaSiteKey) {
+        // Verify reCAPTCHA token with our backend
+        const recaptchaResponse = await fetch('/api/verify-recaptcha', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: recaptchaToken }),
+        });
 
-      const recaptchaData = await recaptchaResponse.json();
+        const recaptchaData = await recaptchaResponse.json();
 
-      if (!recaptchaData.success) {
-          toast({
-              variant: 'destructive',
-              title: 'Registration Failed',
-              description: 'Failed to verify reCAPTCHA. Please try again.',
-          });
-          setIsLoading(false);
-          return;
+        if (!recaptchaData.success) {
+            toast({
+                variant: 'destructive',
+                title: 'Registration Failed',
+                description: 'Failed to verify reCAPTCHA. Please try again.',
+            });
+            setIsLoading(false);
+            return;
+        }
       }
 
       // Check if student ID already exists
@@ -136,7 +139,8 @@ export default function RegisterPage() {
       router.push('/dashboard');
       toast({
         title: 'Account Created!',
-        description: `Welcome, ${fullName}!`,
+        description: `Welcome, ${fullName}! A verification link has been sent to your email.`,
+        duration: 8000,
       });
 
 
@@ -204,12 +208,14 @@ export default function RegisterPage() {
               <Input id="email" type="email" placeholder="Email Address" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
              
-             <div className="flex justify-center">
-                <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    onChange={setRecaptchaToken}
-                />
-             </div>
+             {recaptchaSiteKey && (
+              <div className="flex justify-center">
+                  <ReCAPTCHA
+                      sitekey={recaptchaSiteKey}
+                      onChange={setRecaptchaToken}
+                  />
+              </div>
+            )}
 
             <Button type="submit" className="w-full" onClick={handleRegister} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</> : 'Sign Up'}

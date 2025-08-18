@@ -27,6 +27,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -55,7 +56,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (!recaptchaToken) {
+    if (recaptchaSiteKey && !recaptchaToken) {
         toast({
             variant: 'destructive',
             title: 'Login Failed',
@@ -66,21 +67,23 @@ export default function LoginPage() {
     }
 
     try {
-      // Verify reCAPTCHA token
-      const recaptchaResponse = await fetch('/api/verify-recaptcha', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: recaptchaToken }),
-      });
-      const recaptchaData = await recaptchaResponse.json();
-      if (!recaptchaData.success) {
-          toast({
-              variant: 'destructive',
-              title: 'Login Failed',
-              description: 'Failed to verify reCAPTCHA. Please try again.',
-          });
-          setIsLoading(false);
-          return;
+      if (recaptchaSiteKey) {
+        // Verify reCAPTCHA token
+        const recaptchaResponse = await fetch('/api/verify-recaptcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: recaptchaToken }),
+        });
+        const recaptchaData = await recaptchaResponse.json();
+        if (!recaptchaData.success) {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Failed to verify reCAPTCHA. Please try again.',
+            });
+            setIsLoading(false);
+            return;
+        }
       }
 
       // Find user by student ID in Firestore
@@ -178,12 +181,14 @@ export default function LoginPage() {
               </Link>
             </div>
             
-            <div className="flex justify-center">
-                <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    onChange={setRecaptchaToken}
-                />
-            </div>
+            {recaptchaSiteKey && (
+              <div className="flex justify-center">
+                  <ReCAPTCHA
+                      sitekey={recaptchaSiteKey}
+                      onChange={setRecaptchaToken}
+                  />
+              </div>
+            )}
 
             <Button type="submit" className="w-full" onClick={handleLogin} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging in...</> : 'Login'}
