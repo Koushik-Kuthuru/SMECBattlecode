@@ -84,10 +84,18 @@ export default function LoginPage() {
       
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+          toast({ variant: 'destructive', title: 'Login Failed', description: 'User data not found.' });
+          await auth.signOut();
+          setIsLoading(false);
+          return;
+      }
+      
       const userData = userDocSnap.data();
 
       if (isAdminLogin) {
-          if (!userData?.isAdmin) {
+          if (!userData.isAdmin) {
              toast({
                 variant: 'destructive',
                 title: 'Authorization Failed',
@@ -106,7 +114,7 @@ export default function LoginPage() {
           router.push('/admin/dashboard');
           toast({ title: 'Admin Login Successful', description: `Welcome back, ${userData.name}!` });
       } else {
-           if (userData?.isAdmin) {
+           if (userData.isAdmin) {
               toast({
                 variant: 'destructive',
                 title: 'Login Failed',
