@@ -15,7 +15,6 @@ import { getFirestore, collection, doc, setDoc, getDocs, query, where } from 'fi
 import { app } from '@/lib/firebase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
-import ReCAPTCHA from "react-google-recaptcha";
 import { PasswordStrength } from '@/components/password-strength';
 
 export default function RegisterPage() {
@@ -25,13 +24,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   const handleRegister = async () => {
     // Basic validation
@@ -62,41 +59,9 @@ export default function RegisterPage() {
       return;
     }
     
-    if (recaptchaSiteKey && !recaptchaToken) {
-      toast({
-          variant: 'destructive',
-          title: 'Registration Failed',
-          description: 'Please complete the reCAPTCHA verification.',
-      });
-      return;
-    }
-    
     setIsLoading(true);
 
     try {
-      if (recaptchaSiteKey) {
-        // Verify reCAPTCHA token with our backend
-        const recaptchaResponse = await fetch('/api/verify-recaptcha', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token: recaptchaToken }),
-        });
-
-        const recaptchaData = await recaptchaResponse.json();
-
-        if (!recaptchaData.success) {
-            toast({
-                variant: 'destructive',
-                title: 'Registration Failed',
-                description: 'Failed to verify reCAPTCHA. Please try again.',
-            });
-            setIsLoading(false);
-            return;
-        }
-      }
-
       // Check if student ID already exists
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("studentId", "==", studentId.toUpperCase()));
@@ -208,15 +173,6 @@ export default function RegisterPage() {
               <Input id="email" type="email" placeholder="Email Address" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
              
-             {recaptchaSiteKey && (
-              <div className="flex justify-center">
-                  <ReCAPTCHA
-                      sitekey={recaptchaSiteKey}
-                      onChange={setRecaptchaToken}
-                  />
-              </div>
-            )}
-
             <Button type="submit" className="w-full" onClick={handleRegister} disabled={isLoading}>
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account...</> : 'Sign Up'}
             </Button>
