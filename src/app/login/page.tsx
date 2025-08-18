@@ -16,6 +16,8 @@ import { app } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { SmecBattleCodeLogo } from '@/components/icons';
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
@@ -87,13 +89,6 @@ export default function LoginPage() {
       const userDocRef = doc(db, 'users', loggedInUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (!userDocSnap.exists()) {
-          toast({ variant: 'destructive', title: 'Login Failed', description: 'User data not found.' });
-          await auth.signOut();
-          setIsLoading(false);
-          return;
-      }
-      
       const userData = userDocSnap.data();
 
       if (userData) {
