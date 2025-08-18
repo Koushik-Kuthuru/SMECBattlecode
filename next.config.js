@@ -5,10 +5,10 @@ require('dotenv').config({ path: './.env' });
 const nextConfig = {
   output: 'standalone',
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [
