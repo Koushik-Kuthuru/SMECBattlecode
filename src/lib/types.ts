@@ -37,4 +37,5 @@ export type LeaderboardUser = {
   name: string;
   points: number;
   imageUrl?: string;
+  isAdmin?: boolean;
 };
