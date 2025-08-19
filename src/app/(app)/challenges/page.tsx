@@ -445,12 +445,12 @@ export default function ChallengesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[5%]">S/No.</TableHead>
+                <TableHead className="w-[5%] text-center">S/No.</TableHead>
                 <TableHead className="w-[8%] text-center">Status</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="text-right w-[15%]">Difficulty</TableHead>
-                <TableHead className="text-right w-[15%] hidden md:table-cell">Acceptance</TableHead>
-                <TableHead className="text-right w-[10%]">Points</TableHead>
+                <TableHead className="text-center w-[15%]">Difficulty</TableHead>
+                <TableHead className="text-center w-[15%] hidden md:table-cell">Acceptance</TableHead>
+                <TableHead className="text-center w-[10%]">Points</TableHead>
                 <TableHead className="w-[8%] text-center"><span className="sr-only">Favorite</span></TableHead>
               </TableRow>
             </TableHeader>
@@ -458,19 +458,19 @@ export default function ChallengesPage() {
               {isChallengesLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell><Skeleton className="h-5 w-4/5" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-4/5 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
-                    <TableCell className="text-right hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-1/2 ml-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-3/4 mx-auto" /></TableCell>
+                    <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
                 filteredChallenges.map((challenge, index) => (
                   <TableRow key={challenge.id}>
-                    <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                    <TableCell className="font-medium text-muted-foreground text-center">{index + 1}</TableCell>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
@@ -479,12 +479,12 @@ export default function ChallengesPage() {
                         <span className="line-clamp-2">{challenge.title}</span>
                       </Link>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-center">
                       <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
-                    <TableCell className="text-right text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
-                    <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 text-sm font-semibold text-primary">
+                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
+                    <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
                             {challenge.points}
                         </div>
