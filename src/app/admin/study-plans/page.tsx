@@ -203,7 +203,8 @@ export default function ManageStudyPlansPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="href">Link URL</Label>
-                  <Input id="href" placeholder="e.g., /path/to/course" value={formData.href} onChange={(e) => handleInputChange('href', e.target.value)} required />
+                  <Input id="href" placeholder="e.g., /challenges or https://example.com" value={formData.href} onChange={(e) => handleInputChange('href', e.target.value)} required />
+                  <p className="text-xs text-muted-foreground">For internal pages, use a relative path like <code className="bg-muted px-1 rounded-sm">/about</code>. For external sites, use the full URL.</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
