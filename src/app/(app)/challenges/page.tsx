@@ -409,7 +409,7 @@ export default function ChallengesPage() {
                 <TableHead className="w-16">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-right">Difficulty</TableHead>
-                <TableHead className="text-center">Acceptance</TableHead>
+                <TableHead className="text-center hidden md:table-cell">Acceptance</TableHead>
                 <TableHead className="text-right">Points</TableHead>
               </TableRow>
             </TableHeader>
@@ -419,9 +419,9 @@ export default function ChallengesPage() {
                   <TableRow key={`skeleton-${i}`}>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                    <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
@@ -445,7 +445,7 @@ export default function ChallengesPage() {
                     <TableCell className="text-right">
                       <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
-                    <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
+                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
