@@ -497,26 +497,38 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <ResizablePanel defaultSize={40} minSize={30}>
         {descriptionPanel}
       </ResizablePanel>
-      <ResizableHandleWithHandle />
+      <ResizableHandleWithHandle>
+        {(isRunning || runResult || debugOutput) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 bg-background border rounded-full shadow-md hover:bg-muted"
+            onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}
+          >
+            {isResultsPanelFolded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+          </Button>
+        )}
+      </ResizableHandleWithHandle>
       <ResizablePanel defaultSize={60} minSize={40}>
-        <ScrollArea className="h-full">
-          <div className="flex flex-col h-screen">
-              <div className="relative flex-grow">
-                 {isChallengeLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin" />
+        <ResizablePanelGroup direction="vertical">
+            <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 60} minSize={25}>
+                {isChallengeLoading ? (
+                    <div className="h-full flex items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                 ) : (
                     children
                 )}
-              </div>
-              {(isRunning || runResult || debugOutput) && (
-                <div className="flex-shrink-0">
-                  {testResultPanel}
-                </div>
-              )}
-          </div>
-        </ScrollArea>
+            </ResizablePanel>
+            {(isRunning || runResult || debugOutput) && !isResultsPanelFolded && (
+                <>
+                    <ResizableHandleWithHandle />
+                    <ResizablePanel defaultSize={40} minSize={15}>
+                        {testResultPanel}
+                    </ResizablePanel>
+                </>
+            )}
+        </ResizablePanelGroup>
       </ResizablePanel>
     </ResizablePanelGroup>
   );
