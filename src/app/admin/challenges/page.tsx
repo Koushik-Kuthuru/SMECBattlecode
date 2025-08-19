@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { challenges as initialChallenges, type Challenge } from '@/lib/data';
-import { PlusCircle, Trash2, Edit, ArrowDownAZ, ArrowDownUp, ShieldOff, Shield, Code } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, ArrowDownAZ, ArrowDownUp, ShieldOff, Shield, Code, Loader2 } from 'lucide-react';
 import { CodeEditor } from '@/components/code-editor';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, runTransaction, getDoc, deleteField } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, runTransaction, getDoc, deleteField, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -61,6 +61,7 @@ export default function ManageChallengesPage() {
   const { toast } = useToast();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [languageFilter, setLanguageFilter] = useState('All');
@@ -323,6 +324,28 @@ export default function ManageChallengesPage() {
         return 0;
       });
   }, [challenges, languageFilter, sortType]);
+
+  const handleToggleEnable = async (challengeId: string, isEnabled: boolean) => {
+      setIsSaving(true);
+      try {
+          const challengeRef = doc(db, 'challenges', challengeId);
+          await updateDoc(challengeRef, { isEnabled: isEnabled });
+          toast({
+              title: 'Challenge Updated',
+              description: `Challenge has been ${isEnabled ? 'enabled' : 'disabled'}.`
+          });
+          fetchChallenges();
+      } catch (error) {
+           console.error("Error updating challenge status: ", error);
+           toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not update challenge status.'
+           });
+      } finally {
+        setIsSaving(false);
+      }
+  };
   
   if (isFormVisible) {
      return (
@@ -544,11 +567,11 @@ export default function ManageChallengesPage() {
         </CardHeader>
         <CardContent>
            {isLoading ? (
-              <div className="text-center py-16">Loading challenges...</div>
+              <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
            ) : (
               <div className="space-y-4">
                 {sortedAndFilteredChallenges.length > 0 ? sortedAndFilteredChallenges.map(challenge => (
-                  <div key={challenge.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
+                  <div key={challenge.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4 cursor-pointer hover:bg-muted/50" onClick={() => handleEditClick(challenge)}>
                     <div>
                       <h3 className="font-semibold">{challenge.title}</h3>
                       <div className="text-sm text-muted-foreground flex flex-wrap gap-x-2">
@@ -559,15 +582,16 @@ export default function ManageChallengesPage() {
                         <div className="flex gap-1.5 flex-wrap">{challenge.languages?.map(l => <span key={l}>{l}</span>)}</div>
                       </div>
                     </div>
-                     <div className="flex items-center gap-2">
-                        <Badge variant={challenge.isEnabled !== false ? 'default' : 'secondary'}>
-                            {challenge.isEnabled !== false ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                        <Button variant="outline" size="sm" onClick={() => handleEditClick(challenge)}>
-                             <Edit className="mr-2 h-4 w-4" />
-                             Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => setChallengeToDelete(challenge.id!)}>
+                     <div className="flex items-center gap-4">
+                         <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                           <Switch
+                             checked={challenge.isEnabled !== false}
+                             onCheckedChange={(checked) => handleToggleEnable(challenge.id!, checked)}
+                             disabled={isSaving}
+                           />
+                           <Label>{challenge.isEnabled !== false ? 'Enabled' : 'Disabled'}</Label>
+                         </div>
+                        <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setChallengeToDelete(challenge.id!); }}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
