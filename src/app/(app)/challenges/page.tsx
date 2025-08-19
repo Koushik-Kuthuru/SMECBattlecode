@@ -15,13 +15,23 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData } from '@/lib/types';
+import { Progress } from '@/components/ui/progress';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
+type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved';
 
 const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard' }) => {
   const difficultyStyles = {
@@ -47,8 +57,9 @@ export default function ChallengesPage() {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [isChallengesLoading, setIsChallengesLoading] = useState(true);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
+  const [statusFilter, setStatusFilter] = useState<Status>('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [topicFilter, setTopicFilter] = useState('All');
+  const [topicFilters, setTopicFilters] = useState<string[]>([]);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -132,9 +143,18 @@ export default function ChallengesPage() {
       .filter(challenge => {
         const difficultyMatch = difficultyFilter === 'All' || challenge.difficulty === difficultyFilter;
         const searchMatch = searchTerm === '' || challenge.title.toLowerCase().includes(searchTerm.toLowerCase());
-        const topicMatch = topicFilter === 'All' || (challenge.tags && challenge.tags.includes(topicFilter));
+        const topicMatch = topicFilters.length === 0 || (challenge.tags && challenge.tags.some(tag => topicFilters.includes(tag)));
+        
+        const isSolved = !!completedChallenges[challenge.id!];
+        const isAttempted = !!inProgressChallenges[challenge.id!];
+        const statusMatch = 
+            statusFilter === 'All' ||
+            (statusFilter === 'Solved' && isSolved) ||
+            (statusFilter === 'Attempted' && isAttempted && !isSolved) ||
+            (statusFilter === 'Unsolved' && !isSolved && !isAttempted);
+
         const isEnabled = challenge.isEnabled !== false;
-        return difficultyMatch && searchMatch && topicMatch && isEnabled;
+        return difficultyMatch && searchMatch && topicMatch && statusMatch && isEnabled;
       })
       .sort((a, b) => {
           const aCompleted = !!completedChallenges[a.id!];
@@ -147,13 +167,34 @@ export default function ChallengesPage() {
           
           return 0;
       });
-  }, [challenges, difficultyFilter, searchTerm, topicFilter, currentUser, completedChallenges, inProgressChallenges]);
+  }, [challenges, difficultyFilter, searchTerm, topicFilters, statusFilter, currentUser, completedChallenges, inProgressChallenges]);
 
-  const topicTags = useMemo(() => {
+  const allTopicTags = useMemo(() => {
       const allTags = challenges.flatMap(c => c.tags || []);
       return [...new Set(allTags)].slice(0, 10);
   }, [challenges]);
 
+  const handleTopicFilterChange = (tag: string, checked: boolean) => {
+    setTopicFilters(prev => 
+      checked ? [...prev, tag] : prev.filter(t => t !== tag)
+    );
+  };
+  
+  const handlePickOne = () => {
+    const unsolved = filteredChallenges.filter(c => !completedChallenges[c.id!]);
+    if (unsolved.length > 0) {
+        const randomChallenge = unsolved[Math.floor(Math.random() * unsolved.length)];
+        router.push(`/challenge/${randomChallenge.id}`);
+    } else if (filteredChallenges.length > 0) {
+        const randomChallenge = filteredChallenges[Math.floor(Math.random() * filteredChallenges.length)];
+        router.push(`/challenge/${randomChallenge.id}`);
+    } else {
+        toast({
+            title: 'No Challenges Available',
+            description: 'Could not find any challenges to pick from.'
+        });
+    }
+  }
 
   if (isUserLoading) {
     return (
@@ -173,6 +214,10 @@ export default function ChallengesPage() {
     return <Circle className="h-5 w-5 text-slate-300" />;
   }
 
+  const totalSolved = Object.keys(completedChallenges).length;
+  const totalChallenges = challenges.length;
+  const solvedPercentage = totalChallenges > 0 ? (totalSolved / totalChallenges) * 100 : 0;
+
   return (
     <div className="space-y-6">
       <CardHeader className="px-0">
@@ -190,24 +235,62 @@ export default function ChallengesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select value={difficultyFilter} onValueChange={(value) => setDifficultyFilter(value as Difficulty)}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by difficulty" />
-          </SelectTrigger>
-          <SelectContent>
-              <SelectItem value="All">All Difficulties</SelectItem>
-              <SelectItem value="Easy">Easy</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Hard">Hard</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
-          <Button variant={topicFilter === 'All' ? 'secondary' : 'outline'} size="sm" onClick={() => setTopicFilter('All')}>All</Button>
-          {topicTags.map(tag => (
-              <Button key={tag} variant={topicFilter === tag ? 'secondary' : 'outline'} size="sm" className="bg-background" onClick={() => setTopicFilter(tag)}>{tag}</Button>
-          ))}
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+                <DropdownMenuLabel>Difficulty</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Select value={difficultyFilter} onValueChange={(value) => setDifficultyFilter(value as Difficulty)}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filter by difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All Difficulties</SelectItem>
+                        <SelectItem value="Easy">Easy</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Hard">Hard</SelectItem>
+                    </SelectContent>
+                </Select>
+                <DropdownMenuLabel className="mt-2">Status</DropdownMenuLabel>
+                 <DropdownMenuSeparator />
+                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as Status)}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All Statuses</SelectItem>
+                        <SelectItem value="Solved">Solved</SelectItem>
+                        <SelectItem value="Attempted">Attempted</SelectItem>
+                        <SelectItem value="Unsolved">Unsolved</SelectItem>
+                    </SelectContent>
+                </Select>
+                <DropdownMenuLabel className="mt-2">Topics</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {allTopicTags.map(tag => (
+                  <DropdownMenuCheckboxItem
+                    key={tag}
+                    checked={topicFilters.includes(tag)}
+                    onCheckedChange={(checked) => handleTopicFilterChange(tag, !!checked)}
+                  >
+                    {tag}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-1">
+                <Progress value={solvedPercentage} className="w-24 h-2" />
+                <span>{totalSolved}/{totalChallenges} Solved</span>
+            </div>
+            <Button variant="outline" onClick={handlePickOne}>
+                <Shuffle className="mr-2 h-4 w-4"/> Pick One
+            </Button>
+        </div>
       </div>
       
       <Card>
@@ -241,6 +324,13 @@ export default function ChallengesPage() {
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
                         {challenge.title}
                       </Link>
+                       {challenge.tags && challenge.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {challenge.tags.map(tag => (
+                                <Badge key={tag} variant="secondary" className="font-normal">{tag}</Badge>
+                            ))}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
                     <TableCell className="text-right">
@@ -250,7 +340,7 @@ export default function ChallengesPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">No challenges found.</TableCell>
+                    <TableCell colSpan={4} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
