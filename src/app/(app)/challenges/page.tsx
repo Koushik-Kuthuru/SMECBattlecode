@@ -48,6 +48,7 @@ export default function ChallengesPage() {
   const [isChallengesLoading, setIsChallengesLoading] = useState(true);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [topicFilter, setTopicFilter] = useState('All');
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -131,8 +132,9 @@ export default function ChallengesPage() {
       .filter(challenge => {
         const difficultyMatch = difficultyFilter === 'All' || challenge.difficulty === difficultyFilter;
         const searchMatch = searchTerm === '' || challenge.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const topicMatch = topicFilter === 'All' || (challenge.tags && challenge.tags.includes(topicFilter));
         const isEnabled = challenge.isEnabled !== false;
-        return difficultyMatch && searchMatch && isEnabled;
+        return difficultyMatch && searchMatch && topicMatch && isEnabled;
       })
       .sort((a, b) => {
           const aCompleted = !!completedChallenges[a.id!];
@@ -145,10 +147,10 @@ export default function ChallengesPage() {
           
           return 0;
       });
-  }, [challenges, difficultyFilter, searchTerm, currentUser, completedChallenges, inProgressChallenges]);
+  }, [challenges, difficultyFilter, searchTerm, topicFilter, currentUser, completedChallenges, inProgressChallenges]);
 
   const topicTags = useMemo(() => {
-      const allTags = challenges.flatMap(c => c.tags);
+      const allTags = challenges.flatMap(c => c.tags || []);
       return [...new Set(allTags)].slice(0, 10);
   }, [challenges]);
 
@@ -202,11 +204,10 @@ export default function ChallengesPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="secondary" size="sm">All</Button>
+          <Button variant={topicFilter === 'All' ? 'secondary' : 'outline'} size="sm" onClick={() => setTopicFilter('All')}>All</Button>
           {topicTags.map(tag => (
-              <Button key={tag} variant="outline" size="sm" className="bg-background">{tag}</Button>
+              <Button key={tag} variant={topicFilter === tag ? 'secondary' : 'outline'} size="sm" className="bg-background" onClick={() => setTopicFilter(tag)}>{tag}</Button>
           ))}
-          <Button variant="outline" size="sm" className="bg-background">More</Button>
       </div>
       
       <Card>
