@@ -15,11 +15,19 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, Star } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, Star, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Popover,
   PopoverContent,
@@ -32,6 +40,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved' | 'Favorites';
+type SortBy = 'Default' | 'Difficulty' | 'Points';
 
 const icons: { [key: string]: React.ElementType } = {
   Book,
@@ -88,6 +97,7 @@ export default function ChallengesPage() {
   const [isStudyPlansLoading, setIsStudyPlansLoading] = useState(true);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('All');
+  const [sortBy, setSortBy] = useState<SortBy>('Default');
   const [searchTerm, setSearchTerm] = useState('');
   const [topicFilter, setTopicFilter] = useState<string>('All');
   const [isTagsExpanded, setIsTagsExpanded] = useState(false);
@@ -209,17 +219,26 @@ export default function ChallengesPage() {
         return difficultyMatch && searchMatch && topicMatch && statusMatch && isEnabled;
       })
       .sort((a, b) => {
-          const aCompleted = !!completedChallenges[a.id!];
-          const bCompleted = !!completedChallenges[b.id!];
-          if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
-          
-          const aInProgress = !!inProgressChallenges[a.id!];
-          const bInProgress = !!inProgressChallenges[b.id!];
-          if (aInProgress !== bInProgress) return aInProgress ? -1 : 1;
-          
-          return 0;
+        if (sortBy === 'Difficulty') {
+            const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
+            return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+        }
+        if (sortBy === 'Points') {
+            return a.points - b.points;
+        }
+
+        // Default sort
+        const aCompleted = !!completedChallenges[a.id!];
+        const bCompleted = !!completedChallenges[b.id!];
+        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+        
+        const aInProgress = !!inProgressChallenges[a.id!];
+        const bInProgress = !!inProgressChallenges[b.id!];
+        if (aInProgress !== bInProgress) return aInProgress ? -1 : 1;
+        
+        return 0;
       });
-  }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges, favoriteChallenges]);
+  }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges, favoriteChallenges, sortBy]);
 
   const allTopicTags = useMemo(() => {
       const tagCounts: Record<string, number> = {};
@@ -357,78 +376,96 @@ export default function ChallengesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Popover>
-            <PopoverTrigger asChild>
+        <div className="flex w-full sm:w-auto items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto">
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filters
+                    <ArrowUpDown className="mr-2 h-4 w-4" />
+                    Sort By: {sortBy}
                 </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-screen max-w-sm sm:max-w-md p-4" align="end">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">Match All of the following filters:</p>
-                    </div>
-                    <div className="space-y-3">
-                        {/* Status Filter */}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                  <DropdownMenuRadioItem value="Default">Default</DropdownMenuRadioItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioItem value="Difficulty">Difficulty</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Points">Points</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto">
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filters
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-screen max-w-sm sm:max-w-md p-4" align="end">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-muted-foreground" />
-                            <Label className="w-20 shrink-0">Status</Label>
-                            <Select value="is">
-                                <SelectTrigger className="w-[80px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="is">is</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as Status)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="All">All</SelectItem>
-                                    <SelectItem value="Favorites">Favorites</SelectItem>
-                                    <SelectItem value="Solved">Solved</SelectItem>
-                                    <SelectItem value="Attempted">Attempted</SelectItem>
-                                    <SelectItem value="Unsolved">Unsolved</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <p className="text-sm font-medium">Match All of the following filters:</p>
                         </div>
+                        <div className="space-y-3">
+                            {/* Status Filter */}
+                            <div className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-muted-foreground" />
+                                <Label className="w-20 shrink-0">Status</Label>
+                                <Select value="is">
+                                    <SelectTrigger className="w-[80px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="is">is</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as Status)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All</SelectItem>
+                                        <SelectItem value="Favorites">Favorites</SelectItem>
+                                        <SelectItem value="Solved">Solved</SelectItem>
+                                        <SelectItem value="Attempted">Attempted</SelectItem>
+                                        <SelectItem value="Unsolved">Unsolved</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                        {/* Difficulty Filter */}
-                        <div className="flex items-center gap-2">
-                            <Shuffle className="h-5 w-5 text-muted-foreground" />
-                            <Label className="w-20 shrink-0">Difficulty</Label>
-                             <Select value="is">
-                                <SelectTrigger className="w-[80px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="is">is</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             <Select value={difficultyFilter} onValueChange={(v) => setDifficultyFilter(v as Difficulty)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select difficulty" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="All">All</SelectItem>
-                                    <SelectItem value="Easy">Easy</SelectItem>
-                                    <SelectItem value="Medium">Medium</SelectItem>
-                                    <SelectItem value="Hard">Hard</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {/* Difficulty Filter */}
+                            <div className="flex items-center gap-2">
+                                <Shuffle className="h-5 w-5 text-muted-foreground" />
+                                <Label className="w-20 shrink-0">Difficulty</Label>
+                                 <Select value="is">
+                                    <SelectTrigger className="w-[80px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="is">is</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 <Select value={difficultyFilter} onValueChange={(v) => setDifficultyFilter(v as Difficulty)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select difficulty" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All</SelectItem>
+                                        <SelectItem value="Easy">Easy</SelectItem>
+                                        <SelectItem value="Medium">Medium</SelectItem>
+                                        <SelectItem value="Hard">Hard</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button variant="ghost" onClick={resetFilters}>
+                                <RefreshCw className="mr-2 h-4 w-4" /> Reset
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex justify-end pt-4">
-                        <Button variant="ghost" onClick={resetFilters}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> Reset
-                        </Button>
-                    </div>
-                </div>
-            </PopoverContent>
-        </Popover>
+                </PopoverContent>
+            </Popover>
+        </div>
         <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-1">
                 <Progress value={solvedPercentage} className="w-24 h-2" />
