@@ -2,7 +2,7 @@
 
 'use client'
 
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -99,6 +99,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(false);
   
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
@@ -375,71 +376,80 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     <div className="h-full w-full bg-background flex flex-col border-t">
       <header className="p-2 border-b flex justify-between items-center">
         <h3 className="text-base font-semibold">Test Result</h3>
-         {runResult && !isRunning && (
-            <span className={cn(
-                "text-sm font-bold",
-                runResult.allPassed ? "text-green-600" : "text-red-500"
-            )}>
-                {runResult.allPassed ? "Accepted" : "Wrong Answer"}
-            </span>
-         )}
-         {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
+         <div className="flex items-center gap-2">
+            {runResult && !isRunning && (
+                <span className={cn(
+                    "text-sm font-bold",
+                    runResult.allPassed ? "text-green-600" : "text-red-500"
+                )}>
+                    {runResult.allPassed ? "Accepted" : "Wrong Answer"}
+                </span>
+            )}
+            {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
+             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}>
+                {isResultsPanelFolded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+             </Button>
+         </div>
       </header>
-      {isRunning ? (
-          <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin mb-2" />
-            <p className="font-semibold">Running...</p>
-          </div>
-      ) : runResult ? (
-          <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
-              <div className="p-2 border-b">
-                <TabsList className="h-auto p-1">
-                    {runResult.results.map((res, i) => (
-                        <TabsTrigger key={i} value={String(i)} className="flex items-center gap-1.5 text-xs h-8">
-                            Test Case {i + 1}
-                            {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-              </div>
-              <div className="flex-grow overflow-auto">
-                {runResult.results.map((res, i) => (
-                    <TabsContent key={i} value={String(i)} className="mt-0 p-4 space-y-4">
-                        <div>
-                            <h4 className="font-semibold mb-1 text-sm">Input</h4>
-                            <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <h4 className="font-semibold mb-1 text-sm">Your Output</h4>
-                                <Textarea readOnly value={res.actualOutput} className="font-mono text-xs h-20" />
-                            </div>
-                              <div>
-                                <h4 className="font-semibold mb-1 text-sm">Expected Output</h4>
-                                <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
-                            </div>
-                        </div>
-                    </TabsContent>
-                ))}
-              </div>
-              <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
-          </Tabs>
-      ) : debugOutput ? (
-          <div className="flex-grow p-4 space-y-4 overflow-auto">
-            <div>
-              <h4 className="font-semibold mb-1 text-sm">Standard Output</h4>
-              <Textarea readOnly value={debugOutput.stdout || '(empty)'} className="font-mono text-xs h-32 bg-gray-100" />
-            </div>
-            <div>
-              <h4 className="font-semibold mb-1 text-sm text-red-500">Standard Error</h4>
-              <Textarea readOnly value={debugOutput.stderr || '(empty)'} className="font-mono text-xs h-20 bg-red-50 text-red-700 border-red-200" />
-            </div>
-          </div>
-      ) : (
-          <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
-            <Play className="h-8 w-8 mb-2" />
-            <p>Run your code to see test results.</p>
-          </div>
+      {!isResultsPanelFolded && (
+        <>
+            {isRunning ? (
+                <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                    <p className="font-semibold">Running...</p>
+                </div>
+            ) : runResult ? (
+                <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
+                    <div className="p-2 border-b">
+                        <TabsList className="h-auto p-1">
+                            {runResult.results.map((res, i) => (
+                                <TabsTrigger key={i} value={String(i)} className="flex items-center gap-1.5 text-xs h-8">
+                                    Test Case {i + 1}
+                                    {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
+                    <div className="flex-grow overflow-auto">
+                        {runResult.results.map((res, i) => (
+                            <TabsContent key={i} value={String(i)} className="mt-0 p-4 space-y-4">
+                                <div>
+                                    <h4 className="font-semibold mb-1 text-sm">Input</h4>
+                                    <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 className="font-semibold mb-1 text-sm">Your Output</h4>
+                                        <Textarea readOnly value={res.actualOutput} className="font-mono text-xs h-20" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold mb-1 text-sm">Expected Output</h4>
+                                        <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        ))}
+                    </div>
+                    <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
+                </Tabs>
+            ) : debugOutput ? (
+                <div className="flex-grow p-4 space-y-4 overflow-auto">
+                    <div>
+                        <h4 className="font-semibold mb-1 text-sm">Standard Output</h4>
+                        <Textarea readOnly value={debugOutput.stdout || '(empty)'} className="font-mono text-xs h-32 bg-gray-100" />
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-1 text-sm text-red-500">Standard Error</h4>
+                        <Textarea readOnly value={debugOutput.stderr || '(empty)'} className="font-mono text-xs h-20 bg-red-50 text-red-700 border-red-200" />
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+                    <Play className="h-8 w-8 mb-2" />
+                    <p>Run your code to see test results.</p>
+                </div>
+            )}
+        </>
       )}
   </div>
   );
@@ -489,7 +499,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <ResizableHandleWithHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
         <ScrollArea className="h-full">
-          <div className="flex flex-col h-[calc(100vh)]">
+          <div className="flex flex-col h-screen">
               <div className="relative flex-grow">
                  {isChallengeLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -500,7 +510,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 )}
               </div>
               {(isRunning || runResult || debugOutput) && (
-                <div className="h-[40vh] flex-shrink-0">
+                <div className="flex-shrink-0">
                   {testResultPanel}
                 </div>
               )}
