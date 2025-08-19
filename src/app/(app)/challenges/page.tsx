@@ -1,123 +1,261 @@
 
 'use client';
 
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Trophy, Heart } from 'lucide-react';
-import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
+import { type Challenge, challenges as initialChallenges } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CheckCircle, Circle, RefreshCw, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { UserData } from '@/lib/types';
 
 
-type Contest = {
-  title: string;
-  date: string;
-  imageUrl: string;
-  aiHint: string;
-  startsIn: string;
-  isFeatured?: boolean;
+type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
+
+const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard' }) => {
+  const difficultyStyles = {
+    Easy: 'text-green-600 bg-green-100',
+    Medium: 'text-yellow-600 bg-yellow-100',
+    Hard: 'text-red-600 bg-red-100',
+  };
+  return (
+    <span className={cn('px-2 py-1 text-xs font-semibold rounded-full', difficultyStyles[difficulty])}>
+      {difficulty}
+    </span>
+  );
 };
 
-const contests: Contest[] = [
-  {
-    title: 'Weekly Contest #12',
-    date: 'Sunday 8:00 AM',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'abstract geometric',
-    startsIn: '4d 23h 19m 14s',
-    isFeatured: false,
-  },
-  {
-    title: 'Biweekly Contest #8',
-    date: 'Saturday 8:00 PM',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'digital cube',
-    startsIn: '11d 11h 19m 14s',
-    isFeatured: false,
-  },
-   {
-    title: 'SMEC Foundation Day Special',
-    date: 'October 14th, 9:00 AM',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'university celebration',
-    startsIn: '25d 10h 05m 01s',
-    isFeatured: true,
-  },
-    {
-    title: 'Diwali Code Fest',
-    date: 'November 1st, 10:00 AM',
-    imageUrl: 'https://placehold.co/600x400.png',
-    aiHint: 'festival lights',
-    startsIn: '42d 12h 15m 31s',
-    isFeatured: true,
-  },
-];
 
-const ContestCard = ({ contest, large = false }: { contest: Contest, large?: boolean }) => (
-    <div className="group relative rounded-lg overflow-hidden cursor-pointer shadow-lg transition-transform duration-300 hover:-translate-y-1">
-        <Image
-            src={contest.imageUrl}
-            alt={contest.title}
-            width={600}
-            height={400}
-            className={cn("w-full object-cover transition-transform duration-300 group-hover:scale-105", large ? 'h-56' : 'h-48')}
-            data-ai-hint={contest.aiHint}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        <div className="absolute top-3 right-3 bg-black/30 p-2 rounded-md backdrop-blur-sm">
-            <Calendar className="h-5 w-5 text-white/80" />
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-            <div className="flex items-center gap-2 text-xs text-white/80 mb-2">
-                <Clock className="h-4 w-4" />
-                <span>Starts in {contest.startsIn}</span>
-            </div>
-            <h3 className={cn("font-bold", large ? "text-xl" : "text-lg")}>{contest.title}</h3>
-            <p className="text-sm text-white/80">{contest.date}</p>
-        </div>
-    </div>
-);
+export default function ChallengesPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [completedChallenges, setCompletedChallenges] = useState<Record<string, boolean>>({});
+  const [inProgressChallenges, setInProgressChallenges] = useState<Record<string, boolean>>({});
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [isChallengesLoading, setIsChallengesLoading] = useState(true);
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
-export default function ArenaPage() {
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
-      <div className="container mx-auto px-4 md:px-6 py-12">
-        
-        {/* Hero Section */}
-        <section className="text-center py-16 animate-fade-in-up">
-            <Trophy className="h-24 w-24 mx-auto text-yellow-400 mb-6" />
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                SMEC Battle Code <span className="font-light">Contest</span>
-            </h1>
-            <p className="mt-4 text-lg text-slate-400">
-                Contest every week. Compete and see your ranking!
-            </p>
-        </section>
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
+      setIsUserLoading(true);
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data() as UserData;
+          setCurrentUser({ ...userData, uid: user.uid, email: user.email! });
 
-        {/* Upcoming Contests */}
-        <section className="mb-16">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {contests.filter(c => !c.isFeatured).map(contest => (
-                    <ContestCard key={contest.title} contest={contest} large />
-                ))}
-             </div>
-        </section>
-        
-        {/* Featured Contests */}
-        <section>
-            <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-2xl font-bold">Featured Contests</h2>
-                 <Button variant="link" className="text-sky-400 hover:text-sky-300">
-                    <Heart className="mr-2 h-4 w-4" />
-                    Sponsor a Contest
-                 </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {contests.filter(c => c.isFeatured).map(contest => (
-                     <ContestCard key={contest.title} contest={contest} />
-                ))}
-            </div>
-        </section>
+          const completedChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/completed`));
+          setCompletedChallenges(completedChallengesSnap.exists() ? completedChallengesSnap.data() : {});
+          
+          const inProgressChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/inProgress`));
+          setInProgressChallenges(inProgressChallengesSnap.exists() ? inProgressChallengesSnap.data() : {});
+        } else {
+          router.push('/login');
+        }
+      } else {
+        router.push('/login');
+      }
+      setIsUserLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, [auth, db, router]);
+  
+  const fetchChallenges = useCallback(async () => {
+    setIsChallengesLoading(true);
+    try {
+      const challengesCollection = collection(db, 'challenges');
+      let challengesSnapshot = await getDocs(challengesCollection);
+
+      if (challengesSnapshot.empty) {
+          console.log("No challenges found, seeding initial data...");
+          const batch = writeBatch(db);
+          initialChallenges.forEach(challengeData => {
+              const challengeRef = doc(collection(db, 'challenges'));
+              batch.set(challengeRef, { ...challengeData, id: challengeRef.id });
+          });
+          await batch.commit();
+          
+          challengesSnapshot = await getDocs(challengesCollection); // Re-fetch after seeding
+          toast({
+            title: 'Welcome!',
+            description: 'Initial challenges have been loaded for you.'
+          });
+      }
+      
+      const challengesList = challengesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
+      setChallenges(challengesList);
+
+    } catch (error) {
+      console.error("Error fetching challenges: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error fetching challenges',
+        description: 'Could not load challenges. Please try again later.'
+      });
+      const challengesWithIds = initialChallenges.map((c, i) => ({...c, id: `fallback-${i}`}));
+      setChallenges(challengesWithIds); 
+    } finally {
+      setIsChallengesLoading(false);
+    }
+  }, [db, toast]);
+
+  useEffect(() => {
+    if (!isUserLoading && currentUser) {
+        fetchChallenges();
+    }
+  }, [isUserLoading, currentUser, fetchChallenges]);
+
+  const filteredChallenges = useMemo(() => {
+    if (!currentUser) return [];
+
+    return challenges
+      .filter(challenge => {
+        const difficultyMatch = difficultyFilter === 'All' || challenge.difficulty === difficultyFilter;
+        const searchMatch = searchTerm === '' || challenge.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const isEnabled = challenge.isEnabled !== false;
+        return difficultyMatch && searchMatch && isEnabled;
+      })
+      .sort((a, b) => {
+          const aCompleted = !!completedChallenges[a.id!];
+          const bCompleted = !!completedChallenges[b.id!];
+          if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+          
+          const aInProgress = !!inProgressChallenges[a.id!];
+          const bInProgress = !!inProgressChallenges[b.id!];
+          if (aInProgress !== bInProgress) return aInProgress ? -1 : 1;
+          
+          return 0;
+      });
+  }, [challenges, difficultyFilter, searchTerm, currentUser, completedChallenges, inProgressChallenges]);
+
+  const topicTags = useMemo(() => {
+      const allTags = challenges.flatMap(c => c.tags);
+      return [...new Set(allTags)].slice(0, 10);
+  }, [challenges]);
+
+
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+          <div>Loading...</div>
       </div>
+    )
+  }
+
+  const getStatusIcon = (challengeId: string) => {
+    if (completedChallenges[challengeId]) {
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    }
+    if (inProgressChallenges[challengeId]) {
+      return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
+    }
+    return <Circle className="h-5 w-5 text-slate-300" />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <CardHeader className="px-0">
+        <CardTitle className="text-3xl font-bold tracking-tight">Challenge Arena</CardTitle>
+        <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
+      </CardHeader>
+      
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="relative w-full sm:flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input 
+            placeholder="Search challenges..." 
+            className="pl-10" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select value={difficultyFilter} onValueChange={(value) => setDifficultyFilter(value as Difficulty)}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+              <SelectItem value="All">All Difficulties</SelectItem>
+              <SelectItem value="Easy">Easy</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Hard">Hard</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="secondary" size="sm">All</Button>
+          {topicTags.map(tag => (
+              <Button key={tag} variant="outline" size="sm" className="bg-background">{tag}</Button>
+          ))}
+          <Button variant="outline" size="sm" className="bg-background">More</Button>
+      </div>
+      
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Status</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="text-center">Acceptance</TableHead>
+                <TableHead className="text-right">Difficulty</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isChallengesLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredChallenges.length > 0 ? (
+                filteredChallenges.map(challenge => (
+                  <TableRow key={challenge.id}>
+                    <TableCell className="text-center">
+                      {getStatusIcon(challenge.id!)}
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
+                        {challenge.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
+                    <TableCell className="text-right">
+                      <DifficultyPill difficulty={challenge.difficulty} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">No challenges found.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
