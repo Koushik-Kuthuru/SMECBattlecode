@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug } from 'lucide-react';
@@ -11,7 +10,7 @@ import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 
 import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp, deleteField } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
-  ResizableHandle,
+  ResizableHandleWithHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
@@ -621,3 +620,5 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
+    
