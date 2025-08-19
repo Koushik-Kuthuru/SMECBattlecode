@@ -58,41 +58,19 @@ const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard'
 const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
     const IconComponent = icons[plan.iconName] || Book;
     return (
-        <Link href={plan.href} className="block group">
-            <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6 transition-transform group-hover:scale-105", `bg-gradient-to-br ${plan.gradient}`)}>
-                <div className="relative z-10">
-                    <h3 className="text-xl font-bold">{plan.title}</h3>
-                    <p className="text-sm opacity-90">{plan.description}</p>
-                </div>
-                <Button variant="secondary" size="sm" className="relative z-10 w-fit bg-white/90 text-black hover:bg-white">
+        <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6", `bg-gradient-to-br ${plan.gradient}`)}>
+            <div className="relative z-10">
+                <h3 className="text-xl font-bold">{plan.title}</h3>
+                <p className="text-sm opacity-90">{plan.description}</p>
+            </div>
+            <Link href={plan.href} className="relative z-10 w-fit">
+                <Button variant="secondary" size="sm" className="bg-white/90 text-black hover:bg-white">
                     {plan.buttonText}
                 </Button>
-                <IconComponent className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0 transition-transform group-hover:scale-110" />
-            </Card>
-        </Link>
+            </Link>
+            <IconComponent className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0" />
+        </Card>
     );
-};
-
-const FrequencyIndicator = ({ level }: { level: number }) => {
-  const bars = Array.from({ length: 5 }, (_, i) => i < level);
-  return (
-    <div className="flex items-end gap-0.5 h-5 w-10 mx-auto">
-      {bars.map((isFilled, i) => (
-        <div
-          key={i}
-          className={cn(
-            'w-1.5 rounded-[1px] transition-colors',
-            isFilled ? 'bg-primary' : 'bg-muted',
-            i === 0 && 'h-2',
-            i === 1 && 'h-3',
-            i === 2 && 'h-4',
-            i === 3 && 'h-5',
-            i === 4 && 'h-[22px]'
-          )}
-        />
-      ))}
-    </div>
-  );
 };
 
 
@@ -436,12 +414,11 @@ export default function ChallengesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Status</TableHead>
+                <TableHead className="w-[10%]">Status</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="text-right w-32">Difficulty</TableHead>
-                <TableHead className="text-center hidden md:table-cell w-32">Acceptance</TableHead>
-                <TableHead className="text-right w-28">Points</TableHead>
-                <TableHead className="text-center w-28">Frequency</TableHead>
+                <TableHead className="text-right w-[15%]">Difficulty</TableHead>
+                <TableHead className="text-right w-[15%] hidden md:table-cell">Acceptance</TableHead>
+                <TableHead className="text-right w-[15%]">Points</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -451,9 +428,8 @@ export default function ChallengesPage() {
                     <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
-                    <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell className="text-right hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-1/2 ml-auto" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
@@ -470,21 +446,18 @@ export default function ChallengesPage() {
                     <TableCell className="text-right">
                       <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
-                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
+                    <TableCell className="text-right text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
                             {challenge.points}
                         </div>
                     </TableCell>
-                    <TableCell>
-                        <FrequencyIndicator level={challenge.frequency ?? 0} />
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
