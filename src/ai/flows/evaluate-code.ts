@@ -142,10 +142,14 @@ const evaluateCodeFlow = ai.defineFlow(
         } catch (error: any) {
              console.error("Error executing test case with Judge0:", error.response?.data || error.message);
              allPassed = false;
+             let errorMessage = `Execution Error: ${error.message}`;
+             if(error.response?.status === 403) {
+                errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file."
+             }
              results.push({
                 testCaseInput: testCase.input,
                 expectedOutput: testCase.output,
-                actualOutput: `Execution Error: ${error.message}`,
+                actualOutput: errorMessage,
                 passed: false,
              });
         }

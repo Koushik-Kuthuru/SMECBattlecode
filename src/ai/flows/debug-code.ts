@@ -125,9 +125,13 @@ const debugCodeFlow = ai.defineFlow(
 
     } catch (error: any) {
         console.error("Error executing debug run with Judge0:", error.response?.data || error.message);
+        let errorMessage = `Execution Error: ${error.message}`;
+        if(error.response?.status === 403) {
+            errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file."
+        }
         return {
             stdout: '',
-            stderr: `Execution Error: ${error.message}`,
+            stderr: errorMessage,
         };
     }
   }
