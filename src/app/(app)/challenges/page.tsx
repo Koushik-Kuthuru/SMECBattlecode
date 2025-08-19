@@ -57,7 +57,7 @@ export default function ChallengesPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [topicFilters, setTopicFilters] = useState<string[]>([]);
+  const [topicFilter, setTopicFilter] = useState<string>('All');
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -141,7 +141,7 @@ export default function ChallengesPage() {
       .filter(challenge => {
         const difficultyMatch = difficultyFilter === 'All' || challenge.difficulty === difficultyFilter;
         const searchMatch = searchTerm === '' || challenge.title.toLowerCase().includes(searchTerm.toLowerCase());
-        const topicMatch = topicFilters.length === 0 || (challenge.tags && challenge.tags.some(tag => topicFilters.includes(tag)));
+        const topicMatch = topicFilter === 'All' || (challenge.tags && challenge.tags.includes(topicFilter));
         
         const isSolved = !!completedChallenges[challenge.id!];
         const isAttempted = !!inProgressChallenges[challenge.id!];
@@ -165,11 +165,19 @@ export default function ChallengesPage() {
           
           return 0;
       });
-  }, [challenges, difficultyFilter, searchTerm, topicFilters, statusFilter, currentUser, completedChallenges, inProgressChallenges]);
+  }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges]);
 
   const allTopicTags = useMemo(() => {
-      const allTags = challenges.flatMap(c => c.tags || []);
-      return [...new Set(allTags)].slice(0, 10);
+      const tagCounts: Record<string, number> = {};
+      challenges.forEach(c => {
+        c.tags?.forEach(tag => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+      return Object.entries(tagCounts)
+            .sort(([, countA], [, countB]) => countB - countA)
+            .map(([tag]) => tag)
+            .slice(0, 10);
   }, [challenges]);
   
   const handlePickOne = () => {
@@ -191,6 +199,7 @@ export default function ChallengesPage() {
   const resetFilters = () => {
     setDifficultyFilter('All');
     setStatusFilter('All');
+    setTopicFilter('All');
   }
 
   if (isUserLoading) {
@@ -221,6 +230,26 @@ export default function ChallengesPage() {
         <CardTitle className="text-3xl font-bold tracking-tight">Challenge Arena</CardTitle>
         <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
       </CardHeader>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Badge
+          variant={topicFilter === 'All' ? 'default' : 'secondary'}
+          onClick={() => setTopicFilter('All')}
+          className="cursor-pointer"
+        >
+          All Topics
+        </Badge>
+        {allTopicTags.map(tag => (
+          <Badge
+            key={tag}
+            variant={topicFilter === tag ? 'default' : 'secondary'}
+            onClick={() => setTopicFilter(tag)}
+            className="cursor-pointer"
+          >
+            {tag}
+          </Badge>
+        ))}
+      </div>
       
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative w-full sm:flex-1">
