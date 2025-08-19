@@ -129,7 +129,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: '/dashboard', label: 'Home', icon: Home },
-    { href: '/missions', label: 'Missions', icon: ListChecks },
     { href: '/arena', label: 'Arena', icon: Flame },
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/leaderboard', label: 'Ranking Arena', icon: Trophy },
