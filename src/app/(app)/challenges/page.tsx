@@ -434,13 +434,6 @@ export default function ChallengesPage() {
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
                         <span className="line-clamp-2">{challenge.title}</span>
                       </Link>
-                       {challenge.tags && challenge.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                            {challenge.tags.map(tag => (
-                                <Badge key={tag} variant="secondary" className="font-normal">{tag}</Badge>
-                            ))}
-                        </div>
-                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DifficultyPill difficulty={challenge.difficulty} />
