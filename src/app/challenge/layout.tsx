@@ -44,6 +44,13 @@ import { Progress } from '@/components/ui/progress';
 import { Toaster } from '@/components/ui/toaster';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SmecBattleCodeLogo } from '@/components/icons';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 
 type CurrentUser = {
   uid: string;
@@ -107,7 +114,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
   const [debugOutput, setDebugOutput] = useState<DebugCodeOutput | null>(null);
   const [activeTab, setActiveTab] = useState('description');
-  const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(false);
@@ -225,7 +231,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if(runResult) {
-        setActiveResultTab('0');
+       setIsResultsPanelFolded(false); // Unfold panel when new results arrive
     }
   }, [runResult]);
   
@@ -432,49 +438,44 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
          </div>
       </header>
-      {!isResultsPanelFolded && (
-        <>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
             {isRunning ? (
-                <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
                     <Loader2 className="h-8 w-8 animate-spin mb-2" />
                     <p className="font-semibold">Running...</p>
                 </div>
             ) : runResult ? (
-                <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
-                    <div className="p-2 border-b">
-                        <TabsList className="h-auto p-1">
-                            {runResult.results.map((res, i) => (
-                                <TabsTrigger key={i} value={String(i)} className="flex items-center gap-1.5 text-xs h-8">
-                                    Test Case {i + 1}
+                <Accordion type="single" collapsible className="w-full" defaultValue="0">
+                    {runResult.results.map((res, i) => (
+                        <AccordionItem value={String(i)} key={i}>
+                            <AccordionTrigger>
+                                <div className="flex items-center gap-2">
                                     {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-                    <div className="flex-grow overflow-auto">
-                        {runResult.results.map((res, i) => (
-                            <TabsContent key={i} value={String(i)} className="mt-0 p-4 space-y-4">
+                                    Test Case {i + 1}
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-2 space-y-2">
                                 <div>
-                                    <h4 className="font-semibold mb-1 text-sm">Input</h4>
+                                    <h4 className="font-semibold mb-1 text-xs">Input</h4>
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <h4 className="font-semibold mb-1 text-sm">Your Output</h4>
+                                        <h4 className="font-semibold mb-1 text-xs">Your Output</h4>
                                         <Textarea readOnly value={res.actualOutput} className="font-mono text-xs h-20" />
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold mb-1 text-sm">Expected Output</h4>
+                                        <h4 className="font-semibold mb-1 text-xs">Expected Output</h4>
                                         <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
                                     </div>
                                 </div>
-                            </TabsContent>
-                        ))}
-                    </div>
-                    <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
-                </Tabs>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
             ) : debugOutput ? (
-                <div className="flex-grow p-4 space-y-4 overflow-auto">
+                <div className="p-2 space-y-4">
                     <div>
                         <h4 className="font-semibold mb-1 text-sm">Standard Output</h4>
                         <Textarea readOnly value={debugOutput.stdout || '(empty)'} className="font-mono text-xs h-32 bg-gray-100" />
@@ -485,13 +486,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
                     <Play className="h-8 w-8 mb-2" />
                     <p>Run your code to see test results.</p>
                 </div>
             )}
-        </>
-      )}
+        </div>
+      </ScrollArea>
+      {runResult && <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>}
   </div>
   );
   
@@ -637,7 +639,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </div>
             </TabsContent>
             <TabsContent value="result" className="mt-0 h-full">
-                {bottomPanel}
+                {testResultPanel}
             </TabsContent>
         </div>
     </Tabs>
