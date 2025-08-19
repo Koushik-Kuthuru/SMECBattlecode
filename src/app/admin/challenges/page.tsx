@@ -40,7 +40,7 @@ type FormData = Omit<Challenge, 'id' | 'tags' | 'languages' | 'starterCode' | 's
   tags: string;
   languages: string[];
   starterCode: { [key: string]: string };
-  solution: { [key: string]: string };
+  solution?: { [key: string]: string };
 };
 
 const defaultFormData: FormData = {
@@ -52,9 +52,8 @@ const defaultFormData: FormData = {
   examples: [{ input: '', output: '', explanation: '' }],
   testCases: [{ input: '', output: '', isHidden: false }],
   isEnabled: true,
-  languages: ['Python'],
-  starterCode: { Python: '' },
-  solution: { Python: '' },
+  languages: ALL_LANGUAGES,
+  starterCode: ALL_LANGUAGES.reduce((acc, lang) => ({ ...acc, [lang]: '' }), {}),
 };
 
 export default function ManageChallengesPage() {
@@ -88,7 +87,6 @@ export default function ManageChallengesPage() {
               id: challengeRef.id,
               languages: [challengeData.language],
               starterCode: { [challengeData.language]: challengeData.starterCode },
-              solution: { [challengeData.language]: challengeData.solution },
               language: deleteField(),
               likes: challengeData.likes || 0
             };
@@ -126,27 +124,7 @@ export default function ManageChallengesPage() {
     setFormData(prev => ({...prev, [field]: value}));
   }, []);
   
-  const handleLanguageToggle = (language: string, checked: boolean) => {
-    setFormData(prev => {
-        const newLangs = checked 
-            ? [...prev.languages, language]
-            : prev.languages.filter(lang => lang !== language);
-        
-        const newStarterCode = { ...prev.starterCode };
-        const newSolution = { ...prev.solution };
-        if (!checked) {
-            delete newStarterCode[language];
-            delete newSolution[language];
-        } else {
-            if (!newStarterCode[language]) newStarterCode[language] = '';
-            if (!newSolution[language]) newSolution[language] = '';
-        }
-
-        return {...prev, languages: newLangs, starterCode: newStarterCode, solution: newSolution };
-    });
-  };
-
-  const handleCodeChange = useCallback((lang: string, type: 'starterCode' | 'solution', value: string) => {
+  const handleCodeChange = useCallback((lang: string, type: 'starterCode', value: string) => {
     setFormData(prev => ({
         ...prev,
         [type]: {
@@ -213,12 +191,10 @@ export default function ManageChallengesPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Title is required.' });
         return;
     }
-    if (formData.languages.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'At least one language must be selected.' });
-        return;
-    }
+    const { solution, ...restOfFormData } = formData;
     const challengeDataToSave = {
-        ...formData,
+        ...restOfFormData,
+        languages: ALL_LANGUAGES,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
     };
@@ -382,22 +358,6 @@ export default function ManageChallengesPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <Label>Supported Languages</Label>
-                    <div className="flex flex-wrap gap-4 rounded-lg border p-4">
-                        {ALL_LANGUAGES.map(lang => (
-                            <div key={lang} className="flex items-center gap-2">
-                                <Checkbox
-                                    id={`lang-${lang}`}
-                                    checked={formData.languages.includes(lang)}
-                                    onCheckedChange={(checked) => handleLanguageToggle(lang, !!checked)}
-                                />
-                                <Label htmlFor={`lang-${lang}`} className="font-normal">{lang}</Label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea id="description" placeholder="Detailed problem description..." value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} required rows={5} />
                 </div>
@@ -485,16 +445,6 @@ export default function ManageChallengesPage() {
                                         <CodeEditor
                                             value={formData.starterCode[lang] || ''}
                                             onChange={(value) => handleCodeChange(lang, 'starterCode', value)}
-                                            language={lang.toLowerCase()}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Solution Code ({lang})</Label>
-                                    <div className="h-64 rounded-md border">
-                                         <CodeEditor
-                                            value={formData.solution[lang] || ''}
-                                            onChange={(value) => handleCodeChange(lang, 'solution', value)}
                                             language={lang.toLowerCase()}
                                         />
                                     </div>
