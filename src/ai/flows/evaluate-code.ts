@@ -1,15 +1,27 @@
+
 'use server';
 
 /**
- * @fileOverview A code evaluation AI agent.
+ * @fileOverview A code evaluation agent that uses Judge0.
  *
- * - evaluateCode - A function that evaluates a code submission against test cases.
+ * - evaluateCode - A function that evaluates a code submission against test cases using Judge0.
  * - EvaluateCodeInput - The input type for the evaluateCode function.
  * - EvaluateCodeOutput - The return type for the evaluateCode function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import axios from 'axios';
+
+// Maps our language names to Judge0 language IDs
+const languageIdMap: Record<string, number> = {
+  'javascript': 63,
+  'python': 71,
+  'java': 62,
+  'c++': 54,
+  'cpp': 54,
+  'c': 50,
+};
 
 const TestCaseResultSchema = z.object({
   testCaseInput: z.string().describe("The input for the test case."),
@@ -20,9 +32,7 @@ const TestCaseResultSchema = z.object({
 
 const EvaluateCodeInputSchema = z.object({
   code: z.string().describe('The code submission to evaluate.'),
-  programmingLanguage: z
-    .string()
-    .describe('The programming language of the code submission.'),
+  programmingLanguage: z.string().describe('The programming language of the code submission.'),
   problemDescription: z.string().describe('The description of the coding problem.'),
   testCases: z.array(z.object({
     input: z.string(),
@@ -38,44 +48,57 @@ const EvaluateCodeOutputSchema = z.object({
 });
 export type EvaluateCodeOutput = z.infer<typeof EvaluateCodeOutputSchema>;
 
+
+/**
+ * Helper function to run code on Judge0
+ * @param languageId Judge0 language ID
+ * @param sourceCode The code to run
+ * @param stdin The standard input for the code
+ * @returns The Judge0 submission result
+ */
+async function runOnJudge0(languageId: number, sourceCode: string, stdin: string) {
+  const options = {
+    method: 'POST',
+    url: 'https://judge0-ce.p.rapidapi.com/submissions',
+    params: {
+      base64_encoded: 'false',
+      fields: '*'
+    },
+    headers: {
+      'content-type': 'application/json',
+      'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+    },
+    data: {
+      language_id: languageId,
+      source_code: sourceCode,
+      stdin: stdin
+    }
+  };
+
+  const submissionResponse = await axios.request(options);
+  const token = submissionResponse.data.token;
+
+  // Poll for the result
+  while (true) {
+    const resultResponse = await axios.get(`https://judge0-ce.p.rapidapi.com/submissions/${token}?base64_encoded=false&fields=*`, {
+        headers: {
+            'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+        }
+    });
+    const statusId = resultResponse.data.status.id;
+    if (statusId > 2) { // Statuses: 1-In Queue, 2-Processing. Others are final.
+        return resultResponse.data;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before polling again
+  }
+}
+
+
 export async function evaluateCode(input: EvaluateCodeInput): Promise<EvaluateCodeOutput> {
   return evaluateCodeFlow(input);
 }
-
-const prompt = ai.definePrompt({
-  name: 'evaluateCodePrompt',
-  input: {schema: EvaluateCodeInputSchema},
-  output: {schema: EvaluateCodeOutputSchema},
-  prompt: `You are a highly advanced code evaluation engine for a competitive programming platform. Your task is to analyze a user's code submission against a series of test cases and determine its correctness.
-
-  **Problem Description:**
-  {{{problemDescription}}}
-
-  **Programming Language:**
-  {{{programmingLanguage}}}
-
-  **User's Code Submission:**
-  \`\`\`{{{programmingLanguage}}}
-  {{{code}}}
-  \`\`\`
-
-  **Test Cases:**
-  {{#each testCases}}
-  - Input: \`{{this.input}}\`
-  - Expected Output: \`{{this.output}}\`
-  {{/each}}
-
-  **Instructions:**
-  1.  Mentally execute the user's code for each provided test case.
-  2.  For each test case, determine the \`actualOutput\` produced by the code.
-  3.  Compare the \`actualOutput\` with the \`expectedOutput\`.
-  4.  Set the \`passed\` flag to \`true\` if the outputs match exactly, and \`false\` otherwise. Pay close attention to data types, formatting, and whitespace.
-  5.  After evaluating all test cases, determine if all of them passed and set the \`allPassed\` flag accordingly.
-  6.  Provide brief, constructive, overall \`feedback\` on the submission. If there are errors, hint at the possible cause without giving away the solution. For example: "Your code seems to work for simple cases, but consider edge cases with larger inputs." or "Looks like there might be an issue with how you handle array boundaries." If the code is correct, provide positive feedback like "Great job! Your solution is correct and efficient."
-
-  Return a JSON object matching the specified output schema.
-  `,
-});
 
 const evaluateCodeFlow = ai.defineFlow(
   {
@@ -83,8 +106,58 @@ const evaluateCodeFlow = ai.defineFlow(
     inputSchema: EvaluateCodeInputSchema,
     outputSchema: EvaluateCodeOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async ({ code, programmingLanguage, testCases }) => {
+    const languageId = languageIdMap[programmingLanguage.toLowerCase()];
+    if (!languageId) {
+      throw new Error(`Unsupported language: ${programmingLanguage}`);
+    }
+    if (!process.env.JUDGE0_API_KEY) {
+        throw new Error('JUDGE0_API_KEY is not set in the environment variables.');
+    }
+
+    const results: z.infer<typeof TestCaseResultSchema>[] = [];
+    let allPassed = true;
+
+    for (const testCase of testCases) {
+        try {
+            const judgeResult = await runOnJudge0(languageId, code, testCase.input);
+            
+            // Normalize outputs for comparison
+            const actualOutput = (judgeResult.stdout || '').trim();
+            const expectedOutput = testCase.output.trim();
+
+            const passed = actualOutput === expectedOutput && judgeResult.status.id === 3; // Status 3 is "Accepted"
+
+            if (!passed) {
+                allPassed = false;
+            }
+
+            results.push({
+                testCaseInput: testCase.input,
+                expectedOutput: testCase.output,
+                actualOutput: judgeResult.stdout || judgeResult.stderr || judgeResult.compile_output || 'No output',
+                passed,
+            });
+
+        } catch (error: any) {
+             console.error("Error executing test case with Judge0:", error.response?.data || error.message);
+             allPassed = false;
+             results.push({
+                testCaseInput: testCase.input,
+                expectedOutput: testCase.output,
+                actualOutput: `Execution Error: ${error.message}`,
+                passed: false,
+             });
+        }
+    }
+    
+    let feedback = "Your code has been evaluated.";
+    if(allPassed) {
+        feedback = "Great job! Your solution passed all test cases.";
+    } else {
+        feedback = "Your solution did not pass all test cases. Review the results and try again.";
+    }
+
+    return { results, allPassed, feedback };
   }
 );
