@@ -109,7 +109,7 @@ export default function LeaderboardPage() {
       <Card className="overflow-hidden">
         <CardHeader>
           <div className="flex items-center gap-2">
-             <CardTitle className="text-3xl font-bold tracking-tight">Leaderboard</CardTitle>
+             <CardTitle className="text-3xl font-bold tracking-tight">Ranking Arena</CardTitle>
                 <Dialog>
                     <DialogTrigger asChild>
                          <Button variant="ghost" size="icon">
