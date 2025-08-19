@@ -15,19 +15,16 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
@@ -173,12 +170,6 @@ export default function ChallengesPage() {
       const allTags = challenges.flatMap(c => c.tags || []);
       return [...new Set(allTags)].slice(0, 10);
   }, [challenges]);
-
-  const handleTopicFilterChange = (tag: string, checked: boolean) => {
-    setTopicFilters(prev => 
-      checked ? [...prev, tag] : prev.filter(t => t !== tag)
-    );
-  };
   
   const handlePickOne = () => {
     const unsolved = filteredChallenges.filter(c => !completedChallenges[c.id!]);
@@ -194,6 +185,11 @@ export default function ChallengesPage() {
             description: 'Could not find any challenges to pick from.'
         });
     }
+  }
+
+  const resetFilters = () => {
+    setDifficultyFilter('All');
+    setStatusFilter('All');
   }
 
   if (isUserLoading) {
@@ -235,53 +231,77 @@ export default function ChallengesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        <Popover>
+            <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto">
                     <Filter className="mr-2 h-4 w-4" />
                     Filters
                 </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Difficulty</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <Select value={difficultyFilter} onValueChange={(value) => setDifficultyFilter(value as Difficulty)}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Filter by difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="All">All Difficulties</SelectItem>
-                        <SelectItem value="Easy">Easy</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Hard">Hard</SelectItem>
-                    </SelectContent>
-                </Select>
-                <DropdownMenuLabel className="mt-2">Status</DropdownMenuLabel>
-                 <DropdownMenuSeparator />
-                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as Status)}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="All">All Statuses</SelectItem>
-                        <SelectItem value="Solved">Solved</SelectItem>
-                        <SelectItem value="Attempted">Attempted</SelectItem>
-                        <SelectItem value="Unsolved">Unsolved</SelectItem>
-                    </SelectContent>
-                </Select>
-                <DropdownMenuLabel className="mt-2">Topics</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {allTopicTags.map(tag => (
-                  <DropdownMenuCheckboxItem
-                    key={tag}
-                    checked={topicFilters.includes(tag)}
-                    onCheckedChange={(checked) => handleTopicFilterChange(tag, !!checked)}
-                  >
-                    {tag}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+            </PopoverTrigger>
+            <PopoverContent className="w-screen max-w-sm sm:max-w-md p-4" align="end">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">Match All of the following filters:</p>
+                    </div>
+                    <div className="space-y-3">
+                        {/* Status Filter */}
+                        <div className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-muted-foreground" />
+                            <Label className="w-20 shrink-0">Status</Label>
+                            <Select value="is">
+                                <SelectTrigger className="w-[80px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="is">is</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as Status)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="All">All</SelectItem>
+                                    <SelectItem value="Solved">Solved</SelectItem>
+                                    <SelectItem value="Attempted">Attempted</SelectItem>
+                                    <SelectItem value="Unsolved">Unsolved</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Difficulty Filter */}
+                        <div className="flex items-center gap-2">
+                            <Shuffle className="h-5 w-5 text-muted-foreground" />
+                            <Label className="w-20 shrink-0">Difficulty</Label>
+                             <Select value="is">
+                                <SelectTrigger className="w-[80px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="is">is</SelectItem>
+                                </SelectContent>
+                            </Select>
+                             <Select value={difficultyFilter} onValueChange={(v) => setDifficultyFilter(v as Difficulty)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select difficulty" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="All">All</SelectItem>
+                                    <SelectItem value="Easy">Easy</SelectItem>
+                                    <SelectItem value="Medium">Medium</SelectItem>
+                                    <SelectItem value="Hard">Hard</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                        <Button variant="ghost" onClick={resetFilters}>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Reset
+                        </Button>
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
         <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-1">
                 <Progress value={solvedPercentage} className="w-24 h-2" />
