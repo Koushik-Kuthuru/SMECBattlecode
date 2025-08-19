@@ -416,9 +416,9 @@ export default function ChallengesPage() {
               <TableRow>
                 <TableHead className="w-16">Status</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="text-right">Difficulty</TableHead>
-                <TableHead className="text-center hidden md:table-cell">Acceptance</TableHead>
-                <TableHead className="text-right">Points</TableHead>
+                <TableHead className="text-right w-28">Difficulty</TableHead>
+                <TableHead className="text-center hidden md:table-cell w-32">Acceptance</TableHead>
+                <TableHead className="text-right w-24">Points</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
