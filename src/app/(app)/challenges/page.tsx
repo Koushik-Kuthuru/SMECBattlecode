@@ -293,7 +293,7 @@ export default function ChallengesPage() {
         <Badge
           variant={topicFilter === 'All' ? 'default' : 'secondary'}
           onClick={() => setTopicFilter('All')}
-          className="cursor-pointer"
+          className="cursor-pointer text-sm"
         >
           All Topics
         </Badge>
@@ -302,7 +302,7 @@ export default function ChallengesPage() {
             key={tag}
             variant={topicFilter === tag ? 'default' : 'secondary'}
             onClick={() => setTopicFilter(tag)}
-            className="cursor-pointer"
+            className="cursor-pointer text-sm"
           >
             {tag}
           </Badge>
