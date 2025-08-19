@@ -297,12 +297,12 @@ export default function ChallengesPage() {
 
   const getStatusIcon = (challengeId: string) => {
     if (completedChallenges[challengeId]) {
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
+      return <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />;
     }
     if (inProgressChallenges[challengeId]) {
-      return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
+      return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin mx-auto" />;
     }
-    return <Circle className="h-5 w-5 text-slate-300" />;
+    return <Circle className="h-5 w-5 text-slate-300 mx-auto" />;
   }
 
   const totalSolved = Object.keys(completedChallenges).length;
