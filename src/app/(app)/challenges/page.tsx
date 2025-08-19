@@ -459,7 +459,7 @@ export default function ChallengesPage() {
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
                     <TableCell className="text-center"><Skeleton className="h-5 w-4/5 mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-5 w-3/4 mx-auto" /></TableCell>
                     <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
