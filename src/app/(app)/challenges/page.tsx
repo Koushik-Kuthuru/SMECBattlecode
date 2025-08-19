@@ -68,7 +68,7 @@ const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard'
 const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
     const IconComponent = icons[plan.iconName] || Book;
     return (
-      <Card className={cn("overflow-hidden relative flex flex-col justify-between text-white p-6", `bg-gradient-to-br ${plan.gradient}`)}>
+      <Card className={cn("h-48 overflow-hidden relative flex flex-col justify-between text-white p-6", `bg-gradient-to-br ${plan.gradient}`)}>
             <div className="relative z-10">
                 <h3 className="text-xl font-bold">{plan.title}</h3>
                 <p className="text-sm opacity-90">{plan.description}</p>
