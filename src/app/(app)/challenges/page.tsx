@@ -278,7 +278,7 @@ export default function ChallengesPage() {
         <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
       </CardHeader>
       
-      <div className="space-y-4">
+      <div className="hidden md:block space-y-4">
           <h2 className="text-xl font-bold">Study Plans</h2>
             {isStudyPlansLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
