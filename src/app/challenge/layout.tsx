@@ -84,14 +84,6 @@ export const useChallenge = () => {
     return context;
 }
 
-type PenaltyDialogContent = {
-    type: 'warning' | 'penalty' | 'error';
-    title: string;
-    description: string;
-    points?: number;
-}
-
-
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
@@ -107,8 +99,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
-  const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
   
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
@@ -210,60 +200,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         setActiveResultTab('0');
     }
   }, [runResult]);
-
-  // Anti-cheat tab switch detection
-  const handleVisibilityChange = useCallback(async () => {
-      if (document.hidden && currentUser && challenge && !isChallengeCompleted) {
-          try {
-              await runTransaction(db, async (transaction) => {
-                  const userDocRef = doc(db, `users/${currentUser.uid}`);
-                  const userDoc = await transaction.get(userDocRef);
-                  
-                  if (!userDoc.exists()) {
-                      throw "User document does not exist!";
-                  }
-
-                  const difficultyPenaltyMap = { 'Easy': 2, 'Medium': 5, 'Hard': 15 };
-                  const penaltyPoints = difficultyPenaltyMap[challenge.difficulty] || 5;
-                  
-                  // Update total points and total penalties
-                  transaction.update(userDocRef, { 
-                    points: increment(-penaltyPoints),
-                    penalties: increment(penaltyPoints),
-                  });
-                  
-                  // Update daily penalties
-                  const today = new Date().toISOString().split('T')[0];
-                  const dailyPointsRef = doc(db, `users/${currentUser.uid}/daily_points`, today);
-                  transaction.set(dailyPointsRef, { penalties: increment(penaltyPoints) }, { merge: true });
-
-                  setPenaltyDialogContent({
-                      type: 'penalty',
-                      title: "Penalty Applied for Tab Switching",
-                      description: `You have lost points for navigating away from the challenge page. This will affect your leaderboard score.`,
-                      points: penaltyPoints
-                  });
-                  setIsPenaltyDialogOpen(true);
-              });
-
-          } catch (error) {
-              console.error("Error applying penalty: ", error);
-              setPenaltyDialogContent({
-                  type: 'error',
-                  title: 'Error',
-                  description: 'Could not process the tab switch penalty.',
-              });
-              setIsPenaltyDialogOpen(true);
-          }
-      }
-  }, [currentUser, challenge, db, isChallengeCompleted]);
-
-  useEffect(() => {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
-  }, [handleVisibilityChange]);
   
   const handleLikeToggle = async () => {
     if (!currentUser || !challenge) return;
@@ -331,14 +267,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const descriptionPanelContent = (
     challenge ? (
-      <>
+      <div className="h-full flex flex-col">
         <div className="flex-grow overflow-auto p-4">
           <div className="flex justify-between items-start">
             <div>
-               <h1 className="text-2xl font-bold mb-2">{challenge!.title}</h1>
+               <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
               <div className="flex items-center gap-4 text-sm">
                   {statusBadge}
-                  <span className={cn("font-semibold", difficultyTextColors[challenge!.difficulty])}>{challenge!.difficulty}</span>
+                  <span className={cn("font-semibold", difficultyTextColors[challenge.difficulty])}>{challenge.difficulty}</span>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="flex items-center gap-1.5 h-8" onClick={handleLikeToggle}>
@@ -373,7 +309,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         <div className="shrink-0 p-4 border-t">
           <p className="text-xs text-muted-foreground text-center">Copyright © {new Date().getFullYear()} SMEC BattleCode. All rights reserved.</p>
         </div>
-      </>
+      </div>
     ) : (
       <div className="p-6">Challenge not found.</div>
     )
@@ -546,7 +482,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
 
   const renderDesktopLayout = () => (
-    <ResizablePanelGroup direction="horizontal">
+     <ResizablePanelGroup direction="horizontal">
       <ResizablePanel defaultSize={40} minSize={30}>
         {descriptionPanel}
       </ResizablePanel>
@@ -555,7 +491,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         <ScrollArea className="h-full">
           <div className="flex flex-col h-[calc(100vh)]">
               <div className="relative flex-grow">
-                {children}
+                 {isChallengeLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : (
+                    children
+                )}
               </div>
               {(isRunning || runResult || debugOutput) && (
                 <div className="h-[40vh] flex-shrink-0">
@@ -600,38 +542,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                {isDesktop ? renderDesktopLayout() : renderMobileLayout()}
             </main>
         </div>
-        <AlertDialog open={isPenaltyDialogOpen} onOpenChange={setIsPenaltyDialogOpen}>
-            <AlertDialogContent>
-              {penaltyDialogContent && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className={cn(
-                        "text-2xl text-center mb-2",
-                         penaltyDialogContent.type === 'penalty' && "text-destructive"
-                    )}>
-                        {penaltyDialogContent.title}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-center">
-                      {penaltyDialogContent.description}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  
-                  {penaltyDialogContent.type === 'penalty' && penaltyDialogContent.points && (
-                    <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-red-500">
-                        <span>- {penaltyDialogContent.points}</span>
-                        <BulletCoin className="h-7 w-7" />
-                    </div>
-                  )}
-
-                  <AlertDialogFooter>
-                     <AlertDialogAction onClick={() => setIsPenaltyDialogOpen(false)} className="w-full">
-                        Okay
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-            </AlertDialogContent>
-        </AlertDialog>
         <Toaster />
     </ChallengeContext.Provider>
   );
