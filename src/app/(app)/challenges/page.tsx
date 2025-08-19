@@ -15,7 +15,7 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, Star, ArrowUpDown } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, Star, ArrowUpNarrowWide, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
@@ -521,7 +521,7 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">
-                        <span className="hover:underline">{`${index + 1}. ${challenge.title}`}</span>
+                        <span>{`${index + 1}. ${challenge.title}`}</span>
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
@@ -565,5 +565,3 @@ export default function ChallengesPage() {
     </div>
   );
 }
-
-    
