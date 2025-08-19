@@ -450,7 +450,7 @@ export default function ChallengesPage() {
                 <TableHead className="text-right w-[15%]">Difficulty</TableHead>
                 <TableHead className="text-right w-[15%] hidden md:table-cell">Acceptance</TableHead>
                 <TableHead className="text-right w-[10%]">Points</TableHead>
-                <TableHead className="w-[8%] text-center">Favorite</TableHead>
+                <TableHead className="w-[8%] text-center"><span className="sr-only">Favorite</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
