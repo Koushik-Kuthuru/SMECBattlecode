@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug } from 'lucide-react';
@@ -20,6 +21,7 @@ import { type Challenge } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type EvaluateCodeOutput } from '@/ai/flows/evaluate-code';
+import { type DebugCodeOutput } from '@/ai/flows/debug-code';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -63,6 +65,8 @@ type ChallengeContextType = {
   challenge: Challenge | null;
   runResult: EvaluateCodeOutput | null;
   setRunResult: React.Dispatch<React.SetStateAction<EvaluateCodeOutput | null>>;
+  debugOutput: DebugCodeOutput | null;
+  setDebugOutput: React.Dispatch<React.SetStateAction<DebugCodeOutput | null>>;
   activeTab: string;
   setActiveTab: React.Dispatch<React.SetStateAction<string>>;
   isRunning: boolean;
@@ -98,6 +102,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
   const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
+  const [debugOutput, setDebugOutput] = useState<DebugCodeOutput | null>(null);
   const [activeTab, setActiveTab] = useState('description');
   const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -299,6 +304,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       challenge,
       runResult,
       setRunResult,
+      debugOutput,
+      setDebugOutput,
       activeTab,
       setActiveTab,
       isRunning,
@@ -328,10 +335,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         <div className="flex-grow overflow-auto p-4">
           <div className="flex justify-between items-start">
             <div>
-               <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
+               <h1 className="text-2xl font-bold mb-2">{challenge!.title}</h1>
               <div className="flex items-center gap-4 text-sm">
                   {statusBadge}
-                  <span className={cn("font-semibold", difficultyTextColors[challenge.difficulty])}>{challenge.difficulty}</span>
+                  <span className={cn("font-semibold", difficultyTextColors[challenge!.difficulty])}>{challenge!.difficulty}</span>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="flex items-center gap-1.5 h-8" onClick={handleLikeToggle}>
@@ -440,11 +447,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 {runResult.allPassed ? "Accepted" : "Wrong Answer"}
             </span>
          )}
+         {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
       </header>
-      {isRunning && !runResult?.results.length ? (
+      {isRunning ? (
           <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mb-2" />
-            <p className="font-semibold">Running test cases...</p>
+            <p className="font-semibold">Running...</p>
           </div>
       ) : runResult ? (
           <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
@@ -480,6 +488,17 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               </div>
               <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
           </Tabs>
+      ) : debugOutput ? (
+          <div className="flex-grow p-4 space-y-4 overflow-auto">
+            <div>
+              <h4 className="font-semibold mb-1 text-sm">Standard Output</h4>
+              <Textarea readOnly value={debugOutput.stdout || '(empty)'} className="font-mono text-xs h-32 bg-gray-100" />
+            </div>
+            <div>
+              <h4 className="font-semibold mb-1 text-sm text-red-500">Standard Error</h4>
+              <Textarea readOnly value={debugOutput.stderr || '(empty)'} className="font-mono text-xs h-20 bg-red-50 text-red-700 border-red-200" />
+            </div>
+          </div>
       ) : (
           <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
             <Play className="h-8 w-8 mb-2" />
@@ -538,7 +557,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               <div className="relative flex-grow">
                 {children}
               </div>
-              {(isRunning || runResult) && (
+              {(isRunning || runResult || debugOutput) && (
                 <div className="h-[40vh] flex-shrink-0">
                   {testResultPanel}
                 </div>

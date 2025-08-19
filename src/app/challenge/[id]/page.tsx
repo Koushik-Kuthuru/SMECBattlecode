@@ -15,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useChallenge } from "../layout";
 import { evaluateCode } from "@/ai/flows/evaluate-code";
 import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
+import { debugCode } from "@/ai/flows/debug-code";
 
 export default function ChallengeDetail() {
-  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning } = useChallenge();
+  const { challenge, setRunResult, setDebugOutput, setActiveTab, isRunning, setIsRunning } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('');
@@ -137,6 +138,7 @@ export default function ChallengeDetail() {
     
     setIsRunning(true);
     setRunResult({ feedback: '', results: [], allPassed: false }); // Show loading state in results
+    setDebugOutput(null);
     setActiveTab('result'); // Switch to result tab
     try {
         const result = await evaluateCode({
@@ -159,6 +161,30 @@ export default function ChallengeDetail() {
         setIsRunning(false);
     }
   }
+
+  const handleDebugCode = async () => {
+    if (!challenge) return;
+    const sampleInput = challenge.examples[0]?.input || '';
+    setIsRunning(true);
+    setRunResult(null);
+    setDebugOutput({ stdout: '', stderr: 'Running in debug mode...' });
+    setActiveTab('result');
+
+    try {
+      const result = await debugCode({
+        code: solution,
+        programmingLanguage: language,
+        input: sampleInput,
+      });
+      setDebugOutput(result);
+    } catch(error) {
+      console.error("Error debugging code:", error);
+      toast({ variant: "destructive", title: "Debug Error", description: "Could not run the code for debugging." });
+      setDebugOutput(null);
+    } finally {
+      setIsRunning(false);
+    }
+  }
   
   const handleSubmit = async () => {
     if (!user || !challenge || !challengeId) {
@@ -167,6 +193,7 @@ export default function ChallengeDetail() {
     }
     setIsRunning(true);
     setRunResult({ feedback: '', results: [], allPassed: false });
+    setDebugOutput(null);
     setActiveTab('result');
 
     try {
@@ -285,7 +312,7 @@ export default function ChallengeDetail() {
             />
        </div>
         <footer className="shrink-0 flex items-center justify-end p-2 border-t bg-muted gap-2">
-            <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600">
+            <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={handleDebugCode} disabled={isSaving || isRunning}>
                 <Bug className="mr-2 h-4 w-4" /> Debug
             </Button>
              <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
