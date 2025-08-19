@@ -15,7 +15,7 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, BarChart } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
@@ -71,6 +71,28 @@ const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
             </Card>
         </Link>
     );
+};
+
+const FrequencyIndicator = ({ level }: { level: number }) => {
+  const bars = Array.from({ length: 5 }, (_, i) => i < level);
+  return (
+    <div className="flex items-end gap-0.5 h-5 w-10 mx-auto">
+      {bars.map((isFilled, i) => (
+        <div
+          key={i}
+          className={cn(
+            'w-1.5 rounded-[1px] transition-colors',
+            isFilled ? 'bg-primary' : 'bg-muted',
+            i === 0 && 'h-2',
+            i === 1 && 'h-3',
+            i === 2 && 'h-4',
+            i === 3 && 'h-5',
+            i === 4 && 'h-[22px]'
+          )}
+        />
+      ))}
+    </div>
+  );
 };
 
 
@@ -416,10 +438,10 @@ export default function ChallengesPage() {
               <TableRow>
                 <TableHead className="w-16">Status</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="text-right w-28">Difficulty</TableHead>
+                <TableHead className="text-right w-32">Difficulty</TableHead>
                 <TableHead className="text-center hidden md:table-cell w-32">Acceptance</TableHead>
-                <TableHead className="text-right w-24">Points</TableHead>
-                <TableHead className="text-right w-24">Frequency</TableHead>
+                <TableHead className="text-right w-28">Points</TableHead>
+                <TableHead className="text-center w-28">Frequency</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -428,10 +450,10 @@ export default function ChallengesPage() {
                   <TableRow key={`skeleton-${i}`}>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
                     <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-1/2 ml-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
@@ -455,8 +477,8 @@ export default function ChallengesPage() {
                             {challenge.points}
                         </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                        <BarChart className="h-5 w-5 text-muted-foreground mx-auto" />
+                    <TableCell>
+                        <FrequencyIndicator level={challenge.frequency ?? 0} />
                     </TableCell>
                   </TableRow>
                 ))
