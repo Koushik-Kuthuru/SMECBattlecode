@@ -43,7 +43,7 @@ export default function ChallengeDetail() {
 
     const fetchSolution = async () => {
       let userLang = firstLang;
-      let userCode = challenge.starterCode[firstLang] || challenge.starterCode[availableLangs[0]] || '';
+      let userCode = (challenge.starterCode && (challenge.starterCode[firstLang] || challenge.starterCode[availableLangs[0]])) || '';
 
       if (user) {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
@@ -54,7 +54,7 @@ export default function ChallengeDetail() {
           if(availableLangs.includes(data.language)) {
              userCode = data.code;
              userLang = data.language.toLowerCase();
-          } else {
+          } else if (challenge.starterCode) {
              // If not, fall back to the first available language's starter code
              userCode = challenge.starterCode[availableLangs[0]] || '';
           }
@@ -69,7 +69,7 @@ export default function ChallengeDetail() {
   }, [challenge, user]);
 
   useEffect(() => {
-    if (challenge && language) {
+    if (challenge && language && challenge.starterCode) {
         const starter = challenge.starterCode[language] || '';
         setSolution(sol => sol || starter); // Only set starter if current solution is empty
         setInitialSolution(sol => sol || starter);
