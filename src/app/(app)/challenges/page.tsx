@@ -224,7 +224,7 @@ export default function ChallengesPage() {
             return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
         }
         if (sortBy === 'Points') {
-            return a.points - b.points;
+            return b.points - a.points;
         }
 
         // Default sort
@@ -379,15 +379,15 @@ export default function ChallengesPage() {
         <div className="flex w-full sm:w-auto items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
-                    <ArrowUpDown className="mr-2 h-4 w-4" />
-                    Sort By: {sortBy}
+                <Button variant="outline" size="icon">
+                    <ArrowUpDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
                   <DropdownMenuRadioItem value="Default">Default</DropdownMenuRadioItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuRadioItem value="Difficulty">Difficulty</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Points">Points</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
@@ -503,7 +503,7 @@ export default function ChallengesPage() {
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
-                filteredChallenges.map((challenge) => (
+                filteredChallenges.map((challenge, index) => (
                   <TableRow
                     key={challenge.id}
                     className="cursor-pointer"
@@ -520,7 +520,7 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">
-                        <span className="line-clamp-2">{challenge.title}</span>
+                        <span className="hover:underline">{`${index + 1}. ${challenge.title}`}</span>
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
