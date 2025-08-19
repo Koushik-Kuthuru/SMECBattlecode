@@ -2,7 +2,7 @@
 
 'use client'
 
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, List, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -42,6 +42,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Toaster } from '@/components/ui/toaster';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SmecBattleCodeLogo } from '@/components/icons';
 
 type CurrentUser = {
   uid: string;
@@ -74,6 +76,12 @@ type ChallengeContextType = {
   isChallengeCompleted: boolean;
   isResultsPanelFolded: boolean;
   setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
+  runCodeHandler: () => void;
+  setRunCodeHandler: (handler: () => void) => void;
+  debugCodeHandler: () => void;
+  setDebugCodeHandler: (handler: () => void) => void;
+  submitHandler: () => void;
+  setSubmitHandler: (handler: () => void) => void;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -93,6 +101,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
   const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
@@ -103,6 +112,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(false);
   
+  // Handlers for header buttons
+  const [runCodeHandler, setRunCodeHandler] = useState<() => void>(() => () => {});
+  const [debugCodeHandler, setDebugCodeHandler] = useState<() => void>(() => () => {});
+  const [submitHandler, setSubmitHandler] = useState<() => void>(() => () => {});
+
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -135,6 +149,17 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     });
     return () => unsubscribe();
   }, [auth]);
+
+  useEffect(() => {
+    // Fetch all challenges for prev/next navigation
+    const fetchAllChallenges = async () => {
+        const challengesCollection = collection(db, 'challenges');
+        const challengesSnapshot = await getDocs(challengesCollection);
+        const challengesList = challengesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
+        setAllChallenges(challengesList);
+    };
+    fetchAllChallenges();
+  }, []);
 
   useEffect(() => {
     if (challengeId) {
@@ -230,6 +255,15 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         setLikeCount(current => !newHasLiked ? current + 1 : current - 1);
     }
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
+  const currentChallengeIndex = allChallenges.findIndex(c => c.id === challengeId);
+  const prevChallengeId = currentChallengeIndex > 0 ? allChallenges[currentChallengeIndex - 1].id : null;
+  const nextChallengeId = currentChallengeIndex < allChallenges.length - 1 ? allChallenges[currentChallengeIndex + 1].id : null;
   
   if (isLoading || isChallengeLoading) {
     return (
@@ -252,6 +286,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       isChallengeCompleted,
       isResultsPanelFolded,
       setIsResultsPanelFolded,
+      runCodeHandler,
+      setRunCodeHandler,
+      debugCodeHandler,
+      setDebugCodeHandler,
+      submitHandler,
+      setSubmitHandler,
   };
   
   const difficultyColors = {
@@ -273,7 +313,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const descriptionPanelContent = (
     challenge ? (
       <div className="h-full flex flex-col">
-        <div className="flex-grow overflow-auto p-4">
+        <ScrollArea className="flex-grow p-4">
           <div className="flex justify-between items-start">
             <div>
                <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
@@ -310,7 +350,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </div>
             </div>
           ))}
-        </div>
+        </ScrollArea>
         <div className="shrink-0 p-4 border-t">
           <p className="text-xs text-muted-foreground text-center">Copyright © {new Date().getFullYear()} SMEC BattleCode. All rights reserved.</p>
         </div>
@@ -491,27 +531,63 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </div>
   );
 
+  const headerPanel = (
+    <header className="h-14 flex-shrink-0 bg-slate-900 text-white flex items-center justify-between px-4 border-b border-slate-700">
+        <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+                <SmecBattleCodeLogo className="h-8 w-8" />
+            </Link>
+            <Button variant="ghost" className="text-white hover:bg-slate-800 hover:text-white flex items-center gap-2">
+                <List className="h-5 w-5" />
+                Problem List
+            </Button>
+            <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-8 w-8" disabled={!prevChallengeId} onClick={() => prevChallengeId && router.push(`/challenge/${prevChallengeId}`)}>
+                    <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-8 w-8" disabled={!nextChallengeId} onClick={() => nextChallengeId && router.push(`/challenge/${nextChallengeId}`)}>
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
+            </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" className="bg-slate-700 text-white hover:bg-slate-600" onClick={runCodeHandler} disabled={isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
+            </Button>
+            <Button size="sm" variant="secondary" className="bg-slate-700 text-white hover:bg-slate-600" onClick={debugCodeHandler} disabled={isRunning}>
+                <Bug className="mr-2 h-4 w-4" /> Debug
+            </Button>
+            <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={submitHandler} disabled={isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
+            </Button>
+        </div>
+         <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800 h-8 w-8"><Settings className="h-5 w-5"/></Button>
+            {currentUser && (
+                <Link href="/profile">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={currentUser.imageUrl} />
+                    <AvatarFallback><User /></AvatarFallback>
+                  </Avatar>
+                </Link>
+            )}
+             <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white hover:bg-slate-800 h-8 w-8">
+                <LogOut className="h-5 w-5" />
+            </Button>
+        </div>
+    </header>
+  )
+
 
   const renderDesktopLayout = () => (
      <ResizablePanelGroup direction="horizontal">
       <ResizablePanel defaultSize={40} minSize={30}>
         {descriptionPanel}
       </ResizablePanel>
-      <ResizableHandleWithHandle>
-        {(isRunning || runResult || debugOutput) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 bg-background border rounded-full shadow-md hover:bg-muted"
-            onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}
-          >
-            {isResultsPanelFolded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-          </Button>
-        )}
-      </ResizableHandleWithHandle>
+      <ResizableHandleWithHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
         <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 60} minSize={25}>
+            <ResizablePanel defaultSize={60} minSize={25}>
                 {isChallengeLoading ? (
                     <div className="h-full flex items-center justify-center">
                         <Loader2 className="h-8 w-8 animate-spin" />
@@ -520,10 +596,19 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     children
                 )}
             </ResizablePanel>
-            {(isRunning || runResult || debugOutput) && !isResultsPanelFolded && (
+            {(isRunning || runResult || debugOutput) && (
                 <>
-                    <ResizableHandleWithHandle />
-                    <ResizablePanel defaultSize={40} minSize={15}>
+                    <ResizableHandleWithHandle>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 bg-background border rounded-full shadow-md hover:bg-muted"
+                        onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}
+                      >
+                        {isResultsPanelFolded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                      </Button>
+                    </ResizableHandleWithHandle>
+                    <ResizablePanel defaultSize={40} minSize={15} collapsed={isResultsPanelFolded} collapsible>
                         {testResultPanel}
                     </ResizablePanel>
                 </>
@@ -561,6 +646,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
+            {headerPanel}
             <main className="flex-1 flex flex-row overflow-hidden bg-muted/40">
                {isDesktop ? renderDesktopLayout() : renderMobileLayout()}
             </main>

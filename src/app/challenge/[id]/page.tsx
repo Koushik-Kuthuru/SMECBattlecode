@@ -17,7 +17,19 @@ import { evaluateCode } from "@/ai/flows/evaluate-code";
 import { debugCode } from "@/ai/flows/debug-code";
 
 export default function ChallengeDetail() {
-  const { challenge, runResult, debugOutput, setRunResult, setDebugOutput, setActiveTab, isRunning, setIsRunning, isResultsPanelFolded, setIsResultsPanelFolded } = useChallenge();
+  const { 
+      challenge, 
+      setRunResult, 
+      setDebugOutput, 
+      setActiveTab, 
+      setIsRunning, 
+      isResultsPanelFolded, 
+      setIsResultsPanelFolded,
+      setRunCodeHandler,
+      setDebugCodeHandler,
+      setSubmitHandler,
+  } = useChallenge();
+
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('');
@@ -43,7 +55,7 @@ export default function ChallengeDetail() {
 
     const fetchSolution = async () => {
       let userLang = firstLang;
-      let userCode = (challenge.starterCode && (challenge.starterCode[firstLang] || challenge.starterCode[availableLangs[0]])) || '';
+      let userCode = (challenge.starterCode && challenge.starterCode[firstLang]) || '';
 
       if (user) {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
@@ -136,9 +148,13 @@ export default function ChallengeDetail() {
         } else {
              toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
         }
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error running code:", error);
-        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
+        let errorMessage = "Could not evaluate your code. Please try again.";
+        if (error.message?.includes('403')) {
+            errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file.";
+        }
+        toast({ variant: "destructive", title: "Evaluation Error", description: errorMessage });
         setRunResult(null); // Clear loading state on error
     } finally {
         setIsRunning(false);
@@ -160,9 +176,13 @@ export default function ChallengeDetail() {
         input: sampleInput,
       });
       setDebugOutput(result);
-    } catch(error) {
+    } catch(error: any) {
       console.error("Error debugging code:", error);
-      toast({ variant: "destructive", title: "Debug Error", description: "Could not run the code for debugging." });
+       let errorMessage = "Could not run the code for debugging.";
+        if (error.message?.includes('403')) {
+            errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file.";
+        }
+      toast({ variant: "destructive", title: "Debug Error", description: errorMessage });
       setDebugOutput(null);
     } finally {
       setIsRunning(false);
@@ -249,13 +269,25 @@ export default function ChallengeDetail() {
         toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones)." });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting code:", error);
-      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
+       let errorMessage = "An error occurred during submission.";
+        if (error.message?.includes('403')) {
+            errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file.";
+        }
+      toast({ variant: "destructive", title: "Submission Error", description: errorMessage });
     } finally {
       setIsRunning(false);
     }
   }
+
+  // Register handlers with context
+  useEffect(() => {
+    setRunCodeHandler(() => handleRunCode);
+    setDebugCodeHandler(() => handleDebugCode);
+    setSubmitHandler(() => handleSubmit);
+  }, [handleRunCode, handleDebugCode, handleSubmit]);
+
 
   const handleReset = () => {
       if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
@@ -279,10 +311,10 @@ export default function ChallengeDetail() {
              </SelectContent>
          </Select>
          <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning}>
+           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving}>
              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
            </Button>
-           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving || isRunning}>
+           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving}>
             {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
            </Button>
          </div>
@@ -294,26 +326,6 @@ export default function ChallengeDetail() {
                 language={language}
             />
        </div>
-        <footer className="shrink-0 flex items-center justify-between p-2 border-t bg-muted gap-2">
-            <div>
-                 {(isRunning || runResult || debugOutput) && (
-                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}>
-                        {isResultsPanelFolded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                    </Button>
-                 )}
-            </div>
-            <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={handleDebugCode} disabled={isSaving || isRunning}>
-                    <Bug className="mr-2 h-4 w-4" /> Debug
-                </Button>
-                 <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
-                    {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
-                </Button>
-                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning}>
-                    {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
-                </Button>
-            </div>
-        </footer>
     </div>
   );
 }
