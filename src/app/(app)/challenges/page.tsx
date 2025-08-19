@@ -409,6 +409,7 @@ export default function ChallengesPage() {
                 <TableHead className="w-16">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-center">Acceptance</TableHead>
+                <TableHead className="text-right">Points</TableHead>
                 <TableHead className="text-right">Difficulty</TableHead>
               </TableRow>
             </TableHeader>
@@ -419,6 +420,7 @@ export default function ChallengesPage() {
                     <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -442,19 +444,19 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                          <span className="flex items-center gap-1 text-sm font-semibold text-primary">
-                             <BulletCoin className="h-4 w-4" />
-                             {challenge.points}
-                          </span>
-                          <DifficultyPill difficulty={challenge.difficulty} />
-                      </div>
+                        <div className="flex items-center justify-end gap-1 text-sm font-semibold text-primary">
+                            <BulletCoin className="h-4 w-4" />
+                            {challenge.points}
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
