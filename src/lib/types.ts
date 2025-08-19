@@ -34,6 +34,18 @@ export type Event = {
     createdAt?: Timestamp;
 };
 
+export type StudyPlan = {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+  buttonText: string;
+  href: string;
+  gradient: string;
+  isEnabled: boolean;
+  createdAt?: Timestamp;
+};
+
 export type LeaderboardUser = {
   name: string;
   points: number;

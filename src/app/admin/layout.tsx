@@ -3,7 +3,7 @@
 
 import { SmecBattleCodeLogo } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { Home, LogOut, Settings, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users, Megaphone, CalendarDays, ShieldAlert, Server } from 'lucide-react';
+import { Home, LogOut, Settings, User, Trophy, ArrowRight, Menu, Flame, ListChecks, Users, Megaphone, CalendarDays, ShieldAlert, Server, BookCopy } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -46,6 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/users', label: 'Manage Users', icon: Users },
     { href: '/admin/advertisement', label: 'Manage Ads', icon: Megaphone },
     { href: '/admin/events', label: 'Manage Events', icon: CalendarDays },
+    { href: '/admin/study-plans', label: 'Manage Study Plans', icon: BookCopy },
     { href: '/admin/cheating-detection', label: 'Cheating Detection', icon: ShieldAlert },
   ];
   

@@ -10,15 +10,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2 } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { UserData } from '@/lib/types';
+import { UserData, StudyPlan } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import {
   Popover,
@@ -30,6 +30,15 @@ import { Label } from '@/components/ui/label';
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved';
+
+const icons: { [key: string]: React.ElementType } = {
+  Book,
+  BrainCircuit,
+  MessageSquare,
+  Code2,
+  Target,
+  Trophy,
+};
 
 const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard' }) => {
   const difficultyStyles = {
@@ -45,31 +54,36 @@ const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard'
 };
 
 
-const StudyPlanCard = ({ title, description, buttonText, icon: Icon, href, className }: { title: string, description: string, buttonText: string, icon: React.ElementType, href: string, className?: string }) => (
-    <Link href={href} className="block group">
-        <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6 transition-transform group-hover:scale-105", className)}>
-            <div className="relative z-10">
-                <h3 className="text-xl font-bold">{title}</h3>
-                <p className="text-sm opacity-90">{description}</p>
-            </div>
-            <Button variant="secondary" size="sm" className="relative z-10 w-fit bg-white/90 text-black hover:bg-white">
-                {buttonText}
-            </Button>
-             <Icon className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0 transition-transform group-hover:scale-110" />
-        </Card>
-    </Link>
-);
+const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
+    const IconComponent = icons[plan.iconName] || Book;
+    return (
+        <Link href={plan.href} className="block group">
+            <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6 transition-transform group-hover:scale-105", `bg-gradient-to-br ${plan.gradient}`)}>
+                <div className="relative z-10">
+                    <h3 className="text-xl font-bold">{plan.title}</h3>
+                    <p className="text-sm opacity-90">{plan.description}</p>
+                </div>
+                <Button variant="secondary" size="sm" className="relative z-10 w-fit bg-white/90 text-black hover:bg-white">
+                    {plan.buttonText}
+                </Button>
+                <IconComponent className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0 transition-transform group-hover:scale-110" />
+            </Card>
+        </Link>
+    );
+};
 
 
 export default function ChallengesPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [completedChallenges, setCompletedChallenges] = useState<Record<string, boolean>>({});
   const [inProgressChallenges, setInProgressChallenges] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [isChallengesLoading, setIsChallengesLoading] = useState(true);
+  const [isStudyPlansLoading, setIsStudyPlansLoading] = useState(true);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -105,6 +119,20 @@ export default function ChallengesPage() {
     return () => unsubscribe();
   }, [auth, db, router]);
   
+  useEffect(() => {
+    setIsStudyPlansLoading(true);
+    const plansCollectionRef = collection(db, 'study_plans');
+    const q = query(plansCollectionRef, orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const plansList = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as StudyPlan))
+        .filter(plan => plan.isEnabled);
+      setStudyPlans(plansList);
+      setIsStudyPlansLoading(false);
+    });
+    return () => unsubscribe();
+  }, [db]);
+
   const fetchChallenges = useCallback(async () => {
     setIsChallengesLoading(true);
     try {
@@ -243,46 +271,21 @@ export default function ChallengesPage() {
   return (
     <div className="space-y-6">
       <CardHeader className="px-0">
-        <CardTitle className="text-3xl font-bold tracking-tight">Challenge Arena</CardTitle>
+        <CardTitle className="text-3xl font-bold tracking-tight">Challenges</CardTitle>
         <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
       </CardHeader>
       
       <div className="space-y-4">
           <h2 className="text-xl font-bold">Study Plans</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StudyPlanCard 
-                  title="Interview Crash Course" 
-                  description="System Design" 
-                  buttonText="Start Learning" 
-                  icon={Book}
-                  href="#"
-                  className="bg-gradient-to-br from-green-600 to-emerald-800"
-              />
-              <StudyPlanCard 
-                  title="Interview Crash Course" 
-                  description="Data Structures & Algorithms" 
-                  buttonText="Start Learning" 
-                  icon={BrainCircuit}
-                  href="#"
-                  className="bg-gradient-to-br from-purple-600 to-indigo-800"
-              />
-              <StudyPlanCard 
-                  title="Top Interview Questions" 
-                  description="Master the essentials" 
-                  buttonText="Get Started" 
-                  icon={MessageSquare}
-                  href="#"
-                  className="bg-gradient-to-br from-blue-500 to-sky-700"
-              />
-              <StudyPlanCard 
-                  title="Java 30 Day Challenge" 
-                  description="Beginner to advanced" 
-                  buttonText="Start Learning"
-                  icon={Code2}
-                  href="#"
-                  className="bg-gradient-to-br from-orange-500 to-amber-700"
-              />
-          </div>
+            {isStudyPlansLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {studyPlans.map(plan => <StudyPlanCard key={plan.id} plan={plan} />)}
+                </div>
+            )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
