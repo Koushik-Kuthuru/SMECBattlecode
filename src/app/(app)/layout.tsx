@@ -52,12 +52,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           const userData = userDoc.data();
           
           if (userData.isAdmin) {
-             localStorage.setItem('currentUser', JSON.stringify({
-                uid: user.uid,
-                email: userData.email,
-                name: userData.name,
-                isAdmin: true,
-            }));
+             if (typeof window !== 'undefined') {
+                localStorage.setItem('currentUser', JSON.stringify({
+                    uid: user.uid,
+                    email: userData.email,
+                    name: userData.name,
+                    isAdmin: true,
+                }));
+             }
             router.push('/admin/dashboard');
             return;
           }
@@ -119,15 +121,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await signOut(auth);
-    localStorage.removeItem('currentUser'); // For admin logout
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentUser'); // For admin logout
+    }
     router.push('/');
   }
 
   const navLinks = [
     { href: '/dashboard', label: 'Home', icon: Home },
+    { href: '/missions', label: 'Missions', icon: Flame },
     { href: '/missions', label: 'Challenge Arena', icon: Shield },
     { href: '/events', label: 'Events', icon: Calendar },
-    { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    { href: '/leaderboard', label: 'Ranking Arena', icon: Trophy },
     { href: '/about', label: 'About', icon: Info },
   ];
   
@@ -153,7 +158,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <nav className="flex flex-col gap-2">
                      {navLinks.map((link) => (
                         <Link
-                          key={link.href}
+                          key={link.label}
                           href={link.href}
                           className={cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-slate-800',
@@ -202,7 +207,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <nav className="flex flex-col gap-4 mt-8">
                        {navLinks.map((link) => (
                         <Link
-                          key={link.href}
+                          key={link.label}
                           href={link.href}
                           className={cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-slate-800',
@@ -231,7 +236,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="md:hidden sticky bottom-0 left-0 right-0 bg-slate-900 text-white border-t border-slate-700 flex justify-around p-2">
              {navLinks.slice(0, 4).map((link) => (
                 <Link
-                  key={link.href}
+                  key={link.label}
                   href={link.href}
                   className={cn(
                     'flex flex-col items-center gap-1 rounded-lg px-2 py-1 transition-all w-20',
