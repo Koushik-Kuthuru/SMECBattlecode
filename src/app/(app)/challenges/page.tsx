@@ -446,11 +446,11 @@ export default function ChallengesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[8%] text-center">Status</TableHead>
-                <TableHead className="w-[8%] text-center">Favorite</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-right w-[15%]">Difficulty</TableHead>
                 <TableHead className="text-right w-[15%] hidden md:table-cell">Acceptance</TableHead>
-                <TableHead className="text-right w-[15%]">Points</TableHead>
+                <TableHead className="text-right w-[10%]">Points</TableHead>
+                <TableHead className="w-[8%] text-center">Favorite</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -458,11 +458,11 @@ export default function ChallengesPage() {
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
                     <TableCell className="text-right hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-1/2 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
@@ -470,19 +470,6 @@ export default function ChallengesPage() {
                   <TableRow key={challenge.id}>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 group"
-                        onClick={() => handleFavoriteToggle(challenge.id!)}
-                      >
-                        <Star className={cn(
-                          "h-5 w-5 text-slate-300 transition-all duration-300 group-hover:scale-125",
-                          favoriteChallenges[challenge.id!] && "fill-yellow-400 text-yellow-400"
-                        )} />
-                      </Button>
                     </TableCell>
                     <TableCell>
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
@@ -498,6 +485,19 @@ export default function ChallengesPage() {
                             <BulletCoin className="h-4 w-4" />
                             {challenge.points}
                         </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 group"
+                        onClick={() => handleFavoriteToggle(challenge.id!)}
+                      >
+                        <Star className={cn(
+                          "h-5 w-5 text-slate-300 transition-all duration-300 group-hover:scale-125",
+                          favoriteChallenges[challenge.id!] && "fill-yellow-400 text-yellow-400"
+                        )} />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
