@@ -15,7 +15,7 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
@@ -89,6 +89,7 @@ export default function ChallengesPage() {
   const [statusFilter, setStatusFilter] = useState<Status>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [topicFilter, setTopicFilter] = useState<string>('All');
+  const [isTagsExpanded, setIsTagsExpanded] = useState(false);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -221,8 +222,7 @@ export default function ChallengesPage() {
       });
       return Object.entries(tagCounts)
             .sort(([, countA], [, countB]) => countB - countA)
-            .map(([tag]) => tag)
-            .slice(0, 10);
+            .map(([tag]) => tag);
   }, [challenges]);
   
   const handlePickOne = () => {
@@ -268,6 +268,8 @@ export default function ChallengesPage() {
   const totalSolved = Object.keys(completedChallenges).length;
   const totalChallenges = challenges.length;
   const solvedPercentage = totalChallenges > 0 ? (totalSolved / totalChallenges) * 100 : 0;
+  
+  const displayedTags = isTagsExpanded ? allTopicTags : allTopicTags.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -297,7 +299,7 @@ export default function ChallengesPage() {
         >
           All Topics
         </Badge>
-        {allTopicTags.map(tag => (
+        {displayedTags.map(tag => (
           <Badge
             key={tag}
             variant={topicFilter === tag ? 'default' : 'secondary'}
@@ -307,6 +309,12 @@ export default function ChallengesPage() {
             {tag}
           </Badge>
         ))}
+        {allTopicTags.length > 5 && (
+            <Button variant="ghost" size="sm" onClick={() => setIsTagsExpanded(!isTagsExpanded)} className="text-sm">
+                {isTagsExpanded ? 'Show Less' : 'Show More'}
+                <ChevronDown className={cn("ml-1 h-4 w-4 transition-transform", isTagsExpanded && "rotate-180")} />
+            </Button>
+        )}
       </div>
       
       <div className="flex flex-col sm:flex-row items-center gap-4">
