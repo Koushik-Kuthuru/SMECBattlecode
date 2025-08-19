@@ -467,14 +467,24 @@ export default function ChallengesPage() {
                 ))
               ) : filteredChallenges.length > 0 ? (
                 filteredChallenges.map((challenge) => (
-                  <TableRow key={challenge.id}>
+                  <TableRow
+                    key={challenge.id}
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      // Prevent navigation if the favorite button was clicked
+                      if ((e.target as HTMLElement).closest('button')?.dataset.role === 'favorite-button') {
+                        return;
+                      }
+                      router.push(`/challenge/${challenge.id}`);
+                    }}
+                  >
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
                     <TableCell>
-                      <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
+                      <span className="font-medium hover:underline">
                         <span className="line-clamp-2">{challenge.title}</span>
-                      </Link>
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       <DifficultyPill difficulty={challenge.difficulty} />
@@ -491,7 +501,11 @@ export default function ChallengesPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 group"
-                        onClick={() => handleFavoriteToggle(challenge.id!)}
+                        data-role="favorite-button"
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent row's onClick from firing
+                            handleFavoriteToggle(challenge.id!)
+                        }}
                       >
                         <Star className={cn(
                           "h-5 w-5 text-slate-300 transition-all duration-300 group-hover:scale-125",
@@ -513,5 +527,3 @@ export default function ChallengesPage() {
     </div>
   );
 }
-
-    
