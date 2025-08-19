@@ -521,7 +521,7 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">
-                        <span>{`${index + 1}. ${challenge.title}`}</span>
+                        <span>{challenge.title}</span>
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
