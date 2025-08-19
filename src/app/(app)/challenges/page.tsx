@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Label } from '@/components/ui/label';
+import { BulletCoin } from '@/components/icons';
 
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
@@ -441,7 +442,13 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
                     <TableCell className="text-right">
-                      <DifficultyPill difficulty={challenge.difficulty} />
+                      <div className="flex items-center justify-end gap-2">
+                          <span className="flex items-center gap-1 text-sm font-semibold text-primary">
+                             <BulletCoin className="h-4 w-4" />
+                             {challenge.points}
+                          </span>
+                          <DifficultyPill difficulty={challenge.difficulty} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
