@@ -28,28 +28,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDistanceToNow } from 'date-fns';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { BulletCoin } from '@/components/icons';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
-import { Toaster } from '@/components/ui/toaster';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SmecBattleCodeLogo } from '@/components/icons';
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Toaster } from '@/components/ui/toaster';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SmecBattleCodeLogo } from '@/components/icons';
 
 
 type CurrentUser = {
@@ -116,7 +102,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [activeTab, setActiveTab] = useState('description');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(false);
+  const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
   
   // Handlers for header buttons
   const [runCodeHandler, setRunCodeHandler] = useState<() => void>(() => () => {});
@@ -230,10 +216,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
 
   useEffect(() => {
-    if(runResult) {
+    if(runResult || debugOutput) {
        setIsResultsPanelFolded(false); // Unfold panel when new results arrive
     }
-  }, [runResult]);
+  }, [runResult, debugOutput]);
   
   const handleLikeToggle = async () => {
     if (!currentUser || !challenge) return;
@@ -298,12 +284,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setDebugCodeHandler,
       submitHandler,
       setSubmitHandler,
-  };
-  
-  const difficultyColors = {
-    Easy: 'text-green-500 border-green-500/50 bg-green-500/10',
-    Medium: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10',
-    Hard: 'text-red-500 border-red-500/50 bg-red-500/10',
   };
   
   const difficultyTextColors = {
@@ -383,48 +363,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </div>
   );
 
-  const submissionsPanel = (
-     <ScrollArea className="h-full">
-        <div className="p-4">
-            {submissions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Language</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                          {submission.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{submission.language}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-                  <AlertCircle className="h-10 w-10 mb-4" />
-                  <p className="font-semibold">No Submissions Yet</p>
-                  <p>Your submission history for this challenge will appear here.</p>
-              </div>
-            )}
-        </div>
-    </ScrollArea>
-  );
-
   const testResultPanel = (
-    <div className="h-full w-full bg-background flex flex-col border-t">
-      <header className="p-2 border-b flex justify-between items-center">
+    <div className="h-full w-full bg-background flex flex-col">
+      <header className="p-2 border-b flex justify-between items-center flex-shrink-0">
         <h3 className="text-base font-semibold">Test Result</h3>
          <div className="flex items-center gap-2">
             {runResult && !isRunning && (
@@ -493,46 +434,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             )}
         </div>
       </ScrollArea>
-      {runResult && <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>}
+      {runResult && <footer className="p-2 border-t text-sm text-muted-foreground flex-shrink-0">{runResult.feedback}</footer>}
   </div>
   );
   
-  const bottomPanel = (
-    <div className="h-full flex flex-col bg-background">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="flex-shrink-0 p-2 border-b border-r">
-            <div className="flex items-center justify-between">
-                <TabsList>
-                    <TabsTrigger value="result">Test Result</TabsTrigger>
-                    <TabsTrigger value="submissions">Submissions</TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="custom-input" />
-                        <Label htmlFor="custom-input" className="text-sm">Custom Input</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Label htmlFor="diff-mode" className="text-sm">Diff</Label>
-                        <Switch id="diff-mode" />
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                </div>
-            </div>
-          </div>
-          <div className="flex-grow overflow-auto border-r">
-              <TabsContent value="submissions" className="mt-0 h-full">
-                {submissionsPanel}
-              </TabsContent>
-              <TabsContent value="result" className="mt-0 h-full">
-                {testResultPanel}
-              </TabsContent>
-          </div>
-        </Tabs>
-    </div>
-  );
-
   const headerPanel = (
     <header className="h-14 flex-shrink-0 bg-slate-900 text-white flex items-center justify-between px-4 border-b border-slate-700">
         <div className="flex items-center gap-4">
@@ -580,7 +485,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </header>
   )
 
-
   const renderDesktopLayout = () => (
      <ResizablePanelGroup direction="horizontal">
       <ResizablePanel defaultSize={40} minSize={30}>
@@ -589,7 +493,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <ResizableHandleWithHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
         <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={60} minSize={25}>
+            <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 60} minSize={25}>
                 {isChallengeLoading ? (
                     <div className="h-full flex items-center justify-center">
                         <Loader2 className="h-8 w-8 animate-spin" />
@@ -610,7 +514,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         {isResultsPanelFolded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                       </Button>
                     </ResizableHandleWithHandle>
-                    <ResizablePanel defaultSize={40} minSize={15} collapsed={isResultsPanelFolded} collapsible>
+                    <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 40} minSize={15} collapsed={isResultsPanelFolded} collapsible>
                         {testResultPanel}
                     </ResizablePanel>
                 </>
@@ -621,28 +525,45 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
 
   const renderMobileLayout = () => (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        <div className="flex-shrink-0 p-2 border-b">
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="code">Code</TabsTrigger>
-                <TabsTrigger value="result">Result</TabsTrigger>
-            </TabsList>
-        </div>
-        <div className="flex-grow overflow-auto">
-            <TabsContent value="description" className="mt-0 h-full">
-                {descriptionPanel}
-            </TabsContent>
-            <TabsContent value="code" className="mt-0 h-full">
-                <div className="h-full w-full flex">
-                    {children}
-                </div>
-            </TabsContent>
-            <TabsContent value="result" className="mt-0 h-full">
+    <ResizablePanelGroup direction="vertical">
+      <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 50}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <div className="flex-shrink-0 p-2 border-b">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="description">Description</TabsTrigger>
+                    <TabsTrigger value="code">Code</TabsTrigger>
+                </TabsList>
+            </div>
+            <div className="flex-grow overflow-auto">
+                <TabsContent value="description" className="mt-0 h-full">
+                    {descriptionPanel}
+                </TabsContent>
+                <TabsContent value="code" className="mt-0 h-full">
+                    <div className="h-full w-full flex">
+                        {children}
+                    </div>
+                </TabsContent>
+            </div>
+        </Tabs>
+      </ResizablePanel>
+      {(isRunning || runResult || debugOutput) && (
+        <>
+            <ResizableHandleWithHandle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 bg-background border rounded-full shadow-md hover:bg-muted"
+                onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}
+              >
+                {isResultsPanelFolded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
+            </ResizableHandleWithHandle>
+            <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 50} minSize={20} collapsed={isResultsPanelFolded} collapsible>
                 {testResultPanel}
-            </TabsContent>
-        </div>
-    </Tabs>
+            </ResizablePanel>
+        </>
+      )}
+    </ResizablePanelGroup>
   );
 
   return (
