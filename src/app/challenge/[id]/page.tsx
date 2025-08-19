@@ -274,12 +274,12 @@ export default function ChallengeDetail() {
                   <Button variant="outline" size="sm" asChild disabled={!navLinks.prev}>
                       <Link href={navLinks.prev ? `/challenge/${navLinks.prev}` : '#'}>
                           <ArrowLeft className="h-4 w-4 mr-2" />
-                          Previous Mission
+                          Previous Challenge
                       </Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild disabled={!navLinks.next}>
                       <Link href={navLinks.next ? `/challenge/${navLinks.next}` : '#'}>
-                          Next Mission
+                          Next Challenge
                           <ArrowRight className="h-4 w-4 ml-2" />
                       </Link>
                   </Button>

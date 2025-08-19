@@ -475,16 +475,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
            <header className="flex-shrink-0 flex items-center justify-between p-2 bg-slate-900 text-white border-b border-slate-700">
                <div className="flex items-center gap-2">
                     <Button variant="ghost" className="text-white hover:bg-slate-800" asChild>
-                        <Link href="/missions">
+                        <Link href="/challenges">
                           <ArrowLeft className="h-5 w-5 md:mr-2" />
-                          <span className="hidden md:inline">Back to Missions</span>
+                          <span className="hidden md:inline">Back to Challenges</span>
                         </Link>
                     </Button>
                </div>
-                <div className="absolute left-1/2 -translate-x-1/2">
-                    <h1 className="text-lg font-semibold">Missions</h1>
-                </div>
-
+               
                <div className="flex items-center gap-2">
                     {currentUser ? (
                         <>
