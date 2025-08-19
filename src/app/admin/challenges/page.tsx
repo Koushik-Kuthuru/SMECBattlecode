@@ -27,26 +27,34 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 type SortType = 'title' | 'difficulty';
 
 const DIFFICULTY_ORDER: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 };
+const ALL_LANGUAGES = ['C', 'C++', 'Java', 'Python', 'JavaScript'];
 
-type FormData = Omit<Challenge, 'id' | 'tags'> & { tags: string };
+type FormData = Omit<Challenge, 'id' | 'tags' | 'languages' | 'starterCode' | 'solution' | 'likes'> & { 
+  tags: string;
+  languages: string[];
+  starterCode: { [key: string]: string };
+  solution: { [key: string]: string };
+};
 
 const defaultFormData: FormData = {
   title: '',
   difficulty: 'Easy',
-  language: 'Python',
   points: 10,
   description: '',
   tags: '',
-  starterCode: '',
-  solution: '',
   examples: [{ input: '', output: '', explanation: '' }],
   testCases: [{ input: '', output: '', isHidden: false }],
   isEnabled: true,
+  languages: ['Python'],
+  starterCode: { Python: '' },
+  solution: { Python: '' },
 };
 
 export default function ManageChallengesPage() {
@@ -58,8 +66,6 @@ export default function ManageChallengesPage() {
   const [languageFilter, setLanguageFilter] = useState('All');
   const [sortType, setSortType] = useState<SortType>('title');
   const [formData, setFormData] = useState<FormData>(defaultFormData);
-  const [isStarterCodeEditorVisible, setIsStarterCodeEditorVisible] = useState(false);
-  const [isSolutionEditorVisible, setIsSolutionEditorVisible] = useState(false);
   const [challengeToDelete, setChallengeToDelete] = useState<string | null>(null);
   
   const db = getFirestore(app);
@@ -75,7 +81,17 @@ export default function ManageChallengesPage() {
         const batch = writeBatch(db);
         initialChallenges.forEach(challengeData => {
             const challengeRef = doc(collection(db, 'challenges')); // Create ref with new ID
-            batch.set(challengeRef, { ...challengeData, id: challengeRef.id }); // Store the ID within the doc
+            // Quick migration for single language to multi-language
+            const migratedData = {
+              ...challengeData,
+              id: challengeRef.id,
+              languages: [challengeData.language],
+              starterCode: { [challengeData.language]: challengeData.starterCode },
+              solution: { [challengeData.language]: challengeData.solution },
+              language: deleteField(),
+              likes: challengeData.likes || 0
+            };
+            batch.set(challengeRef, migratedData);
         });
         await batch.commit();
         
@@ -105,16 +121,38 @@ export default function ManageChallengesPage() {
     fetchChallenges();
   }, [fetchChallenges]);
   
-  const handleInputChange = useCallback((field: keyof Omit<FormData, 'examples' | 'testCases'>, value: string | number | boolean) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'examples' | 'testCases' | 'languages' | 'starterCode' | 'solution'>, value: string | number | boolean) => {
     setFormData(prev => ({...prev, [field]: value}));
   }, []);
+  
+  const handleLanguageToggle = (language: string, checked: boolean) => {
+    setFormData(prev => {
+        const newLangs = checked 
+            ? [...prev.languages, language]
+            : prev.languages.filter(lang => lang !== language);
+        
+        const newStarterCode = { ...prev.starterCode };
+        const newSolution = { ...prev.solution };
+        if (!checked) {
+            delete newStarterCode[language];
+            delete newSolution[language];
+        } else {
+            if (!newStarterCode[language]) newStarterCode[language] = '';
+            if (!newSolution[language]) newSolution[language] = '';
+        }
 
-  const handleStarterCodeChange = useCallback((value: string) => {
-    setFormData(prev => ({ ...prev, starterCode: value }));
-  }, []);
+        return {...prev, languages: newLangs, starterCode: newStarterCode, solution: newSolution };
+    });
+  };
 
-  const handleSolutionChange = useCallback((value: string) => {
-    setFormData(prev => ({ ...prev, solution: value }));
+  const handleCodeChange = useCallback((lang: string, type: 'starterCode' | 'solution', value: string) => {
+    setFormData(prev => ({
+        ...prev,
+        [type]: {
+            ...prev[type],
+            [lang]: value
+        }
+    }));
   }, []);
 
   const handleArrayChange = useCallback((arrayName: 'examples' | 'testCases', index: number, field: string, value: string | boolean) => {
@@ -145,8 +183,6 @@ export default function ManageChallengesPage() {
     setEditingChallengeId(null);
     setFormData(defaultFormData);
     setIsFormVisible(true);
-    setIsStarterCodeEditorVisible(false);
-    setIsSolutionEditorVisible(false);
   };
   
   const handleEditClick = (challenge: Challenge) => {
@@ -154,21 +190,20 @@ export default function ManageChallengesPage() {
       setFormData({
         ...defaultFormData, // ensure all fields are present
         ...challenge,
+        languages: challenge.languages || [],
+        starterCode: challenge.starterCode || {},
+        solution: challenge.solution || {},
         tags: Array.isArray(challenge.tags) ? challenge.tags.join(', ') : '',
         testCases: challenge.testCases || [{ input: '', output: '', isHidden: false }],
         isEnabled: challenge.isEnabled !== false, // Default to true if undefined
       });
       setIsFormVisible(true);
-      setIsStarterCodeEditorVisible(false);
-      setIsSolutionEditorVisible(false);
   }
 
   const handleCancel = () => {
     setIsFormVisible(false);
     setEditingChallengeId(null);
     setFormData(defaultFormData);
-    setIsStarterCodeEditorVisible(false);
-    setIsSolutionEditorVisible(false);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,9 +212,14 @@ export default function ManageChallengesPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Title is required.' });
         return;
     }
+    if (formData.languages.length === 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'At least one language must be selected.' });
+        return;
+    }
     const challengeDataToSave = {
         ...formData,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
     };
 
     try {
@@ -272,7 +312,7 @@ export default function ManageChallengesPage() {
 
   const sortedAndFilteredChallenges = useMemo(() => {
     return [...challenges]
-      .filter(challenge => languageFilter === 'All' || challenge.language === languageFilter)
+      .filter(challenge => languageFilter === 'All' || (challenge.languages && challenge.languages.includes(languageFilter)))
       .sort((a, b) => {
         if (sortType === 'title') {
           return a.title.localeCompare(b.title);
@@ -300,7 +340,7 @@ export default function ManageChallengesPage() {
                     <Input id='title' placeholder="e.g., Two Sum" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid md:grid-cols-2 gap-6">
                    <div className="space-y-2">
                        <Label>Difficulty</Label>
                        <Select value={formData.difficulty} onValueChange={(value) => handleInputChange('difficulty', value)}>
@@ -313,22 +353,25 @@ export default function ManageChallengesPage() {
                        </Select>
                    </div>
                    <div className="space-y-2">
-                       <Label>Default Language</Label>
-                       <Select value={formData.language} onValueChange={(value) => handleInputChange('language', value)}>
-                           <SelectTrigger><SelectValue placeholder="Select language" /></SelectTrigger>
-                           <SelectContent>
-                              <SelectItem value="C">C</SelectItem>
-                              <SelectItem value="C++">C++</SelectItem>
-                              <SelectItem value="Java">Java</SelectItem>
-                              <SelectItem value="Python">Python</SelectItem>
-                              <SelectItem value="JavaScript">JavaScript</SelectItem>
-                           </SelectContent>
-                       </Select>
-                   </div>
-                   <div className="space-y-2">
                        <Label htmlFor="points">Points</Label>
                        <Input id="points" type="number" placeholder="e.g., 10" value={formData.points} onChange={e => handleInputChange('points', parseInt(e.target.value, 10) || 0)} required />
                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Supported Languages</Label>
+                    <div className="flex flex-wrap gap-4 rounded-lg border p-4">
+                        {ALL_LANGUAGES.map(lang => (
+                            <div key={lang} className="flex items-center gap-2">
+                                <Checkbox
+                                    id={`lang-${lang}`}
+                                    checked={formData.languages.includes(lang)}
+                                    onCheckedChange={(checked) => handleLanguageToggle(lang, !!checked)}
+                                />
+                                <Label htmlFor={`lang-${lang}`} className="font-normal">{lang}</Label>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="space-y-2">
@@ -406,45 +449,43 @@ export default function ManageChallengesPage() {
                    </Button>
                 </div>
 
-                <div className="space-y-2">
-                    <Label>Starter Code</Label>
-                    {isStarterCodeEditorVisible ? (
-                        <div className="h-64 rounded-md border">
-                            <CodeEditor
-                                value={formData.starterCode}
-                                onChange={handleStarterCodeChange}
-                                language={formData.language.toLowerCase()}
-                            />
-                        </div>
-                    ) : (
-                        <Button type="button" variant="outline" onClick={() => setIsStarterCodeEditorVisible(true)}>
-                            <Code className="mr-2 h-4 w-4" />
-                            View/Edit Starter Code
-                        </Button>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Solution Code</Label>
-                    {isSolutionEditorVisible ? (
-                        <div className="h-64 rounded-md border">
-                            <CodeEditor
-                                value={formData.solution}
-                                onChange={handleSolutionChange}
-                                language={formData.language.toLowerCase()}
-                            />
-                        </div>
-                    ) : (
-                        <Button type="button" variant="outline" onClick={() => setIsSolutionEditorVisible(true)}>
-                            <Code className="mr-2 h-4 w-4" />
-                            View/Edit Solution
-                        </Button>
-                    )}
-                </div>
+                <Tabs defaultValue={formData.languages[0] || ALL_LANGUAGES[0]}>
+                    <TabsList>
+                        {formData.languages.map(lang => <TabsTrigger key={lang} value={lang}>{lang}</TabsTrigger>)}
+                    </TabsList>
+                    {formData.languages.map(lang => (
+                        <TabsContent key={lang} value={lang}>
+                            <div className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                    <Label>Starter Code ({lang})</Label>
+                                    <div className="h-64 rounded-md border">
+                                        <CodeEditor
+                                            value={formData.starterCode[lang] || ''}
+                                            onChange={(value) => handleCodeChange(lang, 'starterCode', value)}
+                                            language={lang.toLowerCase()}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Solution Code ({lang})</Label>
+                                    <div className="h-64 rounded-md border">
+                                         <CodeEditor
+                                            value={formData.solution[lang] || ''}
+                                            onChange={(value) => handleCodeChange(lang, 'solution', value)}
+                                            language={lang.toLowerCase()}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </TabsContent>
+                    ))}
+                </Tabs>
                 
                 <div className="flex items-center space-x-2 pt-4">
                     <Switch id="isEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleInputChange('isEnabled', checked)} />
                     <Label htmlFor="isEnabled">Enable this challenge</Label>
+                    <Label htmlFor="likes" className="ml-auto mr-2">Likes</Label>
+                    <Input id="likes" type="number" value={challenges.find(c => c.id === editingChallengeId)?.likes || 0} readOnly className="w-20" />
                 </div>
 
                 <div className="flex gap-4 pt-4">
@@ -510,7 +551,13 @@ export default function ManageChallengesPage() {
                   <div key={challenge.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
                     <div>
                       <h3 className="font-semibold">{challenge.title}</h3>
-                      <p className="text-sm text-muted-foreground">{challenge.difficulty} - {challenge.points} Points - {challenge.language}</p>
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-x-2">
+                        <span>{challenge.difficulty}</span>
+                        <span>-</span>
+                        <span>{challenge.points} Points</span>
+                        <span>-</span>
+                        <div className="flex gap-1.5 flex-wrap">{challenge.languages?.map(l => <span key={l}>{l}</span>)}</div>
+                      </div>
                     </div>
                      <div className="flex items-center gap-2">
                         <Badge variant={challenge.isEnabled !== false ? 'default' : 'secondary'}>

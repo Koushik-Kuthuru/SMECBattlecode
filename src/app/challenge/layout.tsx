@@ -2,13 +2,11 @@
 
 'use client'
 
-import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Copy } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp, deleteField } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
@@ -37,6 +35,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { BulletCoin } from '@/components/icons';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
+import { Toaster } from '@/components/ui/toaster';
 
 type CurrentUser = {
   uid: string;
@@ -56,11 +60,6 @@ export type Submission = {
   } | null;
 };
 
-type NavLinks = {
-  prev: string | null;
-  next: string | null;
-};
-
 type ChallengeContextType = {
   challenge: Challenge | null;
   runResult: EvaluateCodeOutput | null;
@@ -70,7 +69,6 @@ type ChallengeContextType = {
   isRunning: boolean;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
-  navLinks: NavLinks;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -107,7 +105,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isPenaltyDialogOpen, setIsPenaltyDialogOpen] = useState(false);
   const [penaltyDialogContent, setPenaltyDialogContent] = useState<PenaltyDialogContent | null>(null);
-  const [navLinks, setNavLinks] = useState<NavLinks>({ prev: null, next: null });
+  
+  // Like functionality state
+  const [likeCount, setLikeCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
 
   const auth = getAuth(app);
   const challengeId = params.id as string;
@@ -139,34 +140,19 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [auth]);
 
   useEffect(() => {
-    const fetchChallengesData = async () => {
-      setIsChallengeLoading(true);
-      try {
-        const challengesCollection = collection(db, 'challenges');
-        const q = query(challengesCollection, orderBy("title"));
-        const snapshot = await getDocs(q);
-        const challengesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge)).filter(c => c.isEnabled !== false);
-
-        const currentChallengeIndex = challengesList.findIndex(c => c.id === challengeId);
-
-        if (currentChallengeIndex !== -1) {
-            setChallenge(challengesList[currentChallengeIndex]);
-            setNavLinks({
-                prev: currentChallengeIndex > 0 ? challengesList[currentChallengeIndex - 1].id! : null,
-                next: currentChallengeIndex < challengesList.length - 1 ? challengesList[currentChallengeIndex + 1].id! : null
-            });
-        } else {
-            setChallenge(null);
-        }
-
-      } catch (error) {
-        console.error("Error fetching challenges:", error);
-      } finally {
-        setIsChallengeLoading(false);
-      }
-    };
     if (challengeId) {
-      fetchChallengesData();
+      const challengeDocRef = doc(db, 'challenges', challengeId);
+      const unsubscribe = onSnapshot(challengeDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const challengeData = { id: docSnap.id, ...docSnap.data() } as Challenge;
+          setChallenge(challengeData);
+          setLikeCount(challengeData.likes || 0);
+        } else {
+          setChallenge(null);
+        }
+        setIsChallengeLoading(false);
+      });
+      return () => unsubscribe();
     }
   }, [challengeId]);
   
@@ -182,7 +168,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               await setDoc(inProgressRef, { [challengeId]: true }, { merge: true });
           }
       };
-      
       setInProgress();
       
       const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
@@ -190,8 +175,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           setIsChallengeCompleted(!!docSnap.data()?.[challengeId]);
       });
 
+      const likesDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'likes');
+      const unsubscribeLikes = onSnapshot(likesDocRef, (docSnap) => {
+          setHasLiked(!!docSnap.data()?.[challengeId]);
+      });
+
       return () => {
         unsubscribeCompleted();
+        unsubscribeLikes();
       }
   }, [currentUser, challengeId]);
 
@@ -269,12 +260,38 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
   }, [handleVisibilityChange]);
-
   
-  if (isLoading) {
+  const handleLikeToggle = async () => {
+    if (!currentUser || !challenge) return;
+
+    const newHasLiked = !hasLiked;
+    setHasLiked(newHasLiked);
+    setLikeCount(current => newHasLiked ? current + 1 : current - 1);
+
+    const challengeRef = doc(db, 'challenges', challenge.id!);
+    const userLikesRef = doc(db, `users/${currentUser.uid}/challengeData`, 'likes');
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            transaction.update(challengeRef, {
+                likes: increment(newHasLiked ? 1 : -1)
+            });
+            transaction.set(userLikesRef, {
+                [challenge.id!]: newHasLiked ? true : deleteField()
+            }, { merge: true });
+        });
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        // Revert UI on error
+        setHasLiked(!newHasLiked);
+        setLikeCount(current => !newHasLiked ? current + 1 : current - 1);
+    }
+  };
+  
+  if (isLoading || isChallengeLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
-            Loading...
+            <Loader2 className="h-8 w-8 animate-spin" />
         </div>
     )
   }
@@ -288,7 +305,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       isRunning,
       setIsRunning,
       isChallengeCompleted,
-      navLinks,
   };
   
   const difficultyColors = {
@@ -296,255 +312,277 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     Medium: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10',
     Hard: 'text-red-500 border-red-500/50 bg-red-500/10',
   };
+  
+  const difficultyTextColors = {
+    Easy: 'text-green-500',
+    Medium: 'text-yellow-600',
+    Hard: 'text-red-600',
+  }
+  
+  const statusBadge = isChallengeCompleted 
+    ? <Badge variant="default" className="bg-green-600">Solved</Badge>
+    : <Badge variant="secondary">Unsolved</Badge>;
 
-  const descriptionPanel = (
-    <ScrollArea className="h-full p-6">
-    {isChallengeLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-    ) : challenge ? (
-        <>
-          <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
-          <div className="flex items-center gap-4 mb-4 flex-wrap">
-              <Badge variant="outline" className={cn("text-xs", difficultyColors[challenge.difficulty])}>{challenge.difficulty}</Badge>
-              <p className="text-sm text-muted-foreground">Language: {challenge.language}</p>
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-                <BulletCoin className="h-4 w-4" />
-                <span>{challenge.points} Points</span>
+  const descriptionPanelContent = (
+    challenge ? (
+      <>
+        <div className="flex-grow overflow-auto p-4">
+          <div className="flex justify-between items-start">
+            <div>
+               <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
+              <div className="flex items-center gap-4 text-sm">
+                  {statusBadge}
+                  <span className={cn("font-semibold", difficultyTextColors[challenge.difficulty])}>{challenge.difficulty}</span>
               </div>
+            </div>
+            <Button variant="ghost" size="sm" className="flex items-center gap-1.5 h-8" onClick={handleLikeToggle}>
+              <ThumbsUp className={cn("h-4 w-4 transition-colors", hasLiked && "text-blue-500 fill-blue-500/20")} />
+              <span className="font-semibold text-muted-foreground">{likeCount.toLocaleString()}</span>
+            </Button>
           </div>
-          <p className="text-base mb-6 whitespace-pre-wrap">{challenge.description}</p>
+          <p className="text-sm text-muted-foreground mt-4 whitespace-pre-wrap">{challenge.description}</p>
           
           {challenge.examples.map((example, index) => (
-            <div key={index} className="space-y-4 mb-6">
-                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Example {index + 1}</h3>
-                     <div className="space-y-2">
-                        <p className="font-mono text-sm font-semibold">Input:</p>
-                        <div className="bg-muted p-3 rounded-md border">
-                            <pre className="whitespace-pre-wrap font-sans">{example.input}</pre>
-                        </div>
-                        <p className="font-mono text-sm font-semibold">Output:</p>
-                         <div className="bg-muted p-3 rounded-md border">
-                           <pre className="whitespace-pre-wrap font-sans">{example.output}</pre>
-                        </div>
-                        {example.explanation && (
-                            <>
-                                <p className="font-mono text-sm font-semibold">Explanation:</p>
-                                <p className="text-muted-foreground">{example.explanation}</p>
-                            </>
-                        )}
+            <div key={index} className="mt-4">
+                 <p className="font-semibold text-sm mb-1">Example {index + 1}:</p>
+                 <div className="space-y-2 p-3 bg-muted rounded-md border text-sm">
+                    <div>
+                        <span className="font-semibold mr-2">Input:</span>
+                        <code className="font-mono">{example.input}</code>
                     </div>
-                 </div>
+                    <div>
+                        <span className="font-semibold mr-2">Output:</span>
+                        <code className="font-mono">{example.output}</code>
+                    </div>
+                    {example.explanation && (
+                        <div>
+                            <span className="font-semibold mr-2">Explanation:</span>
+                            <span className="text-muted-foreground">{example.explanation}</span>
+                        </div>
+                    )}
+                </div>
             </div>
           ))}
-        </>
+        </div>
+        <div className="shrink-0 p-4 border-t">
+          <p className="text-xs text-muted-foreground text-center">Copyright © {new Date().getFullYear()} SMEC BattleCode. All rights reserved.</p>
+        </div>
+      </>
     ) : (
-        <div>Challenge details not found.</div>
-    )}
-    </ScrollArea>
+      <div className="p-6">Challenge not found.</div>
+    )
+  );
+
+  const descriptionPanel = (
+    <div className="h-full flex flex-col bg-background">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Problem Description</h2>
+      </div>
+      {isChallengeLoading ? (
+          <div className="space-y-4 p-4">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+      ) : descriptionPanelContent}
+    </div>
   );
 
   const submissionsPanel = (
      <ScrollArea className="h-full">
-        {submissions.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Language</TableHead>
-                <TableHead>Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {submissions.map((submission) => (
-                <TableRow key={submission.id}>
-                  <TableCell>
-                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                      {submission.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{submission.language}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-              <AlertCircle className="h-10 w-10 mb-4" />
-              <p className="font-semibold">No Submissions Yet</p>
-              <p>Your submission history for this challenge will appear here.</p>
-          </div>
-        )}
+        <div className="p-4">
+            {submissions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Language</TableHead>
+                    <TableHead>Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell>
+                        <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                          {submission.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{submission.language}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+                  <AlertCircle className="h-10 w-10 mb-4" />
+                  <p className="font-semibold">No Submissions Yet</p>
+                  <p>Your submission history for this challenge will appear here.</p>
+              </div>
+            )}
+        </div>
     </ScrollArea>
   );
 
-  const resultPanel = (
-    <ScrollArea className="h-full w-full">
-      <div className="h-full w-full">
-      { isRunning ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <Loader2 className="h-12 w-12 animate-spin mb-4" />
-            <p className="font-semibold text-lg">Running test cases...</p>
-            <p>Please wait a moment.</p>
+  const testResultPanel = (
+    <div className="h-full w-full bg-background flex flex-col">
+      <header className="p-2 border-b flex justify-between items-center">
+        <h3 className="text-base font-semibold">Test Result</h3>
+         {runResult && !isRunning && (
+            <span className={cn(
+                "text-sm font-bold",
+                runResult.allPassed ? "text-green-600" : "text-red-500"
+            )}>
+                {runResult.allPassed ? "Accepted" : "Wrong Answer"}
+            </span>
+         )}
+      </header>
+      {isRunning && !runResult?.results.length ? (
+          <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin mb-2" />
+            <p className="font-semibold">Running test cases...</p>
           </div>
       ) : runResult ? (
-          <div className="p-4 space-y-4">
-              <h2 className={cn("text-xl font-bold flex items-center gap-2", runResult.allPassed ? 'text-green-600' : 'text-red-600')}>
-                  {runResult.allPassed ? <CheckCircle /> : <XCircle />}
-                  {runResult.allPassed ? 'All Test Cases Passed!' : 'Some Test Cases Failed'}
-              </h2>
-              <p className="text-muted-foreground">{runResult.feedback}</p>
-              <Tabs value={activeResultTab} onValueChange={setActiveResultTab}>
-                  <div className="relative w-full overflow-x-auto">
-                    <TabsList className="inline-flex justify-start">
-                        {runResult.results.map((res, i) => (
-                            <TabsTrigger key={i} value={String(i)} className="flex items-center gap-2">
-                                Test Case {i + 1}
-                                {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                  </div>
-                  {runResult.results.map((res, i) => (
-                      <TabsContent key={i} value={String(i)} className="mt-4 space-y-4">
-                          <div>
-                              <h3 className="font-semibold mb-2">Input</h3>
-                              <Textarea readOnly value={res.testCaseInput} className="font-mono text-sm" />
-                          </div>
-                          <div className="grid md:grid-cols-2 gap-4">
+          <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
+              <div className="p-2 border-b">
+                <TabsList className="h-auto p-1">
+                    {runResult.results.map((res, i) => (
+                        <TabsTrigger key={i} value={String(i)} className="flex items-center gap-1.5 text-xs h-8">
+                            Test Case {i + 1}
+                            {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+              </div>
+              <div className="flex-grow overflow-auto">
+                {runResult.results.map((res, i) => (
+                    <TabsContent key={i} value={String(i)} className="mt-0 p-4 space-y-4">
+                        <div>
+                            <h4 className="font-semibold mb-1 text-sm">Input</h4>
+                            <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 className="font-semibold mb-1 text-sm">Your Output</h4>
+                                <Textarea readOnly value={res.actualOutput} className="font-mono text-xs h-20" />
+                            </div>
                               <div>
-                                  <h3 className="font-semibold mb-2">Your Output</h3>
-                                  <Textarea readOnly value={res.actualOutput} className="font-mono text-sm" />
-                              </div>
-                                <div>
-                                  <h3 className="font-semibold mb-2">Expected Output</h3>
-                                  <Textarea readOnly value={res.expectedOutput} className="font-mono text-sm" />
-                              </div>
-                          </div>
-                      </TabsContent>
-                  ))}
-              </Tabs>
-          </div>
+                                <h4 className="font-semibold mb-1 text-sm">Expected Output</h4>
+                                <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
+                            </div>
+                        </div>
+                    </TabsContent>
+                ))}
+              </div>
+              <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
+          </Tabs>
       ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <AlertCircle className="h-10 w-10 mb-4" />
-            <p>Run your code to see the results here.</p>
+          <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
+            <Play className="h-8 w-8 mb-2" />
+            <p>Run your code to see test results.</p>
           </div>
       )}
-      </div>
-  </ScrollArea>
+  </div>
   );
-
-  const leftPanel = (
+  
+  const rightPanel = (
+    <div className="h-full w-full flex flex-col bg-muted overflow-hidden">
+        {isDesktop && children}
+    </div>
+  );
+  
+  const bottomPanel = (
     <div className="h-full flex flex-col bg-background">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="flex-shrink-0 p-2 border-b border-r">
-              <TabsList>
-                <TabsTrigger value="description">Description</TabsTrigger>
-                {(runResult || isRunning) && <TabsTrigger value="result">Result</TabsTrigger>}
-                <TabsTrigger value="submissions">Submissions</TabsTrigger>
-              </TabsList>
+            <div className="flex items-center justify-between">
+                <TabsList>
+                    <TabsTrigger value="result">Test Result</TabsTrigger>
+                    <TabsTrigger value="submissions">Submissions</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="custom-input" />
+                        <Label htmlFor="custom-input" className="text-sm">Custom Input</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Label htmlFor="diff-mode" className="text-sm">Diff</Label>
+                        <Switch id="diff-mode" />
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                </div>
+            </div>
           </div>
           <div className="flex-grow overflow-auto border-r">
-              <TabsContent value="description" className="mt-0 h-full">
-                {descriptionPanel}
-              </TabsContent>
               <TabsContent value="submissions" className="mt-0 h-full">
                 {submissionsPanel}
               </TabsContent>
               <TabsContent value="result" className="mt-0 h-full">
-                {resultPanel}
+                {testResultPanel}
               </TabsContent>
           </div>
         </Tabs>
     </div>
   );
 
+
+  const renderDesktopLayout = () => (
+    <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel defaultSize={40} minSize={30}>
+            {descriptionPanel}
+        </ResizablePanel>
+        <ResizableHandleWithHandle />
+        <ResizablePanel defaultSize={60} minSize={40}>
+            <ResizablePanelGroup direction="vertical">
+                <ResizablePanel defaultSize={60} minSize={25}>
+                    {children}
+                </ResizablePanel>
+                <ResizableHandleWithHandle />
+                <ResizablePanel defaultSize={40} minSize={25}>
+                    {bottomPanel}
+                </ResizablePanel>
+            </ResizablePanelGroup>
+        </ResizablePanel>
+    </ResizablePanelGroup>
+  );
+
+  const renderMobileLayout = () => (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+        <div className="flex-shrink-0 p-2 border-b">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="code">Code</TabsTrigger>
+                <TabsTrigger value="result">Result</TabsTrigger>
+            </TabsList>
+        </div>
+        <div className="flex-grow overflow-auto">
+            <TabsContent value="description" className="mt-0 h-full">
+                {descriptionPanel}
+            </TabsContent>
+            <TabsContent value="code" className="mt-0 h-full">
+                <div className="h-full w-full flex">
+                    {children}
+                </div>
+            </TabsContent>
+            <TabsContent value="result" className="mt-0 h-full">
+                {bottomPanel}
+            </TabsContent>
+        </div>
+    </Tabs>
+  );
+
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
-           <header className="flex-shrink-0 flex items-center justify-between p-2 bg-slate-900 text-white border-b border-slate-700">
-               <div className="flex items-center gap-2">
-                    <Button variant="ghost" className="text-white" asChild>
-                        <Link href="/challenges">
-                          <ArrowLeft className="h-5 w-5 md:mr-2" />
-                          <span className="hidden md:inline">Back to Challenges</span>
-                        </Link>
-                    </Button>
-               </div>
-               
-               <div className="flex items-center gap-2">
-                    {currentUser ? (
-                        <>
-                            <Link href="/profile">
-                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
-                                    <AvatarFallback>
-                                      <User />
-                                    </AvatarFallback>
-                                  </Avatar>
-                            </Link>
-                        </>
-                    ) : (
-                        <Button asChild>
-                            <Link href="/login">Login</Link>
-                        </Button>
-                    )}
-               </div>
-           </header>
-
             <main className="flex-1 flex flex-row overflow-hidden bg-muted/40">
-               {isDesktop ? (
-                 <ResizablePanelGroup direction="horizontal">
-                     <ResizablePanel defaultSize={50} minSize={30}>
-                       {leftPanel}
-                     </ResizablePanel>
-                     <ResizableHandle />
-                     <ResizablePanel defaultSize={50} minSize={30}>
-                       <div className="h-full w-full flex p-2">
-                          {children}
-                       </div>
-                     </ResizablePanel>
-                 </ResizablePanelGroup>
-               ) : (
-                  <div className="flex flex-col w-full h-full">
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                        <div className="flex-shrink-0 p-2 border-b">
-                            <TabsList className={cn("grid w-full", (runResult || isRunning) ? "grid-cols-4" : "grid-cols-3")}>
-                                <TabsTrigger value="description">Description</TabsTrigger>
-                                <TabsTrigger value="code" onClick={() => setActiveTab('code')}>Code</TabsTrigger>
-                                {(runResult || isRunning) && <TabsTrigger value="result">Result</TabsTrigger>}
-                                <TabsTrigger value="submissions">Submissions</TabsTrigger>
-                            </TabsList>
-                        </div>
-                        <div className="flex-grow overflow-auto">
-                            <TabsContent value="description" className="mt-0 h-full">
-                                {descriptionPanel}
-                            </TabsContent>
-                             <TabsContent value="code" className="mt-0 h-full">
-                                <div className="h-full w-full flex">
-                                    {children}
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="result" className="mt-0 h-full">
-                                {resultPanel}
-                            </TabsContent>
-                            <TabsContent value="submissions" className="mt-0 h-full">
-                                {submissionsPanel}
-                            </TabsContent>
-                        </div>
-                    </Tabs>
-                  </div>
-               )}
+               {isDesktop ? renderDesktopLayout() : renderMobileLayout()}
             </main>
         </div>
         <AlertDialog open={isPenaltyDialogOpen} onOpenChange={setIsPenaltyDialogOpen}>
@@ -579,6 +617,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               )}
             </AlertDialogContent>
         </AlertDialog>
+        <Toaster />
     </ChallengeContext.Provider>
   );
 }

@@ -10,24 +10,22 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Loader2, ArrowLeft, ArrowRight, GitBranchPlus, Bot } from "lucide-react";
+import { Save, RefreshCcw, Code, Loader2, Bug, Play, ThumbsUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
-import Link from 'next/link';
 import { evaluateCode } from "@/ai/flows/evaluate-code";
 import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
 
 export default function ChallengeDetail() {
-  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning, navLinks } = useChallenge();
+  const { challenge, setRunResult, setActiveTab, isRunning, setIsRunning } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
-  const [language, setLanguage] = useState('python');
+  const [language, setLanguage] = useState('');
   const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const params = useParams();
   const challengeId = params.id as string;
-  const [showNavButtons, setShowNavButtons] = useState(false);
   
   const auth = getAuth(app);
 
@@ -40,26 +38,43 @@ export default function ChallengeDetail() {
 
   useEffect(() => {
     if (!challenge) return;
-    setShowNavButtons(false); // Reset on challenge change
-    const fetchSolution = async () => {
-      setLanguage(challenge.language.toLowerCase());
+    const availableLangs = challenge.languages || [];
+    const firstLang = availableLangs.length > 0 ? availableLangs[0].toLowerCase() : 'python';
 
-      let userCode = challenge.starterCode; // Default to starter code
+    const fetchSolution = async () => {
+      let userLang = firstLang;
+      let userCode = challenge.starterCode[firstLang] || challenge.starterCode[availableLangs[0]] || '';
 
       if (user) {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
         const solSnap = await getDoc(solRef);
         if (solSnap.exists()) {
-          userCode = solSnap.data().code;
-          setLanguage(solSnap.data().language || challenge.language.toLowerCase());
+          const data = solSnap.data();
+          // Check if saved language is available for this challenge
+          if(availableLangs.includes(data.language)) {
+             userCode = data.code;
+             userLang = data.language.toLowerCase();
+          } else {
+             // If not, fall back to the first available language's starter code
+             userCode = challenge.starterCode[availableLangs[0]] || '';
+          }
         }
       }
+      setLanguage(userLang);
       setSolution(userCode || '');
       setInitialSolution(userCode || '');
     };
 
     fetchSolution();
   }, [challenge, user]);
+
+  useEffect(() => {
+    if (challenge && language) {
+        const starter = challenge.starterCode[language] || '';
+        setSolution(sol => sol || starter); // Only set starter if current solution is empty
+        setInitialSolution(sol => sol || starter);
+    }
+  }, [language, challenge]);
 
 
   const handleSolutionChange = (newCode: string) => {
@@ -121,7 +136,7 @@ export default function ChallengeDetail() {
     }
     
     setIsRunning(true);
-    setRunResult(null); // Clear previous results
+    setRunResult({ feedback: '', results: [], allPassed: false }); // Show loading state in results
     setActiveTab('result'); // Switch to result tab
     try {
         const result = await evaluateCode({
@@ -139,6 +154,7 @@ export default function ChallengeDetail() {
     } catch(error) {
         console.error("Error running code:", error);
         toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
+        setRunResult(null); // Clear loading state on error
     } finally {
         setIsRunning(false);
     }
@@ -150,7 +166,7 @@ export default function ChallengeDetail() {
         return;
     }
     setIsRunning(true);
-    setRunResult(null);
+    setRunResult({ feedback: '', results: [], allPassed: false });
     setActiveTab('result');
 
     try {
@@ -158,6 +174,7 @@ export default function ChallengeDetail() {
       if (allTestCases.length === 0) {
          toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
          setIsRunning(false);
+         setRunResult(null);
          return;
       }
       
@@ -227,7 +244,6 @@ export default function ChallengeDetail() {
       toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
     } finally {
       setIsRunning(false);
-      setShowNavButtons(true);
     }
   }
 
@@ -236,20 +252,20 @@ export default function ChallengeDetail() {
           setSolution(initialSolution);
       }
   };
-
+  
+  const availableLanguages = challenge?.languages || [];
+  
   return (
     <div className="h-full w-full flex flex-col bg-background">
        <div className="flex-shrink-0 p-2 flex justify-between items-center border-b bg-muted">
-         <Select value={language} onValueChange={setLanguage}>
+         <Select value={language} onValueChange={setLanguage} disabled={availableLanguages.length <= 1}>
              <SelectTrigger className="w-[180px]">
                  <SelectValue placeholder="Select language" />
              </SelectTrigger>
              <SelectContent>
-                <SelectItem value="c">C</SelectItem>
-                <SelectItem value="c++">C++</SelectItem>
-                <SelectItem value="java">Java</SelectItem>
-                <SelectItem value="python">Python</SelectItem>
-                <SelectItem value="javascript">JavaScript</SelectItem>
+                {availableLanguages.map(lang => (
+                    <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                ))}
              </SelectContent>
          </Select>
          <div className="flex items-center gap-2">
@@ -262,40 +278,23 @@ export default function ChallengeDetail() {
          </div>
        </div>
        <div className="flex-grow relative bg-white pr-[2px]">
-          <CodeEditor
-            value={solution}
-            onChange={handleSolutionChange}
-            language={language}
-          />
+            <CodeEditor
+                value={solution}
+                onChange={handleSolutionChange}
+                language={language}
+            />
        </div>
-       <div className="flex-shrink-0 p-2 flex justify-between items-center border-t bg-muted">
-           {showNavButtons ? (
-              <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" asChild disabled={!navLinks.prev}>
-                      <Link href={navLinks.prev ? `/challenge/${navLinks.prev}` : '#'}>
-                          <ArrowLeft className="h-4 w-4 mr-2" />
-                          Previous Challenge
-                      </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild disabled={!navLinks.next}>
-                      <Link href={navLinks.next ? `/challenge/${navLinks.next}` : '#'}>
-                          Next Challenge
-                          <ArrowRight className="h-4 w-4 ml-2" />
-                      </Link>
-                  </Button>
-              </div>
-           ) : (
-            <div />
-           )}
-           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleRunCode} disabled={isSaving || isRunning}>
-                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Code className="mr-2 h-4 w-4" />} Run Code
+        <footer className="shrink-0 flex items-center justify-end p-2 border-t bg-muted gap-2">
+            <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600">
+                <Bug className="mr-2 h-4 w-4" /> Debug
             </Button>
-            <Button size="sm" variant="default" onClick={handleSubmit} disabled={isSaving || isRunning}>
-                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <GitBranchPlus className="mr-2 h-4 w-4" />} Submit
+             <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
             </Button>
-           </div>
-       </div>
+            <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning}>
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
+            </Button>
+        </footer>
     </div>
   );
 }

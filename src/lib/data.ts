@@ -1,9 +1,9 @@
 
+
 export type Challenge = {
   id?: string;
   title: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  language: 'C' | 'C++' | 'Java' | 'Python' | 'JavaScript';
   points: number;
   description: string;
   tags: string[];
@@ -17,12 +17,16 @@ export type Challenge = {
     output: string;
     isHidden?: boolean;
   }[];
-  starterCode: string;
-  solution: string;
   isEnabled?: boolean;
+  likes?: number;
+  // Multi-language support
+  languages: string[]; // e.g., ['Python', 'JavaScript']
+  starterCode: { [language: string]: string };
+  solution: { [language: string]: string };
 };
 
-export const challenges: Challenge[] = [
+// This initialChallenges is now a template. It will be migrated on first run.
+export const challenges: (Omit<Challenge, 'languages' | 'starterCode' | 'solution'> & { language: string, starterCode: string, solution: string })[] = [
   {
     title: 'Two Sum',
     difficulty: 'Easy',
