@@ -15,7 +15,7 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData } from '@/lib/types';
@@ -43,6 +43,22 @@ const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard'
     </span>
   );
 };
+
+
+const StudyPlanCard = ({ title, description, buttonText, icon: Icon, href, className }: { title: string, description: string, buttonText: string, icon: React.ElementType, href: string, className?: string }) => (
+    <Link href={href} className="block group">
+        <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6 transition-transform group-hover:scale-105", className)}>
+            <div className="relative z-10">
+                <h3 className="text-xl font-bold">{title}</h3>
+                <p className="text-sm opacity-90">{description}</p>
+            </div>
+            <Button variant="secondary" size="sm" className="relative z-10 w-fit bg-white/90 text-black hover:bg-white">
+                {buttonText}
+            </Button>
+             <Icon className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0 transition-transform group-hover:scale-110" />
+        </Card>
+    </Link>
+);
 
 
 export default function ChallengesPage() {
@@ -230,6 +246,44 @@ export default function ChallengesPage() {
         <CardTitle className="text-3xl font-bold tracking-tight">Challenge Arena</CardTitle>
         <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
       </CardHeader>
+      
+      <div className="space-y-4">
+          <h2 className="text-xl font-bold">Study Plans</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StudyPlanCard 
+                  title="Interview Crash Course" 
+                  description="System Design" 
+                  buttonText="Start Learning" 
+                  icon={Book}
+                  href="#"
+                  className="bg-gradient-to-br from-green-600 to-emerald-800"
+              />
+              <StudyPlanCard 
+                  title="Interview Crash Course" 
+                  description="Data Structures & Algorithms" 
+                  buttonText="Start Learning" 
+                  icon={BrainCircuit}
+                  href="#"
+                  className="bg-gradient-to-br from-purple-600 to-indigo-800"
+              />
+              <StudyPlanCard 
+                  title="Top Interview Questions" 
+                  description="Master the essentials" 
+                  buttonText="Get Started" 
+                  icon={MessageSquare}
+                  href="#"
+                  className="bg-gradient-to-br from-blue-500 to-sky-700"
+              />
+              <StudyPlanCard 
+                  title="Java 30 Day Challenge" 
+                  description="Beginner to advanced" 
+                  buttonText="Start Learning"
+                  icon={Code2}
+                  href="#"
+                  className="bg-gradient-to-br from-orange-500 to-amber-700"
+              />
+          </div>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Badge
