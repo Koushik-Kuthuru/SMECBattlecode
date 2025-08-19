@@ -466,14 +466,14 @@ export default function ChallengesPage() {
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
-                filteredChallenges.map((challenge, index) => (
+                filteredChallenges.map((challenge) => (
                   <TableRow key={challenge.id}>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
                     <TableCell>
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
-                        <span className="line-clamp-2">{index + 1}. {challenge.title}</span>
+                        <span className="line-clamp-2">{challenge.title}</span>
                       </Link>
                     </TableCell>
                     <TableCell className="text-center">
@@ -513,3 +513,5 @@ export default function ChallengesPage() {
     </div>
   );
 }
+
+    
