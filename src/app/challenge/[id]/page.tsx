@@ -10,7 +10,7 @@ import { getAuth, onAuthStateChanged, type User } from "firebase/auth";
 import type { Challenge } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCcw, Code, Loader2, Bug, Play, ThumbsUp } from "lucide-react";
+import { Save, RefreshCcw, Code, Loader2, Bug, Play, ThumbsUp, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import { evaluateCode } from "@/ai/flows/evaluate-code";
@@ -18,7 +18,7 @@ import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
 import { debugCode } from "@/ai/flows/debug-code";
 
 export default function ChallengeDetail() {
-  const { challenge, setRunResult, setDebugOutput, setActiveTab, isRunning, setIsRunning } = useChallenge();
+  const { challenge, runResult, debugOutput, setRunResult, setDebugOutput, setActiveTab, isRunning, setIsRunning, isResultsPanelFolded, setIsResultsPanelFolded } = useChallenge();
   const { toast } = useToast();
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState('');
@@ -311,16 +311,25 @@ export default function ChallengeDetail() {
                 language={language}
             />
        </div>
-        <footer className="shrink-0 flex items-center justify-end p-2 border-t bg-muted gap-2">
-            <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={handleDebugCode} disabled={isSaving || isRunning}>
-                <Bug className="mr-2 h-4 w-4" /> Debug
-            </Button>
-             <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
-                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
-            </Button>
-            <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning}>
-                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
-            </Button>
+        <footer className="shrink-0 flex items-center justify-between p-2 border-t bg-muted gap-2">
+            <div>
+                 {(isRunning || runResult || debugOutput) && (
+                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}>
+                        {isResultsPanelFolded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </Button>
+                 )}
+            </div>
+            <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={handleDebugCode} disabled={isSaving || isRunning}>
+                    <Bug className="mr-2 h-4 w-4" /> Debug
+                </Button>
+                 <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
+                    {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
+                </Button>
+                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning}>
+                    {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
+                </Button>
+            </div>
         </footer>
     </div>
   );

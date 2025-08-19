@@ -72,6 +72,8 @@ type ChallengeContextType = {
   isRunning: boolean;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
+  isResultsPanelFolded: boolean;
+  setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -248,6 +250,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       isRunning,
       setIsRunning,
       isChallengeCompleted,
+      isResultsPanelFolded,
+      setIsResultsPanelFolded,
   };
   
   const difficultyColors = {
@@ -386,9 +390,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </span>
             )}
             {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
-             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}>
-                {isResultsPanelFolded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-             </Button>
          </div>
       </header>
       {!isResultsPanelFolded && (
