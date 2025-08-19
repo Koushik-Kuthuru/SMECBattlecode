@@ -408,9 +408,9 @@ export default function ChallengesPage() {
               <TableRow>
                 <TableHead className="w-16">Status</TableHead>
                 <TableHead>Title</TableHead>
+                <TableHead className="text-right">Difficulty</TableHead>
                 <TableHead className="text-center">Acceptance</TableHead>
                 <TableHead className="text-right">Points</TableHead>
-                <TableHead className="text-right">Difficulty</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -419,8 +419,8 @@ export default function ChallengesPage() {
                   <TableRow key={`skeleton-${i}`}>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -442,15 +442,15 @@ export default function ChallengesPage() {
                         </div>
                       )}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <DifficultyPill difficulty={challenge.difficulty} />
+                    </TableCell>
                     <TableCell className="text-center text-muted-foreground text-sm">55.8%</TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
                             {challenge.points}
                         </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
                   </TableRow>
                 ))
