@@ -445,7 +445,6 @@ export default function ChallengesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[5%] text-center">S/No.</TableHead>
                 <TableHead className="w-[8%] text-center">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-center w-[15%]">Difficulty</TableHead>
@@ -458,7 +457,6 @@ export default function ChallengesPage() {
               {isChallengesLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell className="text-center"><Skeleton className="h-5 w-4/5 mx-auto" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-5 w-3/4 mx-auto" /></TableCell>
@@ -470,13 +468,12 @@ export default function ChallengesPage() {
               ) : filteredChallenges.length > 0 ? (
                 filteredChallenges.map((challenge, index) => (
                   <TableRow key={challenge.id}>
-                    <TableCell className="font-medium text-muted-foreground text-center">{index + 1}</TableCell>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
                     <TableCell>
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
-                        <span className="line-clamp-2">{challenge.title}</span>
+                        <span className="line-clamp-2">{index + 1}. {challenge.title}</span>
                       </Link>
                     </TableCell>
                     <TableCell className="text-center">
@@ -506,7 +503,7 @@ export default function ChallengesPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
