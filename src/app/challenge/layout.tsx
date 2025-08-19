@@ -10,9 +10,9 @@ import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 
 import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp, deleteField } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
-  ResizableHandleWithHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  ResizableHandleWithHandle,
 } from "@/components/ui/resizable"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -429,7 +429,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
 
   const testResultPanel = (
-    <div className="h-full w-full bg-background flex flex-col">
+    <div className="h-full w-full bg-background flex flex-col border-t">
       <header className="p-2 border-b flex justify-between items-center">
         <h3 className="text-base font-semibold">Test Result</h3>
          {runResult && !isRunning && (
@@ -489,12 +489,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   </div>
   );
   
-  const rightPanel = (
-    <div className="h-full w-full flex flex-col bg-muted overflow-hidden">
-        {isDesktop && children}
-    </div>
-  );
-  
   const bottomPanel = (
     <div className="h-full flex flex-col bg-background">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
@@ -534,21 +528,24 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const renderDesktopLayout = () => (
     <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={40} minSize={30}>
-            {descriptionPanel}
-        </ResizablePanel>
-        <ResizableHandleWithHandle />
-        <ResizablePanel defaultSize={60} minSize={40}>
-            <ResizablePanelGroup direction="vertical">
-                <ResizablePanel defaultSize={60} minSize={25}>
-                    {children}
-                </ResizablePanel>
-                <ResizableHandleWithHandle />
-                <ResizablePanel defaultSize={40} minSize={25}>
-                    {bottomPanel}
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </ResizablePanel>
+      <ResizablePanel defaultSize={40} minSize={30}>
+        {descriptionPanel}
+      </ResizablePanel>
+      <ResizableHandleWithHandle />
+      <ResizablePanel defaultSize={60} minSize={40}>
+        <ScrollArea className="h-full">
+          <div className="flex flex-col h-[calc(100vh)]">
+              <div className="relative flex-grow">
+                {children}
+              </div>
+              {(isRunning || runResult) && (
+                <div className="h-[40vh] flex-shrink-0">
+                  {testResultPanel}
+                </div>
+              )}
+          </div>
+        </ScrollArea>
+      </ResizablePanel>
     </ResizablePanelGroup>
   );
 
@@ -620,5 +617,3 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
-
-    
