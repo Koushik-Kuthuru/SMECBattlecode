@@ -10,12 +10,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy, setDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
@@ -27,10 +27,11 @@ import {
 } from "@/components/ui/popover";
 import { Label } from '@/components/ui/label';
 import { BulletCoin } from '@/components/icons';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
-type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved';
+type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved' | 'Favorites';
 
 const icons: { [key: string]: React.ElementType } = {
   Book,
@@ -54,11 +55,10 @@ const DifficultyPill = ({ difficulty }: { difficulty: 'Easy' | 'Medium' | 'Hard'
   );
 };
 
-
 const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
     const IconComponent = icons[plan.iconName] || Book;
     return (
-        <Card className={cn("overflow-hidden relative h-48 flex flex-col justify-between text-white p-6", `bg-gradient-to-br ${plan.gradient}`)}>
+      <Card className={cn("overflow-hidden relative flex flex-col justify-between text-white p-6", `bg-gradient-to-br ${plan.gradient}`)}>
             <div className="relative z-10">
                 <h3 className="text-xl font-bold">{plan.title}</h3>
                 <p className="text-sm opacity-90">{plan.description}</p>
@@ -69,7 +69,7 @@ const StudyPlanCard = ({ plan }: { plan: StudyPlan }) => {
                 </Button>
             </Link>
             <IconComponent className="absolute right-4 bottom-4 h-20 w-20 text-white/10 z-0" />
-        </Card>
+      </Card>
     );
 };
 
@@ -81,6 +81,7 @@ export default function ChallengesPage() {
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [completedChallenges, setCompletedChallenges] = useState<Record<string, boolean>>({});
   const [inProgressChallenges, setInProgressChallenges] = useState<Record<string, boolean>>({});
+  const [favoriteChallenges, setFavoriteChallenges] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [isChallengesLoading, setIsChallengesLoading] = useState(true);
@@ -103,12 +104,16 @@ export default function ChallengesPage() {
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data() as UserData;
           setCurrentUser({ ...userData, uid: user.uid, email: user.email! });
-
-          const completedChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/completed`));
-          setCompletedChallenges(completedChallengesSnap.exists() ? completedChallengesSnap.data() : {});
           
-          const inProgressChallengesSnap = await getDoc(doc(db, `users/${user.uid}/challengeData/inProgress`));
-          setInProgressChallenges(inProgressChallengesSnap.exists() ? inProgressChallengesSnap.data() : {});
+          const challengeDataRef = collection(db, `users/${user.uid}/challengeData`);
+          const completedDocRef = doc(challengeDataRef, 'completed');
+          const inProgressDocRef = doc(challengeDataRef, 'inProgress');
+          const favoritesDocRef = doc(challengeDataRef, 'favorites');
+
+          onSnapshot(completedDocRef, (snap) => setCompletedChallenges(snap.exists() ? snap.data() : {}));
+          onSnapshot(inProgressDocRef, (snap) => setInProgressChallenges(snap.exists() ? snap.data() : {}));
+          onSnapshot(favoritesDocRef, (snap) => setFavoriteChallenges(snap.exists() ? snap.data() : {}));
+
         } else {
           router.push('/login');
         }
@@ -191,11 +196,14 @@ export default function ChallengesPage() {
         
         const isSolved = !!completedChallenges[challenge.id!];
         const isAttempted = !!inProgressChallenges[challenge.id!];
+        const isFavorite = !!favoriteChallenges[challenge.id!];
+
         const statusMatch = 
             statusFilter === 'All' ||
             (statusFilter === 'Solved' && isSolved) ||
             (statusFilter === 'Attempted' && isAttempted && !isSolved) ||
-            (statusFilter === 'Unsolved' && !isSolved && !isAttempted);
+            (statusFilter === 'Unsolved' && !isSolved && !isAttempted) ||
+            (statusFilter === 'Favorites' && isFavorite);
 
         const isEnabled = challenge.isEnabled !== false;
         return difficultyMatch && searchMatch && topicMatch && statusMatch && isEnabled;
@@ -211,7 +219,7 @@ export default function ChallengesPage() {
           
           return 0;
       });
-  }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges]);
+  }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges, favoriteChallenges]);
 
   const allTopicTags = useMemo(() => {
       const tagCounts: Record<string, number> = {};
@@ -239,6 +247,18 @@ export default function ChallengesPage() {
             description: 'Could not find any challenges to pick from.'
         });
     }
+  }
+  
+  const handleFavoriteToggle = async (challengeId: string) => {
+    if (!currentUser) return;
+    const isFavorited = !!favoriteChallenges[challengeId];
+    const newFavorites = { ...favoriteChallenges, [challengeId]: !isFavorited };
+    if (isFavorited) {
+        delete newFavorites[challengeId];
+    }
+    setFavoriteChallenges(newFavorites);
+    const favoritesDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'favorites');
+    await setDoc(favoritesDocRef, { [challengeId]: !isFavorited }, { merge: true });
   }
 
   const resetFilters = () => {
@@ -279,16 +299,26 @@ export default function ChallengesPage() {
       </CardHeader>
       
       <div className="hidden md:block space-y-4">
-          <h2 className="text-xl font-bold">Study Plans</h2>
-            {isStudyPlansLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {studyPlans.map(plan => <StudyPlanCard key={plan.id} plan={plan} />)}
-                </div>
-            )}
+        <h2 className="text-xl font-bold">Study Plans</h2>
+        {isStudyPlansLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+            </div>
+        ) : (
+            <Carousel opts={{ align: "start", loop: true }} className="w-full">
+                <CarouselContent>
+                    {studyPlans.map((plan, index) => (
+                        <CarouselItem key={plan.id} className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                             <div className="p-1">
+                                <StudyPlanCard plan={plan} />
+                             </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+            </Carousel>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -358,6 +388,7 @@ export default function ChallengesPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="All">All</SelectItem>
+                                    <SelectItem value="Favorites">Favorites</SelectItem>
                                     <SelectItem value="Solved">Solved</SelectItem>
                                     <SelectItem value="Attempted">Attempted</SelectItem>
                                     <SelectItem value="Unsolved">Unsolved</SelectItem>
@@ -414,7 +445,8 @@ export default function ChallengesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[10%]">Status</TableHead>
+                <TableHead className="w-[8%] text-center">Status</TableHead>
+                <TableHead className="w-[8%] text-center">Favorite</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-right w-[15%]">Difficulty</TableHead>
                 <TableHead className="text-right w-[15%] hidden md:table-cell">Acceptance</TableHead>
@@ -425,7 +457,8 @@ export default function ChallengesPage() {
               {isChallengesLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
                     <TableCell className="text-right hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
@@ -437,6 +470,19 @@ export default function ChallengesPage() {
                   <TableRow key={challenge.id}>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 group"
+                        onClick={() => handleFavoriteToggle(challenge.id!)}
+                      >
+                        <Star className={cn(
+                          "h-5 w-5 text-slate-300 transition-all duration-300 group-hover:scale-125",
+                          favoriteChallenges[challenge.id!] && "fill-yellow-400 text-yellow-400"
+                        )} />
+                      </Button>
                     </TableCell>
                     <TableCell>
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
@@ -457,7 +503,7 @@ export default function ChallengesPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
