@@ -482,7 +482,7 @@ export default function ChallengesPage() {
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium hover:underline">
+                      <span className="font-medium">
                         <span className="line-clamp-2">{challenge.title}</span>
                       </span>
                     </TableCell>
