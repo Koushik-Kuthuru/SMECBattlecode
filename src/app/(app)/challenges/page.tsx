@@ -432,7 +432,7 @@ export default function ChallengesPage() {
                     </TableCell>
                     <TableCell>
                       <Link href={`/challenge/${challenge.id}`} className="font-medium hover:underline">
-                        {challenge.title}
+                        <span className="line-clamp-2">{challenge.title}</span>
                       </Link>
                        {challenge.tags && challenge.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
