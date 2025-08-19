@@ -445,6 +445,7 @@ export default function ChallengesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[5%]">S/No.</TableHead>
                 <TableHead className="w-[8%] text-center">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-right w-[15%]">Difficulty</TableHead>
@@ -457,6 +458,7 @@ export default function ChallengesPage() {
               {isChallengesLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-4/5" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-6 rounded-full mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-3/4 ml-auto" /></TableCell>
@@ -466,8 +468,9 @@ export default function ChallengesPage() {
                   </TableRow>
                 ))
               ) : filteredChallenges.length > 0 ? (
-                filteredChallenges.map(challenge => (
+                filteredChallenges.map((challenge, index) => (
                   <TableRow key={challenge.id}>
+                    <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="text-center">
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
@@ -503,7 +506,7 @@ export default function ChallengesPage() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={7} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
