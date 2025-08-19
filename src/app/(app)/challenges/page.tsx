@@ -15,7 +15,7 @@ import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown } from 'lucide-react';
+import { CheckCircle, Circle, RefreshCw, Search, Filter, Shuffle, Tag, Activity, Code, Plus, Trash2, Book, BrainCircuit, MessageSquare, Code2, Target, Trophy, Icon as LucideIcon, ChevronDown, BarChart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { UserData, StudyPlan } from '@/lib/types';
@@ -419,6 +419,7 @@ export default function ChallengesPage() {
                 <TableHead className="text-right w-28">Difficulty</TableHead>
                 <TableHead className="text-center hidden md:table-cell w-32">Acceptance</TableHead>
                 <TableHead className="text-right w-24">Points</TableHead>
+                <TableHead className="text-right w-24">Frequency</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -429,6 +430,7 @@ export default function ChallengesPage() {
                     <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                     <TableCell className="text-center hidden md:table-cell"><Skeleton className="h-5 w-1/2 mx-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-1/4 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -453,11 +455,14 @@ export default function ChallengesPage() {
                             {challenge.points}
                         </div>
                     </TableCell>
+                    <TableCell className="text-right">
+                        <BarChart className="h-5 w-5 text-muted-foreground mx-auto" />
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center">No challenges found for the selected filters.</TableCell>
                 </TableRow>
               )}
             </TableBody>
