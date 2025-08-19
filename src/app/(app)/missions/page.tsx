@@ -52,7 +52,7 @@ function MissionChallengeCard({ challenge, isCompleted, isInProgress }: { challe
                     {challenge.difficulty}
                 </Badge>
             </div>
-            <CardDescription className="flex items-center gap-4 pt-2 flex-wrap">
+            <div className="text-sm text-muted-foreground flex items-center gap-4 pt-2 flex-wrap">
                  <div className="flex items-center gap-1">
                     <BulletCoin className="h-4 w-4 text-primary" />
                     <span>{challenge.points} Points</span>
@@ -67,7 +67,7 @@ function MissionChallengeCard({ challenge, isCompleted, isInProgress }: { challe
                         <span>{statusText}</span>
                     </div>
                  )}
-            </CardDescription>
+            </div>
         </CardHeader>
         <CardContent className="flex-grow">
             <p className="text-sm text-muted-foreground line-clamp-3">
