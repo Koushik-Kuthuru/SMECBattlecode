@@ -14,7 +14,6 @@ import { Save, RefreshCcw, Code, Loader2, Bug, Play, ThumbsUp, ChevronDown, Chev
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChallenge } from "../layout";
 import { evaluateCode } from "@/ai/flows/evaluate-code";
-import { detectAiGeneratedCode } from "@/ai/flows/detect-ai-generated-code";
 import { debugCode } from "@/ai/flows/debug-code";
 
 export default function ChallengeDetail() {
@@ -109,22 +108,6 @@ export default function ChallengeDetail() {
   const handleRunCode = async () => {
     if (!challenge) return;
     
-    // AI check
-    try {
-        const aiResult = await detectAiGeneratedCode({ code: solution, programmingLanguage: language });
-        if(aiResult.isAiGenerated) {
-            toast({
-                variant: 'destructive',
-                title: 'AI Generated Code Detected',
-                description: "Using AI to solve challenges is against the rules. Please write your own code.",
-                duration: 8000
-            })
-        }
-    } catch(err) {
-        // fail silently
-        console.error("AI detection failed", err);
-    }
-
     const visibleTestCases = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
     
     if (!visibleTestCases || visibleTestCases.length === 0) {

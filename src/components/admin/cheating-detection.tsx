@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, Eye, X, Loader2, Bot } from 'lucide-react';
+import { ShieldAlert, Eye, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { CodeEditor } from '../code-editor';
 import { getFirestore, collection, collectionGroup, getDocs, query, doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
@@ -15,7 +15,6 @@ import { compareCode } from '@/ai/flows/compare-code';
 import { Challenge } from '@/lib/data';
 import { UserData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { detectAiGeneratedCode } from '@/ai/flows/detect-ai-generated-code';
 
 
 type Submission = {
@@ -27,7 +26,7 @@ type Submission = {
 };
 
 type SuspiciousActivity = {
-    type: 'plagiarism' | 'ai-generated';
+    type: 'plagiarism';
     challenge: string;
     challengeId: string;
     users: { id: string, name: string }[];
@@ -127,35 +126,7 @@ export function CheatingDetection() {
                 }
             }
             
-            // 4. Detect AI usage
-            for (const challengeId in solutionsByChallenge) {
-                const submissions = solutionsByChallenge[challengeId];
-                for (const submission of submissions) {
-                    if (!submission.code) continue;
-                    try {
-                        const result = await detectAiGeneratedCode({
-                            code: submission.code,
-                            programmingLanguage: submission.language,
-                        });
-                        if (result.isAiGenerated) {
-                            detectedActivities.push({
-                                type: 'ai-generated',
-                                challenge: challenges[challengeId]?.title || 'Unknown Challenge',
-                                challengeId,
-                                users: [{ id: submission.userId, name: submission.userName }],
-                                explanation: result.explanation,
-                                timestamp: new Date().toISOString(),
-                                code: { [submission.userName]: submission.code },
-                                language: submission.language
-                            });
-                        }
-                    } catch (aiError) {
-                         console.error(`AI generation detection failed for challenge ${challengeId}`, aiError);
-                    }
-                }
-            }
-            
-            setSuspiciousActivities(detectedActivities.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0) || (b.explanation?.length ?? 0) - (a.explanation?.length ?? 0)));
+            setSuspiciousActivities(detectedActivities.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0)));
 
         } catch (error) {
             console.error("Error running cheating detection:", error);
@@ -181,10 +152,10 @@ export function CheatingDetection() {
             </div>
             <Button onClick={runDetection} disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isLoading ? 'Running...' : 'Run Detection'}
+                {isLoading ? 'Running...' : 'Run Plagiarism Check'}
             </Button>
         </div>
-        <CardDescription>Potentially suspicious submissions based on AI-powered code similarity and generation analysis.</CardDescription>
+        <CardDescription>Potentially suspicious submissions based on AI-powered code similarity analysis.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border rounded-lg overflow-hidden">
@@ -192,7 +163,6 @@ export function CheatingDetection() {
             <TableHeader>
               <TableRow>
                 <TableHead>Challenge</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Users Involved</TableHead>
                 <TableHead>Similarity</TableHead>
                 <TableHead>Timestamp</TableHead>
@@ -202,7 +172,7 @@ export function CheatingDetection() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={5} className="text-center h-24">
                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                        <p>Analyzing submissions...</p>
                     </TableCell>
@@ -211,11 +181,6 @@ export function CheatingDetection() {
                 suspiciousActivities.map((activity, index) => (
                     <TableRow key={index}>
                     <TableCell className="font-medium">{activity.challenge}</TableCell>
-                    <TableCell>
-                        <Badge variant={activity.type === 'ai-generated' ? 'destructive' : 'secondary'}>
-                            {activity.type === 'ai-generated' ? 'AI Usage' : 'Plagiarism'}
-                        </Badge>
-                    </TableCell>
                     <TableCell>
                         <div className="flex flex-wrap gap-1">
                         {activity.users.map(user => <Badge key={user.id} variant="secondary">{user.name}</Badge>)}
@@ -226,9 +191,8 @@ export function CheatingDetection() {
                             <Badge variant="outline" className={getSimilarityColor(activity.similarity)}>
                                 {activity.similarity}%
                             </Badge>
-                        ) : (
-                             <Badge variant="outline"><Bot className="h-4 w-4 mr-1" /> Likely AI</Badge>
-                        )}
+                        ) : 'N/A'
+                        }
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
@@ -241,7 +205,7 @@ export function CheatingDetection() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
+                    <TableCell colSpan={5} className="text-center h-24">
                         No suspicious activities detected.
                     </TableCell>
                 </TableRow>
@@ -258,16 +222,13 @@ export function CheatingDetection() {
                 <DialogTitle>Review Suspicious Activity</DialogTitle>
                 <DialogDescription>
                     Challenge: {selectedActivity?.challenge} | 
-                    {selectedActivity?.type === 'plagiarism' 
-                        ? ` Similarity: ${selectedActivity.similarity}%` 
-                        : ' AI-Generated Code Detected'
-                    }
+                    Similarity: {selectedActivity?.similarity}%
                 </DialogDescription>
                  {selectedActivity?.explanation && <p className="text-sm text-muted-foreground pt-2">Note: {selectedActivity.explanation}</p>}
             </DialogHeader>
             
             {selectedActivity && (
-                 <div className={`grid grid-cols-1 ${Object.keys(selectedActivity.code).length > 1 ? 'md:grid-cols-2' : ''} gap-4 flex-1 min-h-0`}>
+                 <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
                     {Object.entries(selectedActivity.code).map(([user, code]) => (
                         <div key={user} className="flex flex-col">
                             <h3 className="font-semibold mb-2 text-center">{user}'s Submission</h3>
