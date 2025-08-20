@@ -29,28 +29,29 @@ type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'stat
   prizes: Prize[];
 };
 
-const defaultFormData: FormData = {
-  title: '',
-  description: '',
-  imageUrl: '',
-  aiHint: '',
-  type: 'Challenge',
-  enrolled: 0,
-  isEnabled: true,
-  startDate: new Date(),
-  endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
-  registrationLink: '',
-  prizes: [],
-  importantNotes: [],
-  announcements: [],
-};
-
 export default function ManageArenaPage() {
   const { toast } = useToast();
   const [contests, setContests] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingContestId, setEditingContestId] = useState<string | null>(null);
+  
+  const defaultFormData: FormData = {
+    title: '',
+    description: '',
+    imageUrl: '',
+    aiHint: '',
+    type: 'Challenge',
+    enrolled: 0,
+    isEnabled: true,
+    startDate: new Date(),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
+    registrationLink: '',
+    prizes: [],
+    importantNotes: [],
+    announcements: [],
+  };
+
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
   
