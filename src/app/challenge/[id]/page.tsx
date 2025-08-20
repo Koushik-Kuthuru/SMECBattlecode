@@ -1,6 +1,6 @@
 
 "use client";
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CodeEditor } from "@/components/code-editor";
 import { app, db } from "@/lib/firebase";
@@ -37,6 +37,7 @@ export default function ChallengeDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const params = useParams();
   const challengeId = params.id as string;
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const auth = getAuth(app);
 
@@ -74,10 +75,8 @@ export default function ChallengeDetail() {
     fetchSolution();
   }, [challenge, user, language, setLanguage, setSolution]);
 
-
   const handleSave = async () => {
-    if (!user || !challenge || !language) {
-       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save your progress." });
+    if (!user || !challenge || !language || isSaving) {
        return;
     }
     setIsSaving(true);
@@ -98,6 +97,27 @@ export default function ChallengeDetail() {
         setIsSaving(false);
     }
   };
+
+   useEffect(() => {
+    if (solution === initialSolution || isSaving) {
+      return;
+    }
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      handleSave();
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [solution, language, initialSolution]);
+
 
   const handleReset = () => {
       if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
@@ -124,9 +144,12 @@ export default function ChallengeDetail() {
            <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning || isSubmitting}>
              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
            </Button>
-           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving || isRunning || isSubmitting}>
-            {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
-           </Button>
+           {isSaving && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Saving...</span>
+                </div>
+            )}
          </div>
        </div>
        <div className="flex-grow relative bg-white pr-[2px]">
