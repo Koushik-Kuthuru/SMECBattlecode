@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +42,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved' | 'Favorites';
 type SortBy = 'Default' | 'Difficulty' | 'Points';
+type SolveStats = { [challengeId: string]: { solved: number, attempted: number } };
 
 const icons: { [key: string]: React.ElementType } = {
   Book,
@@ -96,6 +97,8 @@ export default function ChallengesPage() {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [isChallengesLoading, setIsChallengesLoading] = useState(true);
   const [isStudyPlansLoading, setIsStudyPlansLoading] = useState(true);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const [solveStats, setSolveStats] = useState<SolveStats>({});
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('All');
   const [sortBy, setSortBy] = useState<SortBy>('Default');
@@ -149,6 +152,44 @@ export default function ChallengesPage() {
       setIsStudyPlansLoading(false);
     });
     return () => unsubscribe();
+  }, [db]);
+  
+  useEffect(() => {
+    const fetchSolveStats = async () => {
+        setIsStatsLoading(true);
+        const stats: SolveStats = {};
+
+        // Fetch completed
+        const completedQuery = query(collectionGroup(db, 'challengeData'));
+        const querySnapshot = await getDocs(completedQuery);
+
+        querySnapshot.forEach(docSnap => {
+            if (docSnap.id === 'completed') {
+                const data = docSnap.data();
+                Object.keys(data).forEach(challengeId => {
+                    if (!stats[challengeId]) stats[challengeId] = { solved: 0, attempted: 0 };
+                    stats[challengeId].solved += 1;
+                    stats[challengeId].attempted += 1;
+                });
+            } else if (docSnap.id === 'inProgress') {
+                 const data = docSnap.data();
+                 Object.keys(data).forEach(challengeId => {
+                    if (data[challengeId]) { // Ensure it's true
+                        if (!stats[challengeId]) stats[challengeId] = { solved: 0, attempted: 0 };
+                        // Avoid double counting if user is in progress and also completed (edge case)
+                        if (stats[challengeId].attempted === stats[challengeId].solved) {
+                            stats[challengeId].attempted += 1;
+                        }
+                    }
+                });
+            }
+        });
+        
+        setSolveStats(stats);
+        setIsStatsLoading(false);
+    };
+
+    fetchSolveStats();
   }, [db]);
 
   const fetchChallenges = useCallback(async () => {
@@ -310,6 +351,15 @@ export default function ChallengesPage() {
   const solvedPercentage = totalChallenges > 0 ? (totalSolved / totalChallenges) * 100 : 0;
   
   const displayedTags = isTagsExpanded ? allTopicTags : allTopicTags.slice(0, 5);
+
+  const getSolveRate = (challengeId: string) => {
+    const stats = solveStats[challengeId];
+    if (!stats || stats.attempted === 0) {
+      return { percentage: 0, text: 'N/A' };
+    }
+    const rate = Math.round((stats.solved / stats.attempted) * 100);
+    return { percentage: rate, text: `${rate}% (${stats.solved}/${stats.attempted})` };
+  };
 
   return (
     <div className="space-y-6">
@@ -486,7 +536,7 @@ export default function ChallengesPage() {
                 <TableHead className="w-[8%] text-center">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-center w-[15%]">Difficulty</TableHead>
-                <TableHead className="text-center w-[15%] hidden md:table-cell">Solve Rate</TableHead>
+                <TableHead className="text-center w-[20%] hidden md:table-cell">Solve Rate</TableHead>
                 <TableHead className="text-center w-[10%]">Points</TableHead>
                 <TableHead className="w-[8%] text-center"><span className="sr-only">Favorite</span></TableHead>
               </TableRow>
@@ -527,7 +577,13 @@ export default function ChallengesPage() {
                     <TableCell className="text-center">
                       <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
-                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">80%</TableCell>
+                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">
+                      {isStatsLoading ? (
+                        <Skeleton className="h-5 w-3/4 mx-auto" />
+                      ) : (
+                        getSolveRate(challenge.id!).text
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
