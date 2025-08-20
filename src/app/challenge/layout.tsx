@@ -81,8 +81,9 @@ type ChallengeContextType = {
   setSolution: React.Dispatch<React.SetStateAction<string>>;
   language: string | null;
   setLanguage: React.Dispatch<React.SetStateAction<string | null>>;
-  runCodeHandler: (customInput: string) => void;
-  submitHandler: () => void;
+  handleRunCode: () => void;
+  handleDebugCode: (customInput: string) => void;
+  handleSubmit: () => void;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -123,32 +124,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  const runCodeHandler = useCallback(async (customInput: string) => {
+  const handleRunCode = useCallback(async () => {
     if (!challenge || !language) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot Run Code',
-        description:
-          'The challenge data is still loading. Please wait a moment.',
-      });
+      toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
     }
     
-    const isDebugRun = activeTab === 'debug';
-    
-    let testCasesToRun;
-    if (isDebugRun) {
-        testCasesToRun = [{ input: customInput, output: '' }];
-    } else {
-        testCasesToRun = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
-    }
+    const testCasesToRun = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
     
     if (!testCasesToRun || testCasesToRun.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "Missing Test Cases",
-            description: "No test cases available to run against.",
-        });
+        toast({ variant: "destructive", title: "Missing Test Cases", description: "No example test cases to run against." });
         return;
     }
     
@@ -158,41 +143,57 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
-        if(isDebugRun) {
-            const {debugCode} = await import("@/ai/flows/debug-code");
-            const result = await debugCode({
-                code: solution,
-                programmingLanguage: language,
-                input: customInput,
-            });
-            setDebugOutput(result);
-
+        const {evaluateCode} = await import("@/ai/flows/evaluate-code");
+        const result = await evaluateCode({
+            code: solution,
+            programmingLanguage: language,
+            problemDescription: challenge.description,
+            testCases: testCasesToRun,
+        });
+        setRunResult(result);
+        if (result.allPassed) {
+            toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
         } else {
-            const {evaluateCode} = await import("@/ai/flows/evaluate-code");
-            const result = await evaluateCode({
-                code: solution,
-                programmingLanguage: language,
-                problemDescription: challenge.description,
-                testCases: testCasesToRun,
-            });
-            setRunResult(result);
-            if (result.allPassed) {
-                toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
-            } else {
-                 toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
-            }
+             toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);
         toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
         setRunResult(null);
+    } finally {
+        setIsRunning(false);
+    }
+  }, [challenge, language, solution, toast]);
+
+  const handleDebugCode = useCallback(async (customInput: string) => {
+    if (!challenge || !language) {
+      toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
+      return;
+    }
+    
+    setIsRunning(true);
+    setRunResult(null); 
+    setDebugOutput(null);
+    setActiveTab('result');
+
+    try {
+      const {debugCode} = await import("@/ai/flows/debug-code");
+      const result = await debugCode({
+          code: solution,
+          programmingLanguage: language,
+          input: customInput,
+      });
+      setDebugOutput(result);
+    } catch(error) {
+        console.error("Error running debug code:", error);
+        toast({ variant: "destructive", title: "Debug Error", description: "Could not run your code for debugging." });
         setDebugOutput(null);
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast, activeTab]);
+  }, [challenge, language, solution, toast]);
 
-  const submitHandler = useCallback(async () => {
+  const handleSubmit = useCallback(async () => {
     if (!currentUser || !challenge || !challengeId || !language) {
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
@@ -434,8 +435,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setSolution,
       language,
       setLanguage,
-      runCodeHandler,
-      submitHandler,
+      handleRunCode,
+      handleDebugCode,
+      handleSubmit,
   };
   
   const difficultyTextColors = {
@@ -510,7 +512,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 />
             </div>
             <Button 
-                onClick={() => runCodeHandler(customInput)}
+                onClick={() => handleDebugCode(customInput)}
                 disabled={isRunning}
                 size="sm"
             >
@@ -754,7 +756,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                  </div>
                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" onClick={submitHandler}>
+                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" onClick={handleSubmit}>
                         Submit
                     </Button>
                     {currentUser && (
