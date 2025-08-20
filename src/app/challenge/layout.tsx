@@ -108,18 +108,15 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
   const [debugOutput, setDebugOutput] = useState<DebugCodeOutput | null>(null);
   const [activeTab, setActiveTab] = useState('description');
-  const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   
-  // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
 
-  // For next/prev navigation
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
 
   const auth = getAuth(app);
@@ -137,13 +134,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       return;
     }
     
-    // Determine if we're running against examples or custom debug input
     const isDebugRun = activeTab === 'debug';
     
     let testCasesToRun;
     if (isDebugRun) {
-        // For a debug run, we need an expected output. We can leave it blank
-        // as the debug flow doesn't use it, but the type expects it.
         testCasesToRun = [{ input: customInput, output: '' }];
     } else {
         testCasesToRun = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
@@ -161,8 +155,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setIsRunning(true);
     setRunResult(null); 
     setDebugOutput(null);
-    setActiveTab(isDebugRun ? 'debug' : 'description'); // Stay on the current tab
-    setIsResultsPanelFolded(false);
+    setActiveTab('result');
 
     try {
         if(isDebugRun) {
@@ -207,8 +200,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setIsRunning(true);
     setRunResult({ feedback: '', results: [], allPassed: false });
     setDebugOutput(null);
-    setActiveTab('description');
-    setIsResultsPanelFolded(false);
+    setActiveTab('result');
 
     try {
       const allTestCases = challenge.testCases || [];
@@ -252,7 +244,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
-            // Save the accepted solution
             transaction.set(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
 
             if (!completedData[challenge.id!]) {
@@ -391,12 +382,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     return () => unsubscribe();
   }, [currentUser, challengeId]);
 
-
-  useEffect(() => {
-    if(runResult) {
-        setActiveResultTab('0');
-    }
-  }, [runResult]);
   
   const handleLikeToggle = async () => {
     if (!currentUser || !challenge) return;
@@ -419,7 +404,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         });
     } catch (error) {
         console.error('Error toggling like:', error);
-        // Revert UI on error
         setHasLiked(!newHasLiked);
         setLikeCount(current => !newHasLiked ? current + 1 : current - 1);
     }
@@ -452,12 +436,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setLanguage,
       runCodeHandler,
       submitHandler,
-  };
-  
-  const difficultyColors = {
-    Easy: 'text-green-500 border-green-500/50 bg-green-500/10',
-    Medium: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10',
-    Hard: 'text-red-500 border-red-500/50 bg-red-500/10',
   };
   
   const difficultyTextColors = {
@@ -542,77 +520,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         </div>
     );
   }
-
-  const leftPanel = (
-    <div className="h-full flex flex-col bg-background">
-       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="flex-shrink-0 p-2 border-b">
-            <TabsList>
-                <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="debug">Debug</TabsTrigger>
-                <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            </TabsList>
-          </div>
-          <div className="flex-grow overflow-auto">
-              <TabsContent value="description" className="mt-0 h-full">
-                <ScrollArea className="h-full">
-                  {isChallengeLoading ? (
-                      <div className="space-y-4 p-4">
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
-                      </div>
-                  ) : descriptionPanelContent}
-                </ScrollArea>
-              </TabsContent>
-               <TabsContent value="debug" className="mt-0 h-full">
-                <DebugPanel />
-              </TabsContent>
-              <TabsContent value="submissions" className="mt-0 h-full">
-                 <ScrollArea className="h-full">
-                    <div className="p-4">
-                        {submissions.length > 0 ? (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Language</TableHead>
-                                <TableHead>Time</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {submissions.map((submission) => (
-                                <TableRow key={submission.id}>
-                                  <TableCell>
-                                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                                      {submission.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="font-medium">{submission.language}</TableCell>
-                                  <TableCell className="text-xs text-muted-foreground">
-                                    {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-                              <AlertCircle className="h-10 w-10 mb-4" />
-                              <p className="font-semibold">No Submissions Yet</p>
-                              <p>Your submission history for this challenge will appear here.</p>
-                          </div>
-                        )}
-                    </div>
-                </ScrollArea>
-              </TabsContent>
-          </div>
-        </Tabs>
-    </div>
-  );
-
+  
   const testResultPanel = (
     <div className="h-full w-full bg-background flex flex-col border-t">
       <header className="p-2 border-b flex justify-between items-center">
@@ -684,6 +592,82 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         </>
   </div>
   );
+
+  const leftPanel = (
+    <div className="h-full flex flex-col bg-background">
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <div className="flex-shrink-0 p-2 border-b">
+            <TabsList>
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="debug">Debug</TabsTrigger>
+                <TabsTrigger value="result">Result</TabsTrigger>
+                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex-grow overflow-auto">
+              <TabsContent value="description" className="mt-0 h-full">
+                <ScrollArea className="h-full">
+                  {isChallengeLoading ? (
+                      <div className="space-y-4 p-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                  ) : descriptionPanelContent}
+                </ScrollArea>
+              </TabsContent>
+               <TabsContent value="debug" className="mt-0 h-full">
+                <DebugPanel />
+              </TabsContent>
+               <TabsContent value="result" className="mt-0 h-full">
+                 <ScrollArea className="h-full">
+                    {testResultPanel}
+                 </ScrollArea>
+              </TabsContent>
+              <TabsContent value="submissions" className="mt-0 h-full">
+                 <ScrollArea className="h-full">
+                    <div className="p-4">
+                        {submissions.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Language</TableHead>
+                                <TableHead>Time</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {submissions.map((submission) => (
+                                <TableRow key={submission.id}>
+                                  <TableCell>
+                                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                                      {submission.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">{submission.language}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+                              <AlertCircle className="h-10 w-10 mb-4" />
+                              <p className="font-semibold">No Submissions Yet</p>
+                              <p>Your submission history for this challenge will appear here.</p>
+                          </div>
+                        )}
+                    </div>
+                </ScrollArea>
+              </TabsContent>
+          </div>
+        </Tabs>
+    </div>
+  );
   
   const renderDesktopLayout = () => (
      <ResizablePanelGroup direction="horizontal">
@@ -692,21 +676,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
-        <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 60} minSize={25}>
-                {isChallengeLoading ? (
-                    <div className="h-full flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
-                ) : (
-                    children
-                )}
-            </ResizablePanel>
-             <ResizableHandle />
-             <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 40} minSize={15} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
-                {testResultPanel}
-            </ResizablePanel>
-        </ResizablePanelGroup>
+        {isChallengeLoading ? (
+            <div className="h-full flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        ) : (
+            children
+        )}
       </ResizablePanel>
     </ResizablePanelGroup>
   );
@@ -716,27 +692,31 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <ResizablePanel defaultSize={50} minSize={30}>
         <Tabs defaultValue="description" className="h-full flex flex-col">
           <div className="flex-shrink-0 p-2 border-b">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="description">Problem</TabsTrigger>
               <TabsTrigger value="code">Code</TabsTrigger>
+              <TabsTrigger value="result">Result</TabsTrigger>
             </TabsList>
           </div>
           <div className="flex-grow overflow-auto">
             <TabsContent value="description" className="mt-0 h-full">
-              {leftPanel}
+              <ScrollArea className="h-full">
+                  {descriptionPanelContent}
+              </ScrollArea>
             </TabsContent>
             <TabsContent value="code" className="mt-0 h-full">
               <div className="h-full w-full flex flex-col">
                 <div className="flex-grow">{children}</div>
               </div>
             </TabsContent>
+             <TabsContent value="result" className="mt-0 h-full">
+                <ScrollArea className="h-full">
+                  {testResultPanel}
+                </ScrollArea>
+            </TabsContent>
           </div>
         </Tabs>
       </ResizablePanel>
-       <ResizableHandle />
-       <ResizablePanel defaultSize={50} minSize={20} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
-         {testResultPanel}
-       </ResizablePanel>
     </ResizablePanelGroup>
   );
 
@@ -797,5 +777,3 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
-
-    
