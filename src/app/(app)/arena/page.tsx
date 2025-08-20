@@ -9,49 +9,49 @@ import { cn } from '@/lib/utils';
 
 
 const ContestCard = ({ title, time, schedule, imageUrl, aiHint }: { title: string, time: string, schedule: string, imageUrl: string, aiHint: string }) => (
-  <Card className="group relative overflow-hidden rounded-xl border-none bg-slate-800 text-white shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
+  <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
       <Image
         src={imageUrl}
         alt={title}
         width={600}
         height={400}
-        className="absolute inset-0 h-full w-full object-cover opacity-30 transition-opacity duration-300 group-hover:opacity-50"
+        className="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
         data-ai-hint={aiHint}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent"></div>
       
       <div className="relative flex h-full flex-col p-6">
         <div className="flex justify-end">
-            <div className="rounded-lg bg-white/10 p-2">
-                <CalendarDays className="h-5 w-5 text-white" />
+            <div className="rounded-lg bg-black/5 p-2">
+                <CalendarDays className="h-5 w-5 text-card-foreground" />
             </div>
         </div>
         <div className="flex-grow pt-10">
-            <div className="flex items-center gap-2 text-sm text-slate-300">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>{time}</span>
             </div>
-            <h3 className="mt-2 text-xl font-bold">{title}</h3>
-            <p className="text-sm text-slate-400">{schedule}</p>
+            <h3 className="mt-2 text-xl font-bold text-card-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground">{schedule}</p>
         </div>
       </div>
   </Card>
 );
 
 const FeaturedContestCard = ({ title, description, imageUrl, aiHint }: { title: string, description: string, imageUrl: string, aiHint: string }) => (
-    <Card className="group relative overflow-hidden rounded-xl border-none bg-slate-800 text-white shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/20">
+    <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
          <Image
             src={imageUrl}
             alt={title}
             width={800}
             height={450}
-            className="absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity duration-300 group-hover:opacity-60"
+            className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-300 group-hover:opacity-40"
             data-ai-hint={aiHint}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
         <div className="relative flex h-48 flex-col justify-end p-6">
-            <h3 className="text-2xl font-bold">{title}</h3>
-            <p className="text-sm text-slate-300">{description}</p>
+            <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
         </div>
     </Card>
 );
@@ -59,14 +59,14 @@ const FeaturedContestCard = ({ title, description, imageUrl, aiHint }: { title: 
 
 export default function ArenaPage() {
   return (
-    <div className="bg-slate-900 text-white min-h-screen -m-8 p-8">
+    <div className="min-h-screen">
         <div className="container mx-auto max-w-5xl py-12">
             <div className="text-center">
-                <Trophy className="mx-auto h-16 w-16 text-yellow-400" />
-                <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight">
+                <Trophy className="mx-auto h-16 w-16 text-yellow-500" />
+                <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-foreground">
                     Contest Arena
                 </h1>
-                <p className="mt-4 max-w-xl mx-auto text-lg text-slate-300">
+                <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">
                     Contest every week. Compete and see your ranking!
                 </p>
             </div>
@@ -90,8 +90,8 @@ export default function ArenaPage() {
 
             <div className="mt-20">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Featured Contests</h2>
-                    <Button variant="link" className="text-cyan-400 hover:text-cyan-300">
+                    <h2 className="text-2xl font-bold text-foreground">Featured Contests</h2>
+                    <Button variant="link" className="text-primary hover:text-primary/80">
                         <Heart className="mr-2 h-4 w-4" />
                         Sponsor a Contest
                     </Button>
