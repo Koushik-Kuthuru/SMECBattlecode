@@ -8,7 +8,7 @@ import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, getDocs, Timestamp, deleteField } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot, updateDoc, runTransaction, setDoc, increment, addDoc, getDocs, Timestamp, deleteField } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import {
   ResizablePanel,
@@ -68,20 +68,16 @@ export type Submission = {
 type ChallengeContextType = {
   challenge: Challenge | null;
   runResult: EvaluateCodeOutput | null;
+  setRunResult: React.Dispatch<React.SetStateAction<EvaluateCodeOutput | null>>;
   debugOutput: DebugCodeOutput | null;
+  setDebugOutput: React.Dispatch<React.SetStateAction<DebugCodeOutput | null>>;
   activeTab: string;
   setActiveTab: React.Dispatch<React.SetStateAction<string>>;
   isRunning: boolean;
+  setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
   isResultsPanelFolded: boolean;
   setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
-  solution: string;
-  setSolution: React.Dispatch<React.SetStateAction<string>>;
-  language: string;
-  setLanguage: React.Dispatch<React.SetStateAction<string>>;
-  runCodeHandler: () => Promise<void>;
-  debugCodeHandler: (input: string) => Promise<void>;
-  submitHandler: () => Promise<void>;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -193,7 +189,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [challenge, language, solution, toast]);
   
   const submitHandler = useCallback(async () => {
-    if (!user || !challenge || !challengeId) {
+    if (!currentUser || !challenge || !challengeId) {
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
@@ -224,7 +220,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       
       const submissionStatus = result.allPassed ? 'Accepted' : 'Failed';
 
-      const submissionsRef = collection(db, `users/${user.uid}/submissions/${challengeId}/attempts`);
+      const submissionsRef = collection(db, `users/${currentUser.uid}/submissions/${challengeId}/attempts`);
       await addDoc(submissionsRef, {
         code: solution,
         language: language,
@@ -234,9 +230,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       
       if (result.allPassed) {
         await runTransaction(db, async (transaction) => {
-            const userRef = doc(db, "users", user.uid);
-            const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
-            const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+            const userRef = doc(db, "users", currentUser.uid);
+            const completedChallengesDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
+            const solRef = doc(db, `users/${currentUser.uid}/solutions`, challenge.id!);
             
             const [userSnap, completedChallengesSnap] = await Promise.all([
                 transaction.get(userRef),
@@ -252,7 +248,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 transaction.update(userRef, { points: increment(challenge.points) });
                 
                 const today = new Date().toISOString().split('T')[0];
-                const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
+                const dailyPointsRef = doc(db, `users/${currentUser.uid}/daily_points`, today);
                 transaction.set(dailyPointsRef, { points: increment(challenge.points) }, { merge: true });
 
                 transaction.set(completedChallengesDocRef, { 
@@ -264,7 +260,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                  toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
             }
 
-            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+            const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
             transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
         });
         
@@ -279,7 +275,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     } finally {
       setIsRunning(false);
     }
-  }, [user, challenge, challengeId, solution, language, toast]);
+  }, [currentUser, challenge, challengeId, solution, language, toast]);
 
 
   useEffect(() => {
@@ -429,20 +425,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const contextValue: ChallengeContextType = {
       challenge,
       runResult,
+      setRunResult,
       debugOutput,
+      setDebugOutput,
       activeTab,
       setActiveTab,
       isRunning,
+      setIsRunning,
       isChallengeCompleted,
       isResultsPanelFolded,
       setIsResultsPanelFolded,
-      solution,
-      setSolution,
-      language,
-      setLanguage,
-      runCodeHandler,
-      debugCodeHandler,
-      submitHandler,
   };
   
   const difficultyColors = {
@@ -507,7 +499,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
   
   function DebugPanel() {
-    const { debugCodeHandler, isRunning } = useChallenge();
     const [customInput, setCustomInput] = useState(challenge?.examples[0]?.input || "");
 
     return (
@@ -753,6 +744,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             Prev
                         </Link>
                     </Button>
+                     <Button variant="ghost" size="sm" asChild>
+                        <Link href="/challenges">
+                            <List className="h-4 w-4" />
+                        </Link>
+                    </Button>
                     <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
                          <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
                             Next
@@ -761,11 +757,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                  </div>
                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" asChild>
-                        <Link href="/challenges">
-                            <List className="h-4 w-4 mr-2" />
-                            Problem List
-                        </Link>
+                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" onClick={submitHandler}>
+                        Submit
                     </Button>
                     {currentUser && (
                          <Link href="/profile">
@@ -787,4 +780,3 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
-
