@@ -70,22 +70,22 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { 
 );
 
 const PastContestItem = ({ id, title, date, imageUrl, aiHint }: { id: string; title: string; date: string; imageUrl: string; aiHint?: string }) => (
-  <div className="flex items-center justify-between p-4 transition-colors hover:bg-muted/50">
-    <div className="flex items-center gap-4">
+  <div className="flex flex-col sm:flex-row items-center justify-between p-4 transition-colors hover:bg-muted/50 gap-4">
+    <div className="flex items-center gap-4 w-full">
       <Image
-        src={imageUrl || 'https://placehold.co/128'}
+        src={imageUrl || 'https://placehold.co/128x72.png'}
         alt={title}
         width={128}
         height={72}
         className="h-12 w-20 rounded-md object-cover"
         data-ai-hint={aiHint}
       />
-      <div>
+      <div className="flex-1">
         <h3 className="font-semibold text-card-foreground">{title}</h3>
         <p className="text-sm text-muted-foreground">{date}</p>
       </div>
     </div>
-    <Button variant="outline" size="sm" asChild>
+    <Button variant="outline" size="sm" asChild className="w-full sm:w-auto flex-shrink-0">
       <Link href={`/arena/${id}`}>View</Link>
     </Button>
   </div>
@@ -132,7 +132,7 @@ export default function ArenaPage() {
 
   return (
     <div className="min-h-screen">
-        <div className="container mx-auto max-w-5xl py-12 px-4 md:px-6">
+        <div className="container mx-auto max-w-5xl py-8 px-4 md:px-6">
             <div className="text-center">
                 <Trophy className="mx-auto h-16 w-16 text-yellow-500" />
                 <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-foreground">
@@ -154,7 +154,7 @@ export default function ArenaPage() {
                             <Carousel opts={{ align: "start", loop: liveContests.length > 1 }} className="w-full">
                                 <CarouselContent>
                                     {liveContests.map(contest => (
-                                        <CarouselItem key={contest.id} className="md:basis-1/2 lg:basis-1/3">
+                                        <CarouselItem key={contest.id} className="basis-full md:basis-1/2 lg:basis-1/3">
                                             <div className="p-1">
                                                 <ContestCard
                                                     id={contest.id}
@@ -181,7 +181,7 @@ export default function ArenaPage() {
                            <Carousel opts={{ align: "start", loop: upcomingContests.length > 1 }} className="w-full">
                                 <CarouselContent>
                                     {upcomingContests.map(contest => (
-                                         <CarouselItem key={contest.id} className="md:basis-1/2 lg:basis-1/3">
+                                         <CarouselItem key={contest.id} className="basis-full md:basis-1/2 lg:basis-1/3">
                                             <div className="p-1">
                                                 <ContestCard
                                                     id={contest.id}
