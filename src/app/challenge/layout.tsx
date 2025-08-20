@@ -108,7 +108,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
-  const [solution, setSolution] = useState("");
+  const [solution, setSolution] = useState<string>("");
   const [language, setLanguage] = useState<string | null>(null);
   
   const [likeCount, setLikeCount] = useState(0);
@@ -257,7 +257,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
-            transaction.set(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
+            // Save the final correct solution for this language
+            transaction.set(solRef, { 
+              codeByLang: { [language]: solution },
+              updatedAt: serverTimestamp() 
+            }, { merge: true });
 
             if (!completedData[challenge.id!]) {
                 transaction.update(userRef, { points: increment(challenge.points) });

@@ -32,13 +32,15 @@ export default function ChallengeDetail() {
     isSubmitting,
   } = useChallenge();
   const { toast } = useToast();
-  const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const params = useParams();
   const challengeId = params.id as string;
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // State to hold all saved code snippets for the current challenge
+  const [allSolutions, setAllSolutions] = useState<Record<string, string>>({});
+
   const auth = getAuth(app);
 
   useEffect(() => {
@@ -49,66 +51,86 @@ export default function ChallengeDetail() {
   }, [auth]);
 
   useEffect(() => {
-    if (!challenge) return;
-    const availableLangs = challenge.languages || [];
-    const firstLang = availableLangs.length > 0 ? availableLangs[0] : 'Python';
-    if(language === null) {
-      setLanguage(firstLang);
-    }
+    if (!challenge || !user) return;
 
-    const fetchSolution = async () => {
-      let userCode = (challenge.starterCode && challenge.starterCode[language || firstLang]) || '';
-
-      if (user && language) {
-        const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-        const solSnap = await getDoc(solRef);
-        if (solSnap.exists() && solSnap.data().language === language) {
-          userCode = solSnap.data().code;
-        } else if (challenge.starterCode) {
-           userCode = challenge.starterCode[language] || '';
-        }
+    const fetchAllSolutions = async () => {
+      const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+      const solSnap = await getDoc(solRef);
+      if (solSnap.exists()) {
+        setAllSolutions(solSnap.data().codeByLang || {});
       }
-      setSolution(userCode || '');
-      setInitialSolution(userCode || '');
     };
+    fetchAllSolutions();
+  }, [challenge, user]);
 
-    fetchSolution();
-  }, [challenge, user, language, setLanguage, setSolution]);
+  useEffect(() => {
+    if (!challenge) return;
 
-  const handleSave = async () => {
-    if (!user || !challenge || !language || isSaving) {
-       return;
+    // Determine the language to use
+    const availableLangs = challenge.languages || [];
+    const currentLang = language || availableLangs[0] || 'Python';
+
+    // Set the language state if it's not already set
+    if (!language) {
+      setLanguage(currentLang);
     }
-    setIsSaving(true);
-    try {
-        const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-        await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
-        
-        const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-        await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
-        
-        toast({ title: "Progress Saved!", description: "Your code has been saved successfully." });
-        
-        setInitialSolution(solution || '');
-    } catch (error) {
-        console.error("Failed to save solution:", error);
-         toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
-    } finally {
-        setIsSaving(false);
-    }
-  };
+    
+    // Set the editor's code based on saved solutions or starter code
+    const savedCode = allSolutions[currentLang];
+    const starterCode = (challenge.starterCode && challenge.starterCode[currentLang]) || '';
+    setSolution(savedCode || starterCode);
 
-   useEffect(() => {
-    if (solution === initialSolution || isSaving) {
+  }, [challenge, language, allSolutions, setLanguage, setSolution]);
+
+
+  const autoSave = useCallback(async () => {
+    if (!user || !challenge || !language || isSaving || solution === undefined) {
       return;
     }
+    setIsSaving(true);
+    
+    const currentSavedCode = allSolutions[language] || (challenge.starterCode && challenge.starterCode[language]) || '';
+    if (solution === currentSavedCode) {
+        setIsSaving(false);
+        return; // No changes to save
+    }
 
+    try {
+      const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+      
+      // Update only the code for the current language
+      await setDoc(solRef, { 
+          codeByLang: {
+            [language]: solution
+          },
+          updatedAt: serverTimestamp() 
+      }, { merge: true });
+
+      // Mark challenge as in progress
+      const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+      await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
+      
+      // Update local state of all solutions
+      setAllSolutions(prev => ({...prev, [language]: solution}));
+
+      toast({ title: "Progress Saved!", description: `Your ${language} code has been saved.` });
+
+    } catch (error) {
+      console.error("Failed to auto-save solution:", error);
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not save your code. Please try again." });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user, challenge, language, solution, allSolutions, isSaving, toast]);
+
+
+  useEffect(() => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      handleSave();
+      autoSave();
     }, 2000); // Auto-save after 2 seconds of inactivity
 
     return () => {
@@ -116,12 +138,14 @@ export default function ChallengeDetail() {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [solution, language, initialSolution]);
+  }, [solution, language, autoSave]);
 
 
   const handleReset = () => {
-      if(window.confirm("Are you sure you want to reset your code to your last saved version?")) {
-          setSolution(initialSolution);
+      if(window.confirm("Are you sure you want to reset your code to the original starter code for this language?")) {
+          if (challenge && language && challenge.starterCode) {
+              setSolution(challenge.starterCode[language] || '');
+          }
       }
   };
   
@@ -154,7 +178,7 @@ export default function ChallengeDetail() {
        </div>
        <div className="flex-grow relative bg-white pr-[2px]">
             <CodeEditor
-                value={solution}
+                value={solution || ''}
                 onChange={setSolution}
                 language={(language || '').toLowerCase()}
             />
