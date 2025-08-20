@@ -11,9 +11,33 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInSeconds } from 'date-fns';
 
-const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint }: { id: string; title: string; time: string; schedule: string; imageUrl: string; aiHint?: string }) => (
+const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+            if (differenceInSeconds(to, new Date()) <= 0) {
+                onEnd();
+            }
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [to, onEnd]);
+
+    const seconds = differenceInSeconds(to, now);
+    if (seconds <= 0) return <span>Event is live!</span>;
+
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600*24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return <span>{`${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
+};
+
+const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past' }) => (
   <Link href={`/arena/${id}`} className="block">
     <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
         <Image
@@ -27,8 +51,9 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint }: { id: stri
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent"></div>
         
         <div className="relative flex h-full flex-col p-6">
-          <div className="flex justify-end">
-              <div className="rounded-lg bg-black/5 p-2">
+          <div className="flex justify-between items-center">
+              {status === 'live' && <Badge className="bg-red-600 text-white animate-pulse">Live Now</Badge>}
+              <div className="rounded-lg bg-black/5 p-2 ml-auto">
                   <CalendarDays className="h-5 w-5 text-card-foreground" />
               </div>
           </div>
@@ -69,6 +94,7 @@ const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id:
 export default function ArenaPage() {
     const [contests, setContests] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [_, setTick] = useState(0); // For forcing re-render for countdowns
 
     useEffect(() => {
         const eventsCollectionRef = collection(db, 'events');
@@ -82,8 +108,13 @@ export default function ArenaPage() {
             setContests(contestList);
             setIsLoading(false);
         });
+        
+        const interval = setInterval(() => setTick(t => t + 1), 1000);
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            clearInterval(interval);
+        };
     }, []);
 
     const now = new Date();
@@ -91,8 +122,11 @@ export default function ArenaPage() {
     const liveContests = contests.filter(c => c.startDate.toDate() <= now && c.endDate.toDate() >= now);
     const pastContests = contests.filter(c => c.endDate.toDate() < now);
 
-    const getTimeDifference = (date: Timestamp) => {
-        return formatDistanceToNow(date.toDate(), { addSuffix: true });
+    const getTimeDisplay = (contest: Event) => {
+        const now = new Date();
+        if (contest.endDate.toDate() < now) return 'Contest Ended';
+        if (contest.startDate.toDate() <= now) return `Ends ${formatDistanceToNow(contest.endDate.toDate(), { addSuffix: true })}`;
+        return <Countdown to={contest.startDate.toDate()} onEnd={() => setTick(t => t + 1)} />;
     };
 
   return (
@@ -122,10 +156,11 @@ export default function ArenaPage() {
                                         key={contest.id}
                                         id={contest.id}
                                         title={contest.title}
-                                        time={`Ends ${getTimeDifference(contest.endDate)}`}
+                                        time={getTimeDisplay(contest)}
                                         schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
                                         imageUrl={contest.imageUrl}
                                         aiHint={contest.aiHint}
+                                        status="live"
                                     />
                                 ))}
                             </div>
@@ -141,10 +176,11 @@ export default function ArenaPage() {
                                         key={contest.id}
                                         id={contest.id}
                                         title={contest.title}
-                                        time={`Starts ${getTimeDifference(contest.startDate)}`}
+                                        time={getTimeDisplay(contest)}
                                         schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
                                         imageUrl={contest.imageUrl}
                                         aiHint={contest.aiHint}
+                                        status="upcoming"
                                     />
                                 ))}
                             </div>
@@ -180,3 +216,5 @@ export default function ArenaPage() {
     </div>
   );
 }
+
+    

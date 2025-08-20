@@ -74,7 +74,7 @@ export default function ContestDetailPage() {
 
     const formatDate = (timestamp?: Timestamp) => {
         if (!timestamp) return 'Date not set';
-        return format(timestamp.toDate(), "EEE, MMM d, HH:mm zzz");
+        return format(timestamp.toDate(), "EEE, MMM d, h:mm a");
     };
 
     if (isLoading) {
@@ -139,8 +139,6 @@ export default function ContestDetailPage() {
             <Separator />
 
             <div className="prose max-w-none text-base">
-                <p>{contest.description}</p>
-
                 {contest.announcements && contest.announcements.length > 0 && (
                      <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-blue-800">
@@ -194,3 +192,5 @@ export default function ContestDetailPage() {
     </div>
   );
 }
+
+    

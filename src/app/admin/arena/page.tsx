@@ -18,7 +18,7 @@ import { Event } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, setHours, setMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 type Prize = { rank: string; details: string };
@@ -79,7 +79,7 @@ export default function ManageArenaPage() {
     return () => unsubscribe();
   }, [db, toast]);
 
-  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements'>, value: string | boolean | number) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements' | 'description'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
@@ -111,11 +111,19 @@ export default function ManageArenaPage() {
       }));
   };
 
-  const handleDateChange = (field: 'startDate' | 'endDate', value?: Date) => {
-    if (value) {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    }
-  }
+  const handleDateTimeChange = (field: 'startDate' | 'endDate', value: Date | undefined, timePart: 'hour' | 'minute', timeValue: string) => {
+      const newDate = value || formData[field];
+      const numericValue = parseInt(timeValue, 10);
+      if (isNaN(numericValue)) return;
+      
+      let updatedDate;
+      if (timePart === 'hour') {
+          updatedDate = setHours(newDate, numericValue);
+      } else {
+          updatedDate = setMinutes(newDate, numericValue);
+      }
+      setFormData(prev => ({ ...prev, [field]: updatedDate }));
+  };
 
   const handleAddNewClick = () => {
     setEditingContestId(null);
@@ -128,6 +136,7 @@ export default function ManageArenaPage() {
     setFormData({
       ...defaultFormData,
       ...event,
+      description: '', // This field is removed
       startDate: event.startDate.toDate(),
       endDate: event.endDate.toDate(),
       prizes: event.prizes || [],
@@ -150,8 +159,9 @@ export default function ManageArenaPage() {
     // Admin no longer sets enrolled count, but we need to preserve it if it exists.
     const currentEnrolledCount = editingContestId ? (contests.find(c => c.id === editingContestId)?.enrolled || 0) : 0;
     
+    const { description, ...restOfFormData } = formData;
     const dataToSave = {
-        ...formData,
+        ...restOfFormData,
         startDate: Timestamp.fromDate(formData.startDate),
         endDate: Timestamp.fromDate(formData.endDate),
         type: 'Challenge' as const,
@@ -204,6 +214,41 @@ export default function ManageArenaPage() {
       });
     }
   };
+
+  const renderDateTimePicker = (field: 'startDate' | 'endDate') => (
+     <div className="space-y-2">
+      <Label htmlFor={field}>{field === 'startDate' ? 'Start Date & Time' : 'End Date & Time'}</Label>
+      <div className="flex flex-col sm:flex-row gap-2">
+         <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !formData[field] && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData[field] ? format(formData[field], "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar mode="single" selected={formData[field]} onSelect={(d) => setFormData(prev => ({...prev, [field]: d || new Date()}))} initialFocus />
+            </PopoverContent>
+          </Popover>
+          <div className="flex gap-2">
+            <Select onValueChange={(v) => handleDateTimeChange(field, undefined, 'hour', v)} defaultValue={String(formData[field].getHours())}>
+                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{Array.from({length: 24}, (_, i) => <SelectItem key={i} value={String(i)}>{String(i).padStart(2,'0')}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select onValueChange={(v) => handleDateTimeChange(field, undefined, 'minute', v)} defaultValue={String(formData[field].getMinutes())}>
+                <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{Array.from({length: 60}, (_, i) => <SelectItem key={i} value={String(i)}>{String(i).padStart(2,'0')}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+      </div>
+    </div>
+  );
   
   if (isFormVisible) {
     return (
@@ -226,10 +271,6 @@ export default function ManageArenaPage() {
                 <Label htmlFor='title'>Title</Label>
                 <Input id='title' placeholder="Contest Title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="A short, catchy description." value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} required />
-              </div>
               <div className="grid md:grid-cols-2 gap-6">
                  <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL</Label>
@@ -241,46 +282,8 @@ export default function ManageArenaPage() {
                  </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                   <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.startDate ? format(formData.startDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={formData.startDate} onSelect={(d) => handleDateChange('startDate', d)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.endDate ? format(formData.endDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={formData.endDate} onSelect={(d) => handleDateChange('endDate', d)} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                </div>
+                {renderDateTimePicker('startDate')}
+                {renderDateTimePicker('endDate')}
               </div>
 
                <div className="space-y-4">
@@ -408,3 +411,5 @@ export default function ManageArenaPage() {
     </div>
   );
 }
+
+    
