@@ -129,7 +129,9 @@ const debugCodeFlow = ai.defineFlow(
         if (error.response?.status === 429) {
             errorMessage = "Execution Error: Too many requests. You have exceeded the API rate limit for code execution. Please wait a moment and try again.";
         } else if (error.response?.status === 403) {
-            errorMessage = "Execution Error: 403 Forbidden. Please check if your JUDGE0_API_KEY is correct and has been added to the .env file."
+            errorMessage = "Execution Error: 403 Forbidden. This may be due to an invalid API key or exceeding your daily quota. Please check your Judge0 API key and plan.";
+        } else if (error.response?.data?.message) {
+            errorMessage = `Execution Error: ${error.response.data.message}`;
         }
         return {
             stdout: '',
