@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
-import { formatDistanceToNow, differenceInSeconds } from 'date-fns';
+import { formatDistanceToNow, differenceInSeconds, format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
@@ -68,24 +68,26 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { 
   </Link>
 );
 
-const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id: string; title: string; description: string; imageUrl: string; aiHint?: string }) => (
-    <Link href={`/arena/${id}`} className="block">
-        <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
-             <Image
-                src={imageUrl || 'https://placehold.co/800x450.png'}
-                alt={title}
-                width={800}
-                height={450}
-                className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-300 group-hover:opacity-40"
-                data-ai-hint={aiHint}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
-            <div className="relative flex h-56 flex-col justify-end p-6">
-                <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
-            </div>
-        </Card>
-    </Link>
+const PastContestItem = ({ id, title, date, imageUrl, aiHint }: { id: string; title: string; date: string; imageUrl: string; aiHint?: string }) => (
+  <div className="flex items-center justify-between p-4 transition-colors hover:bg-muted/50">
+    <div className="flex items-center gap-4">
+      <Image
+        src={imageUrl || 'https://placehold.co/128'}
+        alt={title}
+        width={128}
+        height={72}
+        className="h-12 w-20 rounded-md object-cover"
+        data-ai-hint={aiHint}
+      />
+      <div>
+        <h3 className="font-semibold text-card-foreground">{title}</h3>
+        <p className="text-sm text-muted-foreground">{date}</p>
+      </div>
+    </div>
+    <Button variant="outline" size="sm" asChild>
+      <Link href={`/arena/${id}`}>View</Link>
+    </Button>
+  </div>
 );
 
 
@@ -189,26 +191,28 @@ export default function ArenaPage() {
 
                     {pastContests.length > 0 && (
                         <div className="mt-20">
-                            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                                <h2 className="text-2xl font-bold text-foreground">Featured Past Contests</h2>
-                                <Button variant="link" className="text-primary hover:text-primary/80">
-                                    <Heart className="mr-2 h-4 w-4" />
-                                    Sponsor a Contest
-                                </Button>
-                            </div>
-                            <div className="flex overflow-x-auto gap-8 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                {pastContests.slice(0, 4).map(contest => (
-                                     <div key={contest.id} className="w-80 flex-shrink-0">
-                                        <FeaturedContestCard
+                            <h2 className="text-2xl font-bold text-foreground mb-6">Past Contests</h2>
+                             <Card>
+                                <CardContent className="p-0">
+                                  <div className="divide-y">
+                                    {pastContests.slice(0, 5).map(contest => (
+                                        <PastContestItem
+                                            key={contest.id}
                                             id={contest.id}
                                             title={contest.title}
-                                            description={contest.description}
+                                            date={format(contest.startDate.toDate(), "MMM d, yyyy, h:mm a")}
                                             imageUrl={contest.imageUrl}
                                             aiHint={contest.aiHint}
                                         />
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                                {pastContests.length > 5 && (
+                                    <CardFooter className="justify-center p-4">
+                                        <Button variant="ghost">View More</Button>
+                                    </CardFooter>
+                                )}
+                            </Card>
                         </div>
                     )}
                 </>
