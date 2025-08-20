@@ -44,6 +44,7 @@ import { Progress } from '@/components/ui/progress';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 type CurrentUser = {
@@ -67,16 +68,20 @@ export type Submission = {
 type ChallengeContextType = {
   challenge: Challenge | null;
   runResult: EvaluateCodeOutput | null;
-  setRunResult: React.Dispatch<React.SetStateAction<EvaluateCodeOutput | null>>;
   debugOutput: DebugCodeOutput | null;
-  setDebugOutput: React.Dispatch<React.SetStateAction<DebugCodeOutput | null>>;
   activeTab: string;
   setActiveTab: React.Dispatch<React.SetStateAction<string>>;
   isRunning: boolean;
-  setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
   isChallengeCompleted: boolean;
   isResultsPanelFolded: boolean;
   setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
+  solution: string;
+  setSolution: React.Dispatch<React.SetStateAction<string>>;
+  language: string;
+  setLanguage: React.Dispatch<React.SetStateAction<string>>;
+  runCodeHandler: () => Promise<void>;
+  debugCodeHandler: (input: string) => Promise<void>;
+  submitHandler: () => Promise<void>;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -105,7 +110,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [activeResultTab, setActiveResultTab] = useState('0');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(false);
+  const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
+  const [solution, setSolution] = useState("");
+  const [language, setLanguage] = useState("");
   
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
@@ -117,6 +124,163 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const auth = getAuth(app);
   const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const runCodeHandler = useCallback(async () => {
+    if (!challenge) return;
+    
+    const visibleTestCases = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
+    
+    if (!visibleTestCases || visibleTestCases.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Missing Test Cases",
+            description: "This challenge has no example test cases to run against. You can still submit.",
+        });
+        return;
+    }
+    
+    setIsRunning(true);
+    setRunResult({ feedback: '', results: [], allPassed: false }); // Show loading state in results
+    setDebugOutput(null);
+    setActiveTab('result'); // Switch to result tab
+    setIsResultsPanelFolded(false);
+    try {
+        const {evaluateCode} = await import("@/ai/flows/evaluate-code");
+        const result = await evaluateCode({
+            code: solution,
+            programmingLanguage: language,
+            problemDescription: challenge.description,
+            testCases: visibleTestCases,
+        });
+        setRunResult(result);
+        if (result.allPassed) {
+            toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
+        } else {
+             toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
+        }
+    } catch(error) {
+        console.error("Error running code:", error);
+        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
+        setRunResult(null); // Clear loading state on error
+    } finally {
+        setIsRunning(false);
+    }
+  }, [challenge, language, solution, toast]);
+
+  const debugCodeHandler = useCallback(async (input: string) => {
+    if (!challenge) return;
+    setIsRunning(true);
+    setRunResult(null);
+    setDebugOutput({ stdout: '', stderr: 'Running in debug mode...' });
+    setActiveTab('result');
+    setIsResultsPanelFolded(false);
+
+    try {
+      const {debugCode} = await import("@/ai/flows/debug-code");
+      const result = await debugCode({
+        code: solution,
+        programmingLanguage: language,
+        input: input,
+      });
+      setDebugOutput(result);
+    } catch(error) {
+      console.error("Error debugging code:", error);
+      toast({ variant: "destructive", title: "Debug Error", description: "Could not run the code for debugging." });
+      setDebugOutput(null);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [challenge, language, solution, toast]);
+  
+  const submitHandler = useCallback(async () => {
+    if (!user || !challenge || !challengeId) {
+        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
+        return;
+    }
+    setIsRunning(true);
+    setRunResult({ feedback: '', results: [], allPassed: false });
+    setDebugOutput(null);
+    setActiveTab('result');
+    setIsResultsPanelFolded(false);
+
+    try {
+      const allTestCases = challenge.testCases || [];
+      if (allTestCases.length === 0) {
+         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
+         setIsRunning(false);
+         setRunResult(null);
+         return;
+      }
+      
+      const {evaluateCode} = await import("@/ai/flows/evaluate-code");
+      const result = await evaluateCode({
+          code: solution,
+          programmingLanguage: language,
+          problemDescription: challenge.description,
+          testCases: allTestCases,
+      });
+
+      setRunResult(result);
+      
+      const submissionStatus = result.allPassed ? 'Accepted' : 'Failed';
+
+      const submissionsRef = collection(db, `users/${user.uid}/submissions/${challengeId}/attempts`);
+      await addDoc(submissionsRef, {
+        code: solution,
+        language: language,
+        status: submissionStatus,
+        timestamp: serverTimestamp(),
+      });
+      
+      if (result.allPassed) {
+        await runTransaction(db, async (transaction) => {
+            const userRef = doc(db, "users", user.uid);
+            const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
+            const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+            
+            const [userSnap, completedChallengesSnap] = await Promise.all([
+                transaction.get(userRef),
+                transaction.get(completedChallengesDocRef)
+            ]);
+            
+            const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
+            
+            // Save the accepted solution
+            transaction.set(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
+
+            if (!completedData[challenge.id!]) {
+                transaction.update(userRef, { points: increment(challenge.points) });
+                
+                const today = new Date().toISOString().split('T')[0];
+                const dailyPointsRef = doc(db, `users/${user.uid}/daily_points`, today);
+                transaction.set(dailyPointsRef, { points: increment(challenge.points) }, { merge: true });
+
+                transaction.set(completedChallengesDocRef, { 
+                    [challenge.id!]: { completedAt: Timestamp.now() }
+                }, { merge: true });
+
+                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!` });
+            } else {
+                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
+            }
+
+            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+            transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
+        });
+        
+        setActiveTab('submissions');
+      } else {
+        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones)." });
+      }
+
+    } catch (error) {
+      console.error("Error submitting code:", error);
+      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [user, challenge, challengeId, solution, language, toast]);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
@@ -164,6 +328,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           const challengeData = { id: docSnap.id, ...docSnap.data() } as Challenge;
           setChallenge(challengeData);
           setLikeCount(challengeData.likes || 0);
+          if (challengeData.languages && challengeData.languages.length > 0 && !language) {
+            setLanguage(challengeData.languages[0]);
+          }
         } else {
           setChallenge(null);
         }
@@ -171,7 +338,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       });
       return () => unsubscribe();
     }
-  }, [challengeId]);
+  }, [challengeId, language]);
   
   useEffect(() => {
       if (!currentUser || !challengeId) return;
@@ -262,16 +429,20 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const contextValue: ChallengeContextType = {
       challenge,
       runResult,
-      setRunResult,
       debugOutput,
-      setDebugOutput,
       activeTab,
       setActiveTab,
       isRunning,
-      setIsRunning,
       isChallengeCompleted,
       isResultsPanelFolded,
       setIsResultsPanelFolded,
+      solution,
+      setSolution,
+      language,
+      setLanguage,
+      runCodeHandler,
+      debugCodeHandler,
+      submitHandler,
   };
   
   const difficultyColors = {
@@ -292,8 +463,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const descriptionPanelContent = (
     challenge ? (
-      <div className="h-full flex flex-col">
-        <div className="flex-grow overflow-auto p-4">
+      <div className="h-full flex flex-col p-4">
           <div className="flex justify-between items-start">
             <div>
                <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
@@ -330,70 +500,109 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </div>
             </div>
           ))}
-        </div>
-        <div className="shrink-0 p-4 border-t">
-          <p className="text-xs text-muted-foreground text-center">Copyright © {new Date().getFullYear()} SMEC BattleCode. All rights reserved.</p>
-        </div>
       </div>
     ) : (
       <div className="p-6">Challenge not found.</div>
     )
   );
+  
+  function DebugPanel() {
+    const { debugCodeHandler, isRunning } = useChallenge();
+    const [customInput, setCustomInput] = useState(challenge?.examples[0]?.input || "");
 
-  const descriptionPanel = (
-    <div className="h-full flex flex-col bg-background">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold">Problem Description</h2>
-      </div>
-      {isChallengeLoading ? (
-          <div className="space-y-4 p-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-      ) : descriptionPanelContent}
-    </div>
-  );
-
-  const submissionsPanel = (
-     <ScrollArea className="h-full">
-        <div className="p-4">
-            {submissions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Language</TableHead>
-                    <TableHead>Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
-                          {submission.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{submission.language}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
-                  <AlertCircle className="h-10 w-10 mb-4" />
-                  <p className="font-semibold">No Submissions Yet</p>
-                  <p>Your submission history for this challenge will appear here.</p>
-              </div>
-            )}
+    return (
+        <div className="p-4 space-y-4">
+            <div>
+                <Label htmlFor="custom-input" className="text-sm">Custom Input</Label>
+                <Textarea 
+                    id="custom-input"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    className="font-mono text-xs mt-1"
+                    rows={5}
+                    placeholder="Enter your test input here..."
+                />
+            </div>
+            <Button 
+                onClick={() => debugCodeHandler(customInput)}
+                disabled={isRunning}
+                size="sm"
+            >
+                {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                Run Debugger
+            </Button>
         </div>
-    </ScrollArea>
+    );
+  }
+
+  const leftPanel = (
+    <div className="h-full flex flex-col bg-background">
+       <Tabs defaultValue="description" className="h-full flex flex-col">
+          <div className="flex-shrink-0 p-2 border-b">
+            <TabsList>
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="debug">Debug</TabsTrigger>
+                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex-grow overflow-auto">
+              <TabsContent value="description" className="mt-0 h-full">
+                <ScrollArea className="h-full">
+                  {isChallengeLoading ? (
+                      <div className="space-y-4 p-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                  ) : descriptionPanelContent}
+                </ScrollArea>
+              </TabsContent>
+               <TabsContent value="debug" className="mt-0 h-full">
+                <DebugPanel />
+              </TabsContent>
+              <TabsContent value="submissions" className="mt-0 h-full">
+                 <ScrollArea className="h-full">
+                    <div className="p-4">
+                        {submissions.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Language</TableHead>
+                                <TableHead>Time</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {submissions.map((submission) => (
+                                <TableRow key={submission.id}>
+                                  <TableCell>
+                                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                                      {submission.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">{submission.language}</TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {submission.timestamp ? formatDistanceToNow(new Date(submission.timestamp.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center">
+                              <AlertCircle className="h-10 w-10 mb-4" />
+                              <p className="font-semibold">No Submissions Yet</p>
+                              <p>Your submission history for this challenge will appear here.</p>
+                          </div>
+                        )}
+                    </div>
+                </ScrollArea>
+              </TabsContent>
+          </div>
+        </Tabs>
+    </div>
   );
 
   const testResultPanel = (
@@ -412,7 +621,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
          </div>
       </header>
-      {!isResultsPanelFolded && (
         <>
             {isRunning ? (
                 <div className="flex flex-col items-center justify-center flex-grow text-muted-foreground">
@@ -420,21 +628,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     <p className="font-semibold">Running...</p>
                 </div>
             ) : runResult ? (
-                <Tabs value={activeResultTab} onValueChange={setActiveResultTab} className="flex-grow flex flex-col overflow-hidden">
-                    <div className="p-2 border-b">
-                        <TabsList className="h-auto p-1">
-                            {runResult.results.map((res, i) => (
-                                <TabsTrigger key={i} value={String(i)} className="flex items-center gap-1.5 text-xs h-8">
-                                    Test Case {i + 1}
-                                    {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-                    <div className="flex-grow overflow-auto">
-                        {runResult.results.map((res, i) => (
-                            <TabsContent key={i} value={String(i)} className="mt-0 p-4 space-y-4">
-                                <div>
+                <ScrollArea className="flex-grow">
+                  <Accordion type="single" collapsible defaultValue="0" className="w-full">
+                     {runResult.results.map((res, i) => (
+                       <AccordionItem value={String(i)} key={i}>
+                          <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
+                              Test Case {i + 1}
+                              {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                          </AccordionTrigger>
+                          <AccordionContent className="p-4 space-y-4 bg-muted/50">
+                               <div>
                                     <h4 className="font-semibold mb-1 text-sm">Input</h4>
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
@@ -448,11 +651,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                         <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
                                     </div>
                                 </div>
-                            </TabsContent>
-                        ))}
-                    </div>
-                    <footer className="p-2 border-t text-sm text-muted-foreground">{runResult.feedback}</footer>
-                </Tabs>
+                          </AccordionContent>
+                       </AccordionItem>
+                     ))}
+                  </Accordion>
+                </ScrollArea>
             ) : debugOutput ? (
                 <div className="flex-grow p-4 space-y-4 overflow-auto">
                     <div>
@@ -471,51 +674,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </div>
             )}
         </>
-      )}
   </div>
   );
   
-  const bottomPanel = (
-    <div className="h-full flex flex-col bg-background">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="flex-shrink-0 p-2 border-b border-r">
-            <div className="flex items-center justify-between">
-                <TabsList>
-                    <TabsTrigger value="result">Test Result</TabsTrigger>
-                    <TabsTrigger value="submissions">Submissions</TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="custom-input" />
-                        <Label htmlFor="custom-input" className="text-sm">Custom Input</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Label htmlFor="diff-mode" className="text-sm">Diff</Label>
-                        <Switch id="diff-mode" />
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <HelpCircle className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                </div>
-            </div>
-          </div>
-          <div className="flex-grow overflow-auto border-r">
-              <TabsContent value="submissions" className="mt-0 h-full">
-                {submissionsPanel}
-              </TabsContent>
-              <TabsContent value="result" className="mt-0 h-full">
-                {testResultPanel}
-              </TabsContent>
-          </div>
-        </Tabs>
-    </div>
-  );
-
-
   const renderDesktopLayout = () => (
      <ResizablePanelGroup direction="horizontal">
       <ResizablePanel defaultSize={40} minSize={30}>
-        {descriptionPanel}
+        {leftPanel}
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
@@ -529,43 +694,42 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     children
                 )}
             </ResizablePanel>
-            {(isRunning || runResult || debugOutput) && (
-                <>
-                    <ResizableHandle />
-                    <ResizablePanel defaultSize={40} minSize={15} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
-                        {testResultPanel}
-                    </ResizablePanel>
-                </>
-            )}
+             <ResizableHandle />
+             <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 40} minSize={15} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
+                {testResultPanel}
+            </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>
     </ResizablePanelGroup>
   );
 
   const renderMobileLayout = () => (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        <div className="flex-shrink-0 p-2 border-b">
+     <ResizablePanelGroup direction="vertical">
+      <ResizablePanel defaultSize={50} minSize={30}>
+        <Tabs defaultValue="description" className="h-full flex flex-col">
+          <div className="flex-shrink-0 p-2 border-b">
             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="code">Code</TabsTrigger>
+              <TabsTrigger value="description">Problem</TabsTrigger>
+              <TabsTrigger value="code">Code</TabsTrigger>
             </TabsList>
-        </div>
-        <div className="flex-grow overflow-auto">
+          </div>
+          <div className="flex-grow overflow-auto">
             <TabsContent value="description" className="mt-0 h-full">
-                {descriptionPanel}
+              {leftPanel}
             </TabsContent>
             <TabsContent value="code" className="mt-0 h-full">
-                <div className="h-full w-full flex flex-col">
-                    <div className="flex-grow">{children}</div>
-                    {(isRunning || runResult || debugOutput) && (
-                       <div className="flex-shrink-0 border-t">
-                         {testResultPanel}
-                       </div>
-                    )}
-                </div>
+              <div className="h-full w-full flex flex-col">
+                <div className="flex-grow">{children}</div>
+              </div>
             </TabsContent>
-        </div>
-    </Tabs>
+          </div>
+        </Tabs>
+      </ResizablePanel>
+       <ResizableHandle />
+       <ResizablePanel defaultSize={50} minSize={20} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
+         {testResultPanel}
+       </ResizablePanel>
+    </ResizablePanelGroup>
   );
 
   const currentIndex = allChallenges.findIndex(c => c.id === challengeId);
@@ -581,23 +745,23 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         <SmecBattleCodeLogo className="h-7 w-7" />
                         <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
                     </Link>
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
-                            <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
-                                <ChevronLeft className="h-4 w-4 mr-1" />
-                                Prev
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
-                             <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
-                                Next
-                                <ChevronRight className="h-4 w-4 ml-1" />
-                            </Link>
-                        </Button>
-                    </div>
                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
+                        <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Prev
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
+                         <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                    </Button>
+                 </div>
                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="bg-transparent text-white" asChild>
+                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" asChild>
                         <Link href="/challenges">
                             <List className="h-4 w-4 mr-2" />
                             Problem List
