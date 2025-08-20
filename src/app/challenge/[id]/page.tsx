@@ -14,23 +14,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useChallenge } from "../layout";
 
 export default function ChallengeDetail() {
-  const { 
-    challenge, 
-    setRunResult, 
-    setDebugOutput, 
-    setActiveTab, 
-    isRunning, 
-    setIsRunning, 
-    isResultsPanelFolded, 
+  const {
+    challenge,
+    runResult,
+    debugOutput,
+    isRunning,
+    isResultsPanelFolded,
     setIsResultsPanelFolded,
     solution,
     setSolution,
     language,
     setLanguage,
+    setActiveTab,
     handleRunCode,
     handleSubmit,
     handleDebugCode,
-   } = useChallenge();
+  } = useChallenge();
   const { toast } = useToast();
   const [initialSolution, setInitialSolution] = useState("");
   const [user, setUser] = useState<User | null>(null);
