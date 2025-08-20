@@ -6,7 +6,7 @@
  *
  * - debugCode - A function that executes code with a given input and returns the output.
  * - DebugCodeInput - The input type for the debugCode function.
- * - DebugCodeOutput - The return type for the debugCode function.
+ * - DebugCodeOutput - The return type for the debugCodeOutput function.
  */
 
 import { ai } from '@/ai/genkit';
