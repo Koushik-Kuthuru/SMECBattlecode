@@ -756,9 +756,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                  </div>
                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" onClick={handleSubmit}>
-                        Submit
-                    </Button>
                     {currentUser && (
                          <Link href="/profile">
                             <Avatar className="h-8 w-8">
