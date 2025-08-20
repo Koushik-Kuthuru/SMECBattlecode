@@ -13,7 +13,7 @@ import { app, db } from '@/lib/firebase';
 import {
   ResizablePanel,
   ResizablePanelGroup,
-  ResizableHandleWithHandle,
+  ResizableHandle,
 } from "@/components/ui/resizable"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -517,18 +517,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <ResizablePanel defaultSize={40} minSize={30}>
         {descriptionPanel}
       </ResizablePanel>
-      <ResizableHandleWithHandle>
-        {(isRunning || runResult || debugOutput) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 bg-background border rounded-full shadow-md hover:bg-muted"
-            onClick={() => setIsResultsPanelFolded(!isResultsPanelFolded)}
-          >
-            {isResultsPanelFolded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-          </Button>
-        )}
-      </ResizableHandleWithHandle>
+      <ResizableHandle />
       <ResizablePanel defaultSize={60} minSize={40}>
         <ResizablePanelGroup direction="vertical">
             <ResizablePanel defaultSize={isResultsPanelFolded ? 100 : 60} minSize={25}>
@@ -540,10 +529,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     children
                 )}
             </ResizablePanel>
-            {(isRunning || runResult || debugOutput) && !isResultsPanelFolded && (
+            {(isRunning || runResult || debugOutput) && (
                 <>
-                    <ResizableHandleWithHandle />
-                    <ResizablePanel defaultSize={40} minSize={15}>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={40} minSize={15} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
                         {testResultPanel}
                     </ResizablePanel>
                 </>
@@ -556,10 +545,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const renderMobileLayout = () => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
         <div className="flex-shrink-0 p-2 border-b">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="code">Code</TabsTrigger>
-                <TabsTrigger value="result">Result</TabsTrigger>
             </TabsList>
         </div>
         <div className="flex-grow overflow-auto">
@@ -567,12 +555,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 {descriptionPanel}
             </TabsContent>
             <TabsContent value="code" className="mt-0 h-full">
-                <div className="h-full w-full flex">
-                    {children}
+                <div className="h-full w-full flex flex-col">
+                    <div className="flex-grow">{children}</div>
+                    {(isRunning || runResult || debugOutput) && (
+                       <div className="flex-shrink-0 border-t">
+                         {testResultPanel}
+                       </div>
+                    )}
                 </div>
-            </TabsContent>
-            <TabsContent value="result" className="mt-0 h-full">
-                {bottomPanel}
             </TabsContent>
         </div>
     </Tabs>
@@ -607,7 +597,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </div>
                 </div>
                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" asChild>
+                    <Button variant="outline" size="sm" className="bg-transparent text-white" asChild>
                         <Link href="/challenges">
                             <List className="h-4 w-4 mr-2" />
                             Problem List
@@ -633,3 +623,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
