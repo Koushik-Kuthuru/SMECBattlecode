@@ -169,8 +169,6 @@ export default function ArenaPage() {
                                         </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious />
-                                <CarouselNext />
                             </Carousel>
                         </div>
                     )}
@@ -196,8 +194,6 @@ export default function ArenaPage() {
                                         </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious />
-                                <CarouselNext />
                             </Carousel>
                         </div>
                     )}
