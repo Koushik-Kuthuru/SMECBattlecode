@@ -29,6 +29,7 @@ export default function ChallengeDetail() {
     handleRunCode,
     handleSubmit,
     handleDebugCode,
+    isSubmitting,
   } = useChallenge();
   const { toast } = useToast();
   const [initialSolution, setInitialSolution] = useState("");
@@ -120,10 +121,10 @@ export default function ChallengeDetail() {
              </SelectContent>
          </Select>
          <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning}>
+           <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving || isRunning || isSubmitting}>
              <RefreshCcw className="mr-2 h-4 w-4" /> Reset
            </Button>
-           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving || isRunning}>
+           <Button variant="outline" size="sm" onClick={() => handleSave()} disabled={isSaving || isRunning || isSubmitting}>
             {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />} Save
            </Button>
          </div>
@@ -144,13 +145,13 @@ export default function ChallengeDetail() {
                  )}
             </div>
             <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={() => setActiveTab('debug')} disabled={isSaving || isRunning}>
+                <Button size="sm" variant="outline" className="text-orange-500 border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-600" onClick={() => setActiveTab('debug')} disabled={isSaving || isRunning || isSubmitting}>
                     <Bug className="mr-2 h-4 w-4" /> Debug
                 </Button>
-                 <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning}>
+                 <Button size="sm" variant="secondary" onClick={handleRunCode} disabled={isSaving || isRunning || isSubmitting}>
                     {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />} Run
                 </Button>
-                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning}>
+                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isRunning || isSubmitting}>
                     {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null} Submit
                 </Button>
             </div>

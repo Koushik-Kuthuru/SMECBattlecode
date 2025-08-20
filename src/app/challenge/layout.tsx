@@ -84,6 +84,7 @@ type ChallengeContextType = {
   handleRunCode: () => void;
   handleDebugCode: (customInput: string) => void;
   handleSubmit: () => void;
+  isSubmitting: boolean;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -111,6 +112,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [activeTab, setActiveTab] = useState('description');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
   const [solution, setSolution] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
@@ -123,6 +125,13 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const auth = getAuth(app);
   const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const startCooldown = () => {
+    setIsSubmitting(true);
+    setTimeout(() => {
+        setIsSubmitting(false);
+    }, 3000); // 3-second cooldown
+  }
 
   const handleRunCode = useCallback(async () => {
     if (!challenge || !language) {
@@ -138,6 +147,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     }
     
     setIsRunning(true);
+    startCooldown();
     setRunResult(null); 
     setDebugOutput(null);
     setActiveTab('result');
@@ -172,6 +182,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     }
     
     setIsRunning(true);
+    startCooldown();
     setRunResult(null); 
     setDebugOutput(null);
     setActiveTab('result');
@@ -199,6 +210,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         return;
     }
     setIsRunning(true);
+    startCooldown();
     setRunResult({ feedback: '', results: [], allPassed: false });
     setDebugOutput(null);
     setActiveTab('result');
@@ -438,6 +450,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       handleRunCode,
       handleDebugCode,
       handleSubmit,
+      isSubmitting,
   };
   
   const difficultyTextColors = {
@@ -513,7 +526,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             </div>
             <Button 
                 onClick={() => handleDebugCode(customInput)}
-                disabled={isRunning}
+                disabled={isRunning || isSubmitting}
                 size="sm"
             >
                 {isRunning ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
@@ -743,7 +756,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             Prev
                         </Link>
                     </Button>
-                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white">
+                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white hover:bg-white/10">
                         <Link href="/challenges">
                             <List className="h-4 w-4" />
                         </Link>
@@ -756,16 +769,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                  </div>
                  <div className="flex items-center gap-4">
-                    {currentUser && (
-                         <Link href="/profile">
-                            <Avatar className="h-8 w-8">
-                               <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
-                               <AvatarFallback>
-                                 <User />
-                               </AvatarFallback>
-                             </Avatar>
-                         </Link>
-                    )}
                  </div>
             </header>
             <main className="flex-1 flex flex-row overflow-hidden bg-muted/40">
