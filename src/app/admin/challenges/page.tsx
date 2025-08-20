@@ -26,6 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,6 +75,7 @@ export default function ManageChallengesPage() {
   const [sortType, setSortType] = useState<SortType>('title');
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [challengeToDelete, setChallengeToDelete] = useState<string | null>(null);
+  const [editingLanguage, setEditingLanguage] = useState<string | null>(null);
   
   const db = getFirestore(app);
 
@@ -124,11 +133,11 @@ export default function ManageChallengesPage() {
     setFormData(prev => ({...prev, [field]: value}));
   }, []);
   
-  const handleCodeChange = useCallback((lang: string, type: 'starterCode', value: string) => {
+  const handleCodeChange = useCallback((lang: string, value: string) => {
     setFormData(prev => ({
         ...prev,
-        [type]: {
-            ...prev[type],
+        starterCode: {
+            ...prev.starterCode,
             [lang]: value
         }
     }));
@@ -325,6 +334,7 @@ export default function ManageChallengesPage() {
   
   if (isFormVisible) {
      return (
+      <>
         <Card>
           <CardHeader>
             <CardTitle>{editingChallengeId ? 'Edit Challenge' : 'Create New Challenge'}</CardTitle>
@@ -434,26 +444,14 @@ export default function ManageChallengesPage() {
 
                 <div className="space-y-4">
                     <Label>Starter Code</Label>
-                    <Tabs defaultValue={ALL_LANGUAGES[0]}>
-                        <TabsList>
-                            {ALL_LANGUAGES.map(lang => <TabsTrigger key={lang} value={lang}>{lang}</TabsTrigger>)}
-                        </TabsList>
+                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                         {ALL_LANGUAGES.map(lang => (
-                            <TabsContent key={lang} value={lang} className="mt-0">
-                                <div className="space-y-4 mt-4">
-                                    <div className="space-y-2">
-                                        <div className="h-64 rounded-md border">
-                                            <CodeEditor
-                                                value={formData.starterCode[lang] || ''}
-                                                onChange={(value) => handleCodeChange(lang, 'starterCode', value)}
-                                                language={lang.toLowerCase()}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </TabsContent>
+                            <Button key={lang} type="button" variant="outline" onClick={() => setEditingLanguage(lang)}>
+                                <Code className="mr-2 h-4 w-4" />
+                                Edit {lang} Code
+                            </Button>
                         ))}
-                    </Tabs>
+                    </div>
                 </div>
                 
                 <div className="flex items-center space-x-2 pt-4">
@@ -470,6 +468,29 @@ export default function ManageChallengesPage() {
               </form>
           </CardContent>
         </Card>
+        <Dialog open={!!editingLanguage} onOpenChange={(isOpen) => !isOpen && setEditingLanguage(null)}>
+            <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Edit Starter Code for {editingLanguage}</DialogTitle>
+                    <DialogDescription>
+                        Provide the initial code snippet for the {editingLanguage} language.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 min-h-0 relative">
+                    {editingLanguage && (
+                        <CodeEditor
+                            value={formData.starterCode[editingLanguage] || ''}
+                            onChange={(value) => handleCodeChange(editingLanguage, value)}
+                            language={editingLanguage.toLowerCase()}
+                        />
+                    )}
+                </div>
+                <DialogClose asChild>
+                    <Button type="button" variant="secondary">Done</Button>
+                </DialogClose>
+            </DialogContent>
+        </Dialog>
+      </>
      );
   }
 
