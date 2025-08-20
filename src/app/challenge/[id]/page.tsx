@@ -39,7 +39,7 @@ export default function ChallengeDetail() {
     if (!challenge) return;
     const availableLangs = challenge.languages || [];
     const firstLang = availableLangs.length > 0 ? availableLangs[0] : 'Python';
-    setLanguage(firstLang.toLowerCase());
+    setLanguage(firstLang);
 
     const fetchSolution = async () => {
       let userCode = (challenge.starterCode && challenge.starterCode[firstLang]) || '';
@@ -52,7 +52,7 @@ export default function ChallengeDetail() {
           // Check if saved language is available for this challenge
           if(availableLangs.includes(data.language)) {
              userCode = data.code;
-             setLanguage(data.language.toLowerCase());
+             setLanguage(data.language);
           } else if (challenge.starterCode) {
              // If not, fall back to the first available language's starter code
              userCode = challenge.starterCode[availableLangs[0]] || '';
@@ -69,10 +69,25 @@ export default function ChallengeDetail() {
   useEffect(() => {
     if (challenge && language && challenge.starterCode) {
         const starter = challenge.starterCode[language] || '';
-        setSolution(sol => sol || starter); // Only set starter if current solution is empty
-        setInitialSolution(sol => sol || starter);
+        const fetchSolutionForLanguage = async () => {
+            if (user) {
+                const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
+                const solSnap = await getDoc(solRef);
+                if (solSnap.exists() && solSnap.data().language === language) {
+                    setSolution(solSnap.data().code);
+                    setInitialSolution(solSnap.data().code);
+                } else {
+                    setSolution(starter);
+                    setInitialSolution(starter);
+                }
+            } else {
+                setSolution(starter);
+                setInitialSolution(starter);
+            }
+        }
+        fetchSolutionForLanguage();
     }
-  }, [language, challenge]);
+  }, [language, challenge, user]);
 
 
   const handleSolutionChange = (newCode: string) => {
@@ -271,7 +286,7 @@ export default function ChallengeDetail() {
              </SelectTrigger>
              <SelectContent>
                 {availableLanguages.map(lang => (
-                    <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
                 ))}
              </SelectContent>
          </Select>
@@ -288,7 +303,7 @@ export default function ChallengeDetail() {
             <CodeEditor
                 value={solution}
                 onChange={handleSolutionChange}
-                language={language}
+                language={language.toLowerCase()}
             />
        </div>
         <footer className="shrink-0 flex items-center justify-between p-2 border-t bg-muted gap-2">
@@ -314,5 +329,3 @@ export default function ChallengeDetail() {
     </div>
   );
 }
-
-    
