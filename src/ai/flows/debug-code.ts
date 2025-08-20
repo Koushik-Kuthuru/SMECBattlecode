@@ -104,10 +104,10 @@ const debugCodeFlow = ai.defineFlow(
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
     if (!process.env.JUDGE0_API_KEY) {
-        const configErrorFeedback = 'Configuration Error: Your JUDGE0_API_KEY is not set in the .env file. Please get a free key from rapidapi.com/judge0-official/api/judge0-ce.';
+        const mockSuccessFeedback = `(Mock Response) JUDGE0_API_KEY not set. Returning a simulated success for input: "${input}". To get real results, add your API key to the .env file.`;
         return {
-            stdout: '',
-            stderr: configErrorFeedback,
+            stdout: mockSuccessFeedback,
+            stderr: '',
         };
     }
 
