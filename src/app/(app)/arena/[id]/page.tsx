@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,6 +25,7 @@ export default function ContestDetailPage() {
     const [contest, setContest] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
     const auth = getAuth();
     const currentUser = auth.currentUser;
 
@@ -70,6 +71,36 @@ export default function ContestDetailPage() {
             toast({ variant: 'destructive', title: 'Registration Failed', description: 'Could not register for the contest. Please try again.' });
         } finally {
             setIsRegistering(false);
+        }
+    };
+    
+    const handleShare = async () => {
+        if (!contest) return;
+        setIsSharing(true);
+        const shareData = {
+            title: contest.title,
+            text: `Check out the "${contest.title}" coding contest on SMEC Battle Code!`,
+            url: window.location.href,
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(window.location.href);
+                toast({
+                    title: 'Link Copied!',
+                    description: 'Contest link copied to clipboard.',
+                });
+            }
+        } catch (error) {
+            console.error('Error sharing:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Sharing Failed',
+                description: 'Could not share the contest link.',
+            });
+        } finally {
+            setIsSharing(false);
         }
     };
 
@@ -122,10 +153,14 @@ export default function ContestDetailPage() {
                  </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex flex-wrap items-stretch gap-2">
                 <Button onClick={handleRegister} disabled={isRegistering} className="group transition-transform hover:scale-105">
                     {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />}
                     Register
+                </Button>
+                <Button variant="outline" onClick={handleShare} disabled={isSharing}>
+                    {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                    Share
                 </Button>
                 {contest.registrationLink && (
                     <Button variant="outline" asChild>
