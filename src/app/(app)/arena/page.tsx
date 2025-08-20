@@ -79,10 +79,10 @@ const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id:
                 className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-300 group-hover:opacity-40"
                 data-ai-hint={aiHint}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
             <div className="relative flex h-48 flex-col justify-end p-6">
                 <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
             </div>
         </Card>
     </Link>
@@ -216,5 +216,3 @@ export default function ArenaPage() {
     </div>
   );
 }
-
-    
