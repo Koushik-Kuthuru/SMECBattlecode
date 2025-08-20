@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List } from 'lucide-react';
@@ -80,8 +79,8 @@ type ChallengeContextType = {
   setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
   solution: string;
   setSolution: React.Dispatch<React.SetStateAction<string>>;
-  language: string;
-  setLanguage: React.Dispatch<React.SetStateAction<string>>;
+  language: string | null;
+  setLanguage: React.Dispatch<React.SetStateAction<string | null>>;
   runCodeHandler: (customInput: string) => void;
   submitHandler: () => void;
 };
@@ -114,7 +113,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isRunning, setIsRunning] = useState(false);
   const [isResultsPanelFolded, setIsResultsPanelFolded] = useState(true);
   const [solution, setSolution] = useState("");
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState<string | null>(null);
   
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
@@ -128,7 +127,15 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const runCodeHandler = useCallback(async (customInput: string) => {
-    if (!challenge) return;
+    if (!challenge || !language) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Run Code',
+        description:
+          'The challenge data is still loading. Please wait a moment.',
+      });
+      return;
+    }
     
     // Determine if we're running against examples or custom debug input
     const isDebugRun = activeTab === 'debug';
@@ -193,7 +200,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [challenge, language, solution, toast, activeTab]);
 
   const submitHandler = useCallback(async () => {
-    if (!currentUser || !challenge || !challengeId) {
+    if (!currentUser || !challenge || !challengeId || !language) {
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
@@ -754,8 +761,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             Prev
                         </Link>
                     </Button>
-                     <Button variant="ghost" size="sm" asChild>
-                        <Link href="/challenges" className="hover:bg-white/10">
+                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white hover:bg-white/10">
+                        <Link href="/challenges">
                             <List className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -791,3 +798,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   );
 }
 
+    
