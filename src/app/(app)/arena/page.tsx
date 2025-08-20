@@ -97,7 +97,7 @@ export default function ArenaPage() {
 
   return (
     <div className="min-h-screen">
-        <div className="container mx-auto max-w-5xl py-12">
+        <div className="container mx-auto max-w-5xl py-12 px-4 md:px-6">
             <div className="text-center">
                 <Trophy className="mx-auto h-16 w-16 text-yellow-500" />
                 <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-foreground">
@@ -153,7 +153,7 @@ export default function ArenaPage() {
 
                     {pastContests.length > 0 && (
                         <div className="mt-20">
-                            <div className="flex justify-between items-center mb-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                                 <h2 className="text-2xl font-bold text-foreground">Featured Past Contests</h2>
                                 <Button variant="link" className="text-primary hover:text-primary/80">
                                     <Heart className="mr-2 h-4 w-4" />

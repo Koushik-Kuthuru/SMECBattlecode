@@ -79,7 +79,7 @@ export default function ContestDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto max-w-4xl py-8">
+            <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto" />
             </div>
         );
@@ -87,7 +87,7 @@ export default function ContestDetailPage() {
     
     if (!contest) {
         return (
-            <div className="container mx-auto max-w-4xl py-8">
+            <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
                 <Link href="/arena" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6">
                     <ArrowLeft className="h-4 w-4"/>
                     Back to Arena
@@ -100,7 +100,7 @@ export default function ContestDetailPage() {
 
 
   return (
-    <div className="container mx-auto max-w-4xl py-8">
+    <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
        <Link href="/arena" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6">
            <ArrowLeft className="h-4 w-4"/>
            Back to Arena
@@ -109,7 +109,7 @@ export default function ContestDetailPage() {
         <div className="space-y-8">
             <div>
                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-primary">{contest.title}</h1>
-                 <div className="flex items-center gap-4 text-muted-foreground mt-2">
+                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-muted-foreground mt-2">
                      <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
                         <span>{formatDate(contest.startDate)}</span>
@@ -121,7 +121,7 @@ export default function ContestDetailPage() {
                  </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Button onClick={handleRegister} disabled={isRegistering}>
                     {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                     Register
@@ -177,8 +177,8 @@ export default function ContestDetailPage() {
                         </h2>
                         <div className="space-y-3">
                            {contest.prizes.map((prize, index) => (
-                                <div key={index} className="flex items-baseline">
-                                    <span className="font-bold w-24 shrink-0">{prize.rank}:</span>
+                                <div key={index} className="flex flex-col sm:flex-row items-baseline">
+                                    <span className="font-bold w-full sm:w-24 shrink-0">{prize.rank}:</span>
                                     <span>{prize.details}</span>
                                 </div>
                            ))}
