@@ -191,7 +191,7 @@ export default function ArenaPage() {
 
                     {pastContests.length > 0 && (
                         <div className="mt-20">
-                            <h2 className="text-2xl font-bold text-foreground mb-6">Past Contests</h2>
+                            <h2 className="text-2xl font-bold text-foreground mb-6">Past Battles</h2>
                              <Card>
                                 <CardContent className="p-0">
                                   <div className="divide-y">
