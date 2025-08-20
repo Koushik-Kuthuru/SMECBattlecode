@@ -111,7 +111,7 @@ const debugCodeFlow = ai.defineFlow(
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
     if (!process.env.JUDGE0_API_URL && !process.env.JUDGE0_API_KEY) {
-        throw new Error('JUDGE0_API_KEY must be set in the environment variables if not using a self-hosted Judge0 instance.');
+        throw new Error('Configuration Error: Set either JUDGE0_API_URL for a self-hosted instance, or get a free JUDGE0_API_KEY from rapidapi.com/judge0-official/api/judge0-ce and add it to your .env file.');
     }
 
     try {
