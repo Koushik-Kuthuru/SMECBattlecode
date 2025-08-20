@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ import { Event } from '@/lib/types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
+import { BulletCoin } from '@/components/icons';
 
 export default function ContestDetailPage() {
     const params = useParams();
@@ -168,20 +169,26 @@ export default function ContestDetailPage() {
                 )}
 
                  {contest.prizes && contest.prizes.length > 0 && (
-                    <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-amber-800">
-                            <Star className="h-5 w-5" />
+                    <div className="mt-8">
+                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                            <Trophy className="h-6 w-6 text-amber-500"/>
                             Prizes
                         </h2>
-                        <div className="space-y-3">
-                           {contest.prizes.map((prize, index) => (
-                                <div key={index} className="flex flex-col sm:flex-row items-baseline">
-                                    <span className="font-bold w-full sm:w-24 shrink-0">{prize.rank}:</span>
-                                    <span>{prize.details}</span>
+                         <Card>
+                            <CardContent className="p-0">
+                                <div className="divide-y">
+                                    {contest.prizes.map((prize, index) => (
+                                         <div key={index} className="flex justify-between items-center p-4">
+                                            <span className="font-semibold">{prize.rank}</span>
+                                            <div className="flex items-center gap-2 font-bold text-lg text-primary">
+                                                <span>{prize.details}</span>
+                                                <BulletCoin className="h-5 w-5" />
+                                            </div>
+                                         </div>
+                                    ))}
                                 </div>
-                           ))}
-                        </div>
-                        
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </div>
