@@ -355,10 +355,10 @@ export default function ChallengesPage() {
   const getSolveRate = (challengeId: string) => {
     const stats = solveStats[challengeId];
     if (!stats || stats.attempted === 0) {
-      return { percentage: 0, text: 'N/A' };
+      return 'N/A';
     }
     const rate = Math.round((stats.solved / stats.attempted) * 100);
-    return { percentage: rate, text: `${rate}%` };
+    return `${rate}%`;
   };
 
   return (
@@ -581,7 +581,7 @@ export default function ChallengesPage() {
                       {isStatsLoading ? (
                         <Skeleton className="h-5 w-3/4 mx-auto" />
                       ) : (
-                        getSolveRate(challenge.id!).text
+                        getSolveRate(challenge.id!)
                       )}
                     </TableCell>
                     <TableCell className="text-center">
