@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { SmecBattleCodeLogo } from '@/components/icons';
+import confetti from 'canvas-confetti';
 
 
 type CurrentUser = {
@@ -237,6 +238,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       });
       
       if (result.allPassed) {
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+        
         await runTransaction(db, async (transaction) => {
             const userRef = doc(db, "users", currentUser.uid);
             const completedChallengesDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
