@@ -67,7 +67,7 @@ export default function ArenaPage() {
                     BATTLE ARENA
                 </h1>
                 <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">
-                    Contest every week. Compete and see your ranking!
+                    Battle every 2 to 3 weeks, complete and see your ranking
                 </p>
             </div>
 
