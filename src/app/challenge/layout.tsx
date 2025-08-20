@@ -37,6 +37,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { SmecBattleCodeLogo } from '@/components/icons';
 import confetti from 'canvas-confetti';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 type CurrentUser = {
@@ -767,7 +768,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             Prev
                         </Link>
                     </Button>
-                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white hover:bg-white/10">
+                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white">
                         <Link href="/challenges">
                             <List className="h-4 w-4" />
                         </Link>
@@ -780,6 +781,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Button>
                  </div>
                  <div className="flex items-center gap-4">
+                  {currentUser && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={currentUser.imageUrl} />
+                      <AvatarFallback>
+                        <User className="h-4 w-4"/>
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                  </div>
             </header>
             <main className="flex-1 flex flex-row overflow-hidden bg-muted/40">
