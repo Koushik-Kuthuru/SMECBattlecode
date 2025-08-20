@@ -18,7 +18,7 @@ const ResizableHandleWithHandle = ({
     )}
     {...props}
   >
-    <div className="z-10 flex h-fit w-fit items-center justify-center rounded-sm">
+    <div className="z-10 flex h-fit w-fit items-center justify-center rounded-sm border bg-background">
         {children || <div className="h-4 w-3 rounded-sm border bg-border" />}
     </div>
   </ResizableHandle>

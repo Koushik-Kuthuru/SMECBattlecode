@@ -45,16 +45,13 @@ export type DebugCodeOutput = z.infer<typeof DebugCodeOutputSchema>;
  * @returns The Judge0 submission result
  */
 async function runOnJudge0(languageId: number, sourceCode: string, stdin: string) {
-  const usePublicAPI = !process.env.JUDGE0_API_URL;
-  const url = usePublicAPI 
-    ? 'https://judge0-ce.p.rapidapi.com/submissions' 
-    : `${process.env.JUDGE0_API_URL}/submissions`;
+  const url = 'https://judge0-ce.p.rapidapi.com/submissions';
 
-  const headers: any = { 'content-type': 'application/json' };
-  if (usePublicAPI) {
-    headers['X-RapidAPI-Key'] = process.env.JUDGE0_API_KEY;
-    headers['X-RapidAPI-Host'] = 'judge0-ce.p.rapidapi.com';
-  }
+  const headers: any = {
+    'content-type': 'application/json',
+    'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+    'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+  };
 
   const options = {
     method: 'POST',
@@ -75,14 +72,10 @@ async function runOnJudge0(languageId: number, sourceCode: string, stdin: string
   const token = submissionResponse.data.token;
   
   if (!token) {
-    // Self-hosted instances might return results immediately
     return submissionResponse.data;
   }
 
-  // Poll for the result if using public API
-  const getResultUrl = usePublicAPI 
-    ? `https://judge0-ce.p.rapidapi.com/submissions/${token}`
-    : `${process.env.JUDGE0_API_URL}/submissions/${token}`;
+  const getResultUrl = `https://judge0-ce.p.rapidapi.com/submissions/${token}`;
 
   while (true) {
     const resultResponse = await axios.get(`${getResultUrl}?base64_encoded=false&fields=*`, { headers });
@@ -110,8 +103,8 @@ const debugCodeFlow = ai.defineFlow(
     if (!languageId) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
-    if (!process.env.JUDGE0_API_URL && !process.env.JUDGE0_API_KEY) {
-        const configErrorFeedback = 'Configuration Error: Set either JUDGE0_API_URL for a self-hosted instance, or get a free JUDGE0_API_KEY from rapidapi.com/judge0-official/api/judge0-ce and add it to your .env file.';
+    if (!process.env.JUDGE0_API_KEY) {
+        const configErrorFeedback = 'Configuration Error: Your JUDGE0_API_KEY is not set in the .env file. Please get a free key from rapidapi.com/judge0-official/api/judge0-ce.';
         return {
             stdout: '',
             stderr: configErrorFeedback,
@@ -124,7 +117,6 @@ const debugCodeFlow = ai.defineFlow(
         const stdout = judgeResult.stdout || '';
         let stderr = judgeResult.stderr || '';
 
-        // Judge0 sometimes puts compile errors in a different field
         if (judgeResult.compile_output) {
             stderr = stderr ? `${stderr}\n\n---COMPILE ERRORS---\n${judgeResult.compile_output}` : judgeResult.compile_output;
         }
@@ -144,7 +136,7 @@ const debugCodeFlow = ai.defineFlow(
         if (error.response?.status === 429) {
             errorMessage = "Execution Error: Too many requests. You have exceeded the API rate limit for code execution. Please wait a moment and try again.";
         } else if (error.response?.data?.message?.includes('exceeded the DAILY quota')) {
-            errorMessage = "Execution Error: You have exceeded the daily quota for the public code execution API. Please try again tomorrow or set up a self-hosted instance.";
+            errorMessage = "Execution Error: You have exceeded the daily quota for the public code execution API. Please try again tomorrow or upgrade your plan on RapidAPI.";
         } else if (error.response?.status === 403) {
             errorMessage = "Execution Error: 403 Forbidden. This may be due to an invalid API key or exceeding your daily quota. Please check your Judge0 API key and plan.";
         } else if (error.response?.data?.message) {
