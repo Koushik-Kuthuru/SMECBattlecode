@@ -368,7 +368,7 @@ export default function ChallengesPage() {
         <CardDescription>Hone your skills with our collection of curated problems.</CardDescription>
       </CardHeader>
       
-      <div className="hidden md:block space-y-4">
+      <div className="space-y-4">
         <h2 className="text-xl font-bold">Study Plans</h2>
         {isStudyPlansLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -570,8 +570,8 @@ export default function ChallengesPage() {
                       {getStatusIcon(challenge.id!)}
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">
-                        <span>{challenge.title}</span>
+                      <span className="font-medium block max-w-[120px] truncate sm:max-w-none sm:whitespace-normal">
+                        {challenge.title}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
@@ -621,3 +621,5 @@ export default function ChallengesPage() {
     </div>
   );
 }
+
+    
