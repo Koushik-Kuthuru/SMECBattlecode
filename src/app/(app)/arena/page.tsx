@@ -148,18 +148,19 @@ export default function ArenaPage() {
                     {liveContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Live Now</h2>
-                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="flex overflow-x-auto gap-8 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                 {liveContests.map(contest => (
-                                    <ContestCard
-                                        key={contest.id}
-                                        id={contest.id}
-                                        title={contest.title}
-                                        time={getTimeDisplay(contest)}
-                                        schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
-                                        imageUrl={contest.imageUrl}
-                                        aiHint={contest.aiHint}
-                                        status="live"
-                                    />
+                                    <div key={contest.id} className="w-80 flex-shrink-0">
+                                        <ContestCard
+                                            id={contest.id}
+                                            title={contest.title}
+                                            time={getTimeDisplay(contest)}
+                                            schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                                            imageUrl={contest.imageUrl}
+                                            aiHint={contest.aiHint}
+                                            status="live"
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -168,18 +169,19 @@ export default function ArenaPage() {
                     {upcomingContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Contests</h2>
-                           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+                           <div className="flex overflow-x-auto gap-8 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                 {upcomingContests.map(contest => (
-                                    <ContestCard
-                                        key={contest.id}
-                                        id={contest.id}
-                                        title={contest.title}
-                                        time={getTimeDisplay(contest)}
-                                        schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
-                                        imageUrl={contest.imageUrl}
-                                        aiHint={contest.aiHint}
-                                        status="upcoming"
-                                    />
+                                    <div key={contest.id} className="w-80 flex-shrink-0">
+                                        <ContestCard
+                                            id={contest.id}
+                                            title={contest.title}
+                                            time={getTimeDisplay(contest)}
+                                            schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                                            imageUrl={contest.imageUrl}
+                                            aiHint={contest.aiHint}
+                                            status="upcoming"
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -214,3 +216,5 @@ export default function ArenaPage() {
     </div>
   );
 }
+
+    
