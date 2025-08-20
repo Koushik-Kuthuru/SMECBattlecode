@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, KeyRound, Search } from 'lucide-react';
+import { User, KeyRound, Search, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [firestoreError, setFirestoreError] = useState<string | null>(null);
     const db = getFirestore(app);
 
     useEffect(() => {
@@ -66,8 +67,15 @@ export default function ManageUsersPage() {
             }).filter(user => !user.isAdmin);
             setUsers(usersList);
             setIsLoading(false);
+            setFirestoreError(null);
         }, (error) => {
             console.error("Error fetching users: ", error);
+            if (error.code === 'unavailable') {
+                const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || app.options.projectId;
+                setFirestoreError(`Could not connect to Firestore. This usually means the database has not been created yet. Please visit https://console.cloud.google.com/firestore/databases?project=${projectId} to create one.`);
+            } else {
+                setFirestoreError('An unknown error occurred while fetching user data.');
+            }
             setIsLoading(false);
         });
 
@@ -110,6 +118,12 @@ export default function ManageUsersPage() {
                 <CardContent>
                     {isLoading ? (
                         <div className="text-center py-16">Loading users...</div>
+                    ) : firestoreError ? (
+                        <div className="text-center py-16 text-destructive flex flex-col items-center gap-4">
+                            <AlertTriangle className="h-10 w-10" />
+                            <p className="font-semibold text-lg">Firestore Connection Error</p>
+                            <p className="max-w-md">{firestoreError}</p>
+                        </div>
                     ) : filteredUsers.length > 0 ? (
                         <Table>
                             <TableHeader>
