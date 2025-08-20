@@ -41,7 +41,7 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
 const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past' }) => (
   <Link href={`/arena/${id}`} className="block group">
     <Card className="overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:transform group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/20">
-        <div className="relative h-48">
+        <div className="relative h-56">
             <Image
               src={imageUrl || 'https://placehold.co/600x400.png'}
               alt={title}
@@ -92,7 +92,7 @@ const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id:
 export default function ArenaPage() {
     const [contests, setContests] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [_, setTick] = useState(0); // For forcing re-render for countdowns
+    const [_, setTick] = useState(0); // Forcing re-render for countdowns
 
     useEffect(() => {
         const eventsCollectionRef = collection(db, 'events');
