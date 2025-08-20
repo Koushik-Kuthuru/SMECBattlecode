@@ -486,7 +486,7 @@ export default function ChallengesPage() {
                 <TableHead className="w-[8%] text-center">Status</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="text-center w-[15%]">Difficulty</TableHead>
-                <TableHead className="text-center w-[15%] hidden md:table-cell">Acceptance</TableHead>
+                <TableHead className="text-center w-[15%] hidden md:table-cell">Solve Rate</TableHead>
                 <TableHead className="text-center w-[10%]">Points</TableHead>
                 <TableHead className="w-[8%] text-center"><span className="sr-only">Favorite</span></TableHead>
               </TableRow>
@@ -527,7 +527,7 @@ export default function ChallengesPage() {
                     <TableCell className="text-center">
                       <DifficultyPill difficulty={challenge.difficulty} />
                     </TableCell>
-                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">55.8%</TableCell>
+                    <TableCell className="text-center text-muted-foreground text-sm hidden md:table-cell">80%</TableCell>
                     <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1 text-sm font-semibold text-primary">
                             <BulletCoin className="h-4 w-4" />
