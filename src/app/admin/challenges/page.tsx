@@ -432,27 +432,29 @@ export default function ManageChallengesPage() {
                    </Button>
                 </div>
 
-                <Tabs defaultValue={formData.languages[0] || ALL_LANGUAGES[0]}>
-                    <TabsList>
-                        {formData.languages.map(lang => <TabsTrigger key={lang} value={lang}>{lang}</TabsTrigger>)}
-                    </TabsList>
-                    {formData.languages.map(lang => (
-                        <TabsContent key={lang} value={lang}>
-                            <div className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label>Starter Code ({lang})</Label>
-                                    <div className="h-64 rounded-md border">
-                                        <CodeEditor
-                                            value={formData.starterCode[lang] || ''}
-                                            onChange={(value) => handleCodeChange(lang, 'starterCode', value)}
-                                            language={lang.toLowerCase()}
-                                        />
+                <div className="space-y-4">
+                    <Label>Starter Code</Label>
+                    <Tabs defaultValue={ALL_LANGUAGES[0]}>
+                        <TabsList>
+                            {ALL_LANGUAGES.map(lang => <TabsTrigger key={lang} value={lang}>{lang}</TabsTrigger>)}
+                        </TabsList>
+                        {ALL_LANGUAGES.map(lang => (
+                            <TabsContent key={lang} value={lang} className="mt-0">
+                                <div className="space-y-4 mt-4">
+                                    <div className="space-y-2">
+                                        <div className="h-64 rounded-md border">
+                                            <CodeEditor
+                                                value={formData.starterCode[lang] || ''}
+                                                onChange={(value) => handleCodeChange(lang, 'starterCode', value)}
+                                                language={lang.toLowerCase()}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                            </TabsContent>
+                        ))}
+                    </Tabs>
+                </div>
                 
                 <div className="flex items-center space-x-2 pt-4">
                     <Switch id="isEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleInputChange('isEnabled', checked)} />
