@@ -94,11 +94,13 @@ export default function ContestDetailPage() {
                 <Button variant="outline" size="icon">
                     <Calendar className="h-4 w-4" />
                 </Button>
-                 <Button variant="outline" size="icon" asChild>
-                    <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                    </a>
-                </Button>
+                {contest.registrationLink && (
+                    <Button variant="outline" size="icon" asChild>
+                        <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                        </a>
+                    </Button>
+                )}
             </div>
 
             <Separator />
@@ -120,10 +122,10 @@ export default function ContestDetailPage() {
 
                         {contest.prizeImages && contest.prizeImages.length > 0 && (
                             <div className="flex items-center justify-center gap-8 mt-6">
-                                {contest.prizeImages.map((img: any, index: number) => (
+                                {contest.prizeImages.map((img, index) => (
                                     <div key={index} className="flex flex-col items-center gap-2">
                                         <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center p-2 border shadow-sm">
-                                            <Image src={img.src} alt={img.alt} width={100} height={100} data-ai-hint={img.hint} className="object-contain" />
+                                            <Image src={img.src || 'https://placehold.co/100x100.png'} alt={img.alt || 'Prize image'} width={100} height={100} data-ai-hint={img.hint} className="object-contain" />
                                         </div>
                                         <p className="text-sm text-muted-foreground">{img.alt}</p>
                                     </div>
