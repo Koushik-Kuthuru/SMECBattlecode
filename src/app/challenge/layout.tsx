@@ -743,7 +743,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                             Prev
                         </Link>
                     </Button>
-                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white hover:bg-white/10">
+                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white">
                         <Link href="/challenges">
                             <List className="h-4 w-4" />
                         </Link>
