@@ -32,22 +32,22 @@ const defaultFormData: FormData = {
   description: '',
   imageUrl: '',
   aiHint: '',
-  type: 'Workshop',
+  type: 'Challenge',
   enrolled: 0,
   isEnabled: true,
   startDate: new Date(),
-  endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
+  endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
   registrationLink: '',
   prizes: [],
   prizeImages: [],
 };
 
-export default function ManageEventsPage() {
+export default function ManageArenaPage() {
   const { toast } = useToast();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [contests, setContests] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editingContestId, setEditingContestId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -57,17 +57,17 @@ export default function ManageEventsPage() {
   useEffect(() => {
     const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsList = snapshot.docs
+      const contestList = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Event))
-        .filter(event => event.type !== 'Challenge'); // Filter out Arena contests
-      setEvents(eventsList);
+        .filter(event => event.type === 'Challenge'); // Only get Arena contests
+      setContests(contestList);
       setIsLoading(false);
     }, (error) => {
-      console.error("Error fetching events:", error);
+      console.error("Error fetching contests:", error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Could not load events from Firestore.'
+        description: 'Could not load contests from Firestore.'
       });
       setIsLoading(false);
     });
@@ -79,6 +79,31 @@ export default function ManageEventsPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  const handleArrayChange = (arrayName: 'prizes' | 'prizeImages', index: number, field: string, value: string) => {
+      setFormData(prev => {
+          const newArray = [...(prev[arrayName] || [])];
+          // @ts-ignore
+          newArray[index] = {...newArray[index], [field]: value};
+          return {...prev, [arrayName]: newArray};
+      });
+  };
+
+  const addArrayItem = (arrayName: 'prizes' | 'prizeImages') => {
+      setFormData(prev => ({
+          ...prev,
+          [arrayName]: [...(prev[arrayName] || []), arrayName === 'prizes' ? '' : { src: '', alt: '', hint: '' }]
+      }));
+  };
+
+  const removeArrayItem = (arrayName: 'prizes' | 'prizeImages', index: number) => {
+      setFormData(prev => ({
+          ...prev,
+          // @ts-ignore
+          [arrayName]: (prev[arrayName] || []).filter((_, i) => i !== index)
+      }));
+  };
+
+
   const handleDateChange = (field: 'startDate' | 'endDate', value?: Date) => {
     if (value) {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,13 +111,13 @@ export default function ManageEventsPage() {
   }
 
   const handleAddNewClick = () => {
-    setEditingEventId(null);
+    setEditingContestId(null);
     setFormData(defaultFormData);
     setIsFormVisible(true);
   };
 
   const handleEditClick = (event: Event) => {
-    setEditingEventId(event.id);
+    setEditingContestId(event.id);
     setFormData({
       ...defaultFormData,
       ...event,
@@ -105,7 +130,7 @@ export default function ManageEventsPage() {
 
   const handleCancel = () => {
     setIsFormVisible(false);
-    setEditingEventId(null);
+    setEditingContestId(null);
     setFormData(defaultFormData);
   };
 
@@ -117,53 +142,52 @@ export default function ManageEventsPage() {
         ...formData,
         startDate: Timestamp.fromDate(formData.startDate),
         endDate: Timestamp.fromDate(formData.endDate),
-        prizes: [], // Ensure these fields are not saved for non-challenge events
-        prizeImages: [],
+        type: 'Challenge' as const, // Ensure type is always Challenge
     };
 
     try {
-      if (editingEventId) {
-        const eventDocRef = doc(db, 'events', editingEventId);
+      if (editingContestId) {
+        const eventDocRef = doc(db, 'events', editingContestId);
         await setDoc(eventDocRef, dataToSave, { merge: true });
         toast({
-          title: 'Event Updated!',
-          description: 'The event has been successfully updated.',
+          title: 'Contest Updated!',
+          description: 'The contest has been successfully updated.',
         });
       } else {
         await addDoc(eventsCollectionRef, { ...dataToSave, createdAt: serverTimestamp() });
         toast({
-          title: 'Event Added!',
-          description: 'The new event has been created.',
+          title: 'Contest Added!',
+          description: 'The new contest has been created.',
         });
       }
       handleCancel();
     } catch (error) {
-      console.error("Error saving event:", error);
+      console.error("Error saving contest:", error);
       toast({
         variant: 'destructive',
         title: 'Error Saving',
-        description: 'Could not save the event to Firestore.'
+        description: 'Could not save the contest to Firestore.'
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async (eventId: string) => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+  const handleDelete = async (contestId: string) => {
+    if (!window.confirm("Are you sure you want to delete this contest?")) return;
 
     try {
-      await deleteDoc(doc(db, "events", eventId));
+      await deleteDoc(doc(db, "events", contestId));
       toast({
-        title: "Event Deleted",
-        description: "The event has been removed successfully.",
+        title: "Contest Deleted",
+        description: "The contest has been removed successfully.",
       });
     } catch (error) {
-      console.error("Error deleting event: ", error);
+      console.error("Error deleting contest: ", error);
       toast({
         variant: "destructive",
         title: "Error Deleting",
-        description: "Could not delete the event.",
+        description: "Could not delete the contest.",
       });
     }
   };
@@ -174,20 +198,20 @@ export default function ManageEventsPage() {
         <Card>
           <CardHeader>
              <div className="flex justify-between items-center">
-              <CardTitle>{editingEventId ? 'Edit Event' : 'Create New Event'}</CardTitle>
+              <CardTitle>{editingContestId ? 'Edit Contest' : 'Create New Contest'}</CardTitle>
               <Button variant="ghost" size="icon" onClick={handleCancel}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
             <CardDescription>
-              {editingEventId ? 'Update the details for this event.' : 'Fill out the form to create a new event.'}
+              {editingContestId ? 'Update the details for this contest.' : 'Fill out the form to create a new contest.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor='title'>Title</Label>
-                <Input id='title' placeholder="Event Title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
+                <Input id='title' placeholder="Contest Title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -210,20 +234,10 @@ export default function ManageEventsPage() {
                  </div>
                  <div className="space-y-2">
                     <Label htmlFor="aiHint">AI Hint (for image search)</Label>
-                    <Input id="aiHint" placeholder="e.g., coding workshop" value={formData.aiHint} onChange={(e) => handleInputChange('aiHint', e.target.value)} />
+                    <Input id="aiHint" placeholder="e.g., coding contest" value={formData.aiHint} onChange={(e) => handleInputChange('aiHint', e.target.value)} />
                  </div>
               </div>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Event Type</Label>
-                  <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v as FormData['type'])}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Workshop">Workshop</SelectItem>
-                        <SelectItem value="Podcast">Podcast</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date</Label>
                    <Popover>
@@ -266,14 +280,48 @@ export default function ManageEventsPage() {
                 </div>
               </div>
 
+               <div className="space-y-4">
+                  <Label>Prizes</Label>
+                  {(formData.prizes || []).map((prize, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                       <Input value={prize} onChange={(e) => handleArrayChange('prizes', index, 'prize', e.target.value)} placeholder={`Prize #${index + 1}`} />
+                       <Button type="button" variant="destructive" size="icon" onClick={() => removeArrayItem('prizes', index)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => addArrayItem('prizes')}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Prize
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                   <Label>Prize Images</Label>
+                   {(formData.prizeImages || []).map((img, index) => (
+                     <Card key={index} className="p-4 relative bg-muted/50">
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <Input value={img.src} onChange={(e) => handleArrayChange('prizeImages', index, 'src', e.target.value)} placeholder="Image URL" />
+                            <Input value={img.alt} onChange={(e) => handleArrayChange('prizeImages', index, 'alt', e.target.value)} placeholder="Alt Text" />
+                            <Input value={img.hint} onChange={(e) => handleArrayChange('prizeImages', index, 'hint', e.target.value)} placeholder="AI Hint" />
+                        </div>
+                       <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeArrayItem('prizeImages', index)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                     </Card>
+                   ))}
+                   <Button type="button" variant="outline" onClick={() => addArrayItem('prizeImages')}>
+                     <PlusCircle className="mr-2 h-4 w-4" /> Add Prize Image
+                   </Button>
+                </div>
+
               <div className="flex items-center space-x-2 pt-4">
                 <Switch id="isEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleInputChange('isEnabled', checked)} />
-                <Label htmlFor="isEnabled">Enable this event</Label>
+                <Label htmlFor="isEnabled">Enable this contest</Label>
               </div>
               <div className="flex gap-4 pt-4">
                 <Button type="submit" disabled={isSaving}>
                   {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                  {isSaving ? 'Saving...' : (editingEventId ? 'Save Changes' : 'Create Event')}
+                  {isSaving ? 'Saving...' : (editingContestId ? 'Save Changes' : 'Create Contest')}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
               </div>
@@ -287,18 +335,18 @@ export default function ManageEventsPage() {
   return (
     <div className="container mx-auto py-8">
        <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Manage Events</h1>
+        <h1 className="text-3xl font-bold">Manage Arena Contests</h1>
         <Button onClick={handleAddNewClick}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add New Event
+          Add New Contest
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Existing Events</CardTitle>
+          <CardTitle>Existing Contests</CardTitle>
           <CardDescription>
-            Manage workshops, podcasts, and other non-arena events.
+            Manage the contests that appear on the public arena page.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -306,9 +354,9 @@ export default function ManageEventsPage() {
              <div className="flex justify-center items-center py-16">
                <Loader2 className="h-8 w-8 animate-spin" />
              </div>
-          ) : events.length > 0 ? (
+          ) : contests.length > 0 ? (
             <div className="space-y-4">
-              {events.map(event => (
+              {contests.map(event => (
                 <div key={event.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
                   <div className="flex items-center gap-4">
                       <img src={event.imageUrl || 'https://placehold.co/64'} alt={event.title} className="w-16 h-16 object-cover rounded-md bg-muted" />
@@ -335,7 +383,7 @@ export default function ManageEventsPage() {
             </div>
           ) : (
             <div className="text-center py-16 text-muted-foreground">
-                No events found. Click "Add New Event" to create one.
+                No contests found. Click "Add New Contest" to create one.
             </div>
           )}
         </CardContent>
