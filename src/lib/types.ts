@@ -35,6 +35,7 @@ export type Event = {
     prizes?: { rank: string; details: string }[];
     importantNotes?: string[];
     announcements?: string[];
+    color?: string;
 };
 
 export type StudyPlan = {

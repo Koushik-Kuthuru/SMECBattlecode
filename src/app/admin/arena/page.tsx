@@ -23,10 +23,11 @@ import { cn } from '@/lib/utils';
 
 type Prize = { rank: string; details: string };
 
-type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color'> & {
   startDate: Date;
   endDate: Date;
   prizes: Prize[];
+  color: string;
 };
 
 export default function ManageArenaPage() {
@@ -50,6 +51,7 @@ export default function ManageArenaPage() {
     prizes: [],
     importantNotes: [],
     announcements: [],
+    color: '#3b82f6',
   };
 
   const [formData, setFormData] = useState<FormData>(defaultFormData);
@@ -142,6 +144,7 @@ export default function ManageArenaPage() {
       prizes: event.prizes || [],
       importantNotes: event.importantNotes || [],
       announcements: event.announcements || [],
+      color: event.color || '#3b82f6',
     });
     setIsFormVisible(true);
   };
@@ -281,6 +284,13 @@ export default function ManageArenaPage() {
                     <Input id="aiHint" placeholder="e.g., coding contest" value={formData.aiHint} onChange={(e) => handleInputChange('aiHint', e.target.value)} />
                  </div>
               </div>
+               <div className="space-y-2">
+                    <Label htmlFor="color">Theme Color</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="color" type="color" value={formData.color} onChange={(e) => handleInputChange('color', e.target.value)} className="w-12 h-10 p-1" />
+                        <Input value={formData.color} onChange={(e) => handleInputChange('color', e.target.value)} />
+                    </div>
+                </div>
               <div className="grid md:grid-cols-2 gap-6">
                 {renderDateTimePicker('startDate')}
                 {renderDateTimePicker('endDate')}

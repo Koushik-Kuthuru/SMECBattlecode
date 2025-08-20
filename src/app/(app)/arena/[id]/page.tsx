@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -139,6 +140,9 @@ export default function ContestDetailPage() {
         );
     }
 
+  const customColorStyle = contest.color ? { color: contest.color } : {};
+  const customBgColorStyle = contest.color ? { backgroundColor: contest.color } : {};
+
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
@@ -149,7 +153,7 @@ export default function ContestDetailPage() {
 
         <div className="space-y-8">
             <div>
-                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-primary">{contest.title}</h1>
+                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight" style={customColorStyle}>{contest.title}</h1>
                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-muted-foreground mt-2">
                      <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
@@ -163,7 +167,7 @@ export default function ContestDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-stretch gap-2">
-                <Button onClick={handleRegister} disabled={isRegistering} className="group transition-transform hover:scale-105">
+                <Button onClick={handleRegister} disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
                     {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />}
                     Register
                 </Button>
