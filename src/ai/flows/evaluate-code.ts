@@ -123,7 +123,17 @@ const evaluateCodeFlow = ai.defineFlow(
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
     if (!process.env.JUDGE0_API_URL && !process.env.JUDGE0_API_KEY) {
-      throw new Error('Configuration Error: Set either JUDGE0_API_URL for a self-hosted instance, or get a free JUDGE0_API_KEY from rapidapi.com/judge0-official/api/judge0-ce and add it to your .env file.');
+      const configErrorFeedback = 'Configuration Error: Set either JUDGE0_API_URL for a self-hosted instance, or get a free JUDGE0_API_KEY from rapidapi.com/judge0-official/api/judge0-ce and add it to your .env file.';
+      return {
+        results: testCases.map(tc => ({
+          testCaseInput: tc.input,
+          expectedOutput: tc.output,
+          actualOutput: configErrorFeedback,
+          passed: false,
+        })),
+        allPassed: false,
+        feedback: configErrorFeedback,
+      };
     }
 
     const results: z.infer<typeof TestCaseResultSchema>[] = [];
