@@ -5,55 +5,60 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Trophy, Users, CheckCircle, CalendarDays, Heart } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 
-const ContestCard = ({ title, time, schedule, imageUrl, aiHint }: { title: string, time: string, schedule: string, imageUrl: string, aiHint: string }) => (
-  <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
-      <Image
-        src={imageUrl}
-        alt={title}
-        width={600}
-        height={400}
-        className="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
-        data-ai-hint={aiHint}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent"></div>
-      
-      <div className="relative flex h-full flex-col p-6">
-        <div className="flex justify-end">
-            <div className="rounded-lg bg-black/5 p-2">
-                <CalendarDays className="h-5 w-5 text-card-foreground" />
-            </div>
-        </div>
-        <div className="flex-grow pt-10">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>{time}</span>
-            </div>
-            <h3 className="mt-2 text-xl font-bold text-card-foreground">{title}</h3>
-            <p className="text-sm text-muted-foreground">{schedule}</p>
-        </div>
-      </div>
-  </Card>
-);
-
-const FeaturedContestCard = ({ title, description, imageUrl, aiHint }: { title: string, description: string, imageUrl: string, aiHint: string }) => (
+const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint }: { id: string; title: string; time: string; schedule: string; imageUrl: string; aiHint: string }) => (
+  <Link href={`/arena/${id}`} className="block">
     <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
-         <Image
-            src={imageUrl}
-            alt={title}
-            width={800}
-            height={450}
-            className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-300 group-hover:opacity-40"
-            data-ai-hint={aiHint}
+        <Image
+          src={imageUrl}
+          alt={title}
+          width={600}
+          height={400}
+          className="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
+          data-ai-hint={aiHint}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
-        <div className="relative flex h-48 flex-col justify-end p-6">
-            <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
-            <p className="text-sm text-muted-foreground">{description}</p>
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent"></div>
+        
+        <div className="relative flex h-full flex-col p-6">
+          <div className="flex justify-end">
+              <div className="rounded-lg bg-black/5 p-2">
+                  <CalendarDays className="h-5 w-5 text-card-foreground" />
+              </div>
+          </div>
+          <div className="flex-grow pt-10">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{time}</span>
+              </div>
+              <h3 className="mt-2 text-xl font-bold text-card-foreground">{title}</h3>
+              <p className="text-sm text-muted-foreground">{schedule}</p>
+          </div>
         </div>
     </Card>
+  </Link>
+);
+
+const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id: string; title: string; description: string; imageUrl: string; aiHint: string }) => (
+    <Link href={`/arena/${id}`} className="block">
+        <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
+             <Image
+                src={imageUrl}
+                alt={title}
+                width={800}
+                height={450}
+                className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-300 group-hover:opacity-40"
+                data-ai-hint={aiHint}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
+            <div className="relative flex h-48 flex-col justify-end p-6">
+                <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
+                <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+        </Card>
+    </Link>
 );
 
 
@@ -72,7 +77,8 @@ export default function ArenaPage() {
             </div>
 
             <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2">
-                <ContestCard 
+                <ContestCard
+                    id="weekly-contest-464"
                     title="Weekly Contest 464" 
                     time="Starts in 3d 11h 18m" 
                     schedule="Sunday 8:00 AM GMT+5:30"
@@ -80,6 +86,7 @@ export default function ArenaPage() {
                     aiHint="abstract geometric"
                 />
                 <ContestCard 
+                    id="biweekly-contest-164"
                     title="Biweekly Contest 164" 
                     time="Starts in 9d 23h 18m" 
                     schedule="Saturday 8:00 PM GMT+5:30"
@@ -97,13 +104,15 @@ export default function ArenaPage() {
                     </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                     <FeaturedContestCard 
+                     <FeaturedContestCard
+                        id="smec-battlecode-24"
                         title="SMEC BATTLECODE '24"
                         description="The flagship annual coding competition of SMEC."
                         imageUrl="https://placehold.co/800x450.png"
                         aiHint="futuristic technology"
                     />
                      <FeaturedContestCard 
+                        id="logic-legion-finals"
                         title="Logic Legion Finals"
                         description="The ultimate test for logical thinkers and problem solvers."
                         imageUrl="https://placehold.co/800x450.png"
