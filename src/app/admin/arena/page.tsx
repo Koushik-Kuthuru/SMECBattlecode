@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -82,8 +83,12 @@ export default function ManageArenaPage() {
   const handleArrayChange = (arrayName: 'prizes' | 'prizeImages', index: number, field: string, value: string) => {
       setFormData(prev => {
           const newArray = [...(prev[arrayName] || [])];
-          // @ts-ignore
-          newArray[index] = {...newArray[index], [field]: value};
+          if (arrayName === 'prizes') {
+              newArray[index] = value;
+          } else {
+              // @ts-ignore
+              newArray[index] = {...newArray[index], [field]: value};
+          }
           return {...prev, [arrayName]: newArray};
       });
   };
