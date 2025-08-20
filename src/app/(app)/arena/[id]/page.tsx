@@ -92,13 +92,22 @@ export default function ContestDetailPage() {
                     description: 'Contest link copied to clipboard.',
                 });
             }
-        } catch (error) {
-            console.error('Error sharing:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Sharing Failed',
-                description: 'Could not share the contest link.',
-            });
+        } catch (error: any) {
+            // Fallback for when sharing is denied or fails
+            if (error.name === 'NotAllowedError') {
+                 await navigator.clipboard.writeText(window.location.href);
+                 toast({
+                    title: 'Link Copied!',
+                    description: 'Sharing was blocked, so we copied the link for you.',
+                });
+            } else {
+                console.error('Error sharing:', error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Sharing Failed',
+                    description: 'Could not share the contest link.',
+                });
+            }
         } finally {
             setIsSharing(false);
         }
