@@ -1,5 +1,4 @@
 
-
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -43,7 +42,7 @@ export default function ChallengeDetail() {
 
     const fetchSolution = async () => {
       let userLang = firstLang;
-      let userCode = (challenge.starterCode && (challenge.starterCode[firstLang] || challenge.starterCode[availableLangs[0]])) || '';
+      let userCode = (challenge.starterCode && challenge.starterCode[firstLang]) || '';
 
       if (user) {
         const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
@@ -199,11 +198,6 @@ export default function ChallengeDetail() {
       
       const submissionStatus = result.allPassed ? 'Accepted' : 'Failed';
 
-      const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
-      await setDoc(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
-      const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-      await setDoc(inProgressRef, { [challenge.id!]: true }, { merge: true });
-
       const submissionsRef = collection(db, `users/${user.uid}/submissions/${challengeId}/attempts`);
       await addDoc(submissionsRef, {
         code: solution,
@@ -216,6 +210,7 @@ export default function ChallengeDetail() {
         await runTransaction(db, async (transaction) => {
             const userRef = doc(db, "users", user.uid);
             const completedChallengesDocRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
+            const solRef = doc(db, `users/${user.uid}/solutions`, challenge.id!);
             
             const [userSnap, completedChallengesSnap] = await Promise.all([
                 transaction.get(userRef),
@@ -224,6 +219,9 @@ export default function ChallengeDetail() {
             
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
+            // Save the accepted solution
+            transaction.set(solRef, { code: solution || '', language, updatedAt: new Date() }, { merge: true });
+
             if (!completedData[challenge.id!]) {
                 transaction.update(userRef, { points: increment(challenge.points) });
                 
@@ -317,3 +315,5 @@ export default function ChallengeDetail() {
     </div>
   );
 }
+
+    
