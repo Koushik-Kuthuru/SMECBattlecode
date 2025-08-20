@@ -32,8 +32,9 @@ export type Event = {
     aiHint?: string;
     status: 'live' | 'upcoming' | 'past';
     createdAt?: Timestamp;
-    prizes?: string[];
-    prizeImages?: { src: string; alt: string; hint: string }[];
+    prizes?: { rank: string; details: string }[];
+    importantNotes?: string[];
+    announcements?: string[];
 };
 
 export type StudyPlan = {

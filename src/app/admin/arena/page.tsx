@@ -21,11 +21,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-type PrizeImage = { src: string; alt: string; hint: string };
+type Prize = { rank: string; details: string };
 
-type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes'> & {
   startDate: Date;
   endDate: Date;
+  prizes: Prize[];
 };
 
 const defaultFormData: FormData = {
@@ -40,7 +41,8 @@ const defaultFormData: FormData = {
   endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
   registrationLink: '',
   prizes: [],
-  prizeImages: [],
+  importantNotes: [],
+  announcements: [],
 };
 
 export default function ManageArenaPage() {
@@ -76,38 +78,37 @@ export default function ManageArenaPage() {
     return () => unsubscribe();
   }, [db, toast]);
 
-  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'prizeImages'>, value: string | boolean | number) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleArrayChange = (arrayName: 'prizes' | 'prizeImages', index: number, field: string, value: string) => {
+  const handleDynamicArrayChange = (arrayName: 'prizes' | 'importantNotes' | 'announcements', index: number, fieldOrValue: string, value?: string) => {
       setFormData(prev => {
           const newArray = [...(prev[arrayName] || [])];
           if (arrayName === 'prizes') {
-              newArray[index] = value;
-          } else {
               // @ts-ignore
-              newArray[index] = {...newArray[index], [field]: value};
+              newArray[index] = {...newArray[index], [fieldOrValue]: value};
+          } else {
+              newArray[index] = fieldOrValue;
           }
           return {...prev, [arrayName]: newArray};
       });
   };
 
-  const addArrayItem = (arrayName: 'prizes' | 'prizeImages') => {
+  const addDynamicArrayItem = (arrayName: 'prizes' | 'importantNotes' | 'announcements') => {
       setFormData(prev => ({
           ...prev,
-          [arrayName]: [...(prev[arrayName] || []), arrayName === 'prizes' ? '' : { src: '', alt: '', hint: '' }]
+          [arrayName]: [...(prev[arrayName] || []), arrayName === 'prizes' ? { rank: '', details: '' } : '']
       }));
   };
 
-  const removeArrayItem = (arrayName: 'prizes' | 'prizeImages', index: number) => {
+  const removeDynamicArrayItem = (arrayName: 'prizes' | 'importantNotes' | 'announcements', index: number) => {
       setFormData(prev => ({
           ...prev,
           // @ts-ignore
           [arrayName]: (prev[arrayName] || []).filter((_, i) => i !== index)
       }));
   };
-
 
   const handleDateChange = (field: 'startDate' | 'endDate', value?: Date) => {
     if (value) {
@@ -128,7 +129,9 @@ export default function ManageArenaPage() {
       ...event,
       startDate: event.startDate.toDate(),
       endDate: event.endDate.toDate(),
-      registrationLink: event.registrationLink || '',
+      prizes: event.prizes || [],
+      importantNotes: event.importantNotes || [],
+      announcements: event.announcements || [],
     });
     setIsFormVisible(true);
   };
@@ -143,11 +146,15 @@ export default function ManageArenaPage() {
     e.preventDefault();
     setIsSaving(true);
     
+    // Admin no longer sets enrolled count, but we need to preserve it if it exists.
+    const currentEnrolledCount = editingContestId ? (contests.find(c => c.id === editingContestId)?.enrolled || 0) : 0;
+    
     const dataToSave = {
         ...formData,
         startDate: Timestamp.fromDate(formData.startDate),
         endDate: Timestamp.fromDate(formData.endDate),
-        type: 'Challenge' as const, // Ensure type is always Challenge
+        type: 'Challenge' as const,
+        enrolled: currentEnrolledCount, // Preserve existing enrolled count
     };
 
     try {
@@ -223,16 +230,6 @@ export default function ManageArenaPage() {
                 <Textarea id="description" placeholder="A short, catchy description." value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} required />
               </div>
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor='registrationLink'>Registration Link</Label>
-                  <Input id='registrationLink' placeholder="https://forms.gle/..." value={formData.registrationLink} onChange={(e) => handleInputChange('registrationLink', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor='enrolled'>Enrolled Count</Label>
-                  <Input id='enrolled' type="number" placeholder="0" value={formData.enrolled} onChange={(e) => handleInputChange('enrolled', parseInt(e.target.value, 10) || 0)} required />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
                  <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL</Label>
                     <Input id="imageUrl" placeholder="https://example.com/image.png" value={formData.imageUrl} onChange={(e) => handleInputChange('imageUrl', e.target.value)} required />
@@ -286,36 +283,50 @@ export default function ManageArenaPage() {
               </div>
 
                <div className="space-y-4">
-                  <Label>Prizes</Label>
-                  {(formData.prizes || []).map((prize, index) => (
+                  <Label>Important Notes</Label>
+                  {(formData.importantNotes || []).map((note, index) => (
                     <div key={index} className="flex items-center gap-2">
-                       <Input value={prize} onChange={(e) => handleArrayChange('prizes', index, 'prize', e.target.value)} placeholder={`Prize #${index + 1}`} />
-                       <Button type="button" variant="destructive" size="icon" onClick={() => removeArrayItem('prizes', index)}>
+                       <Textarea value={note} onChange={(e) => handleDynamicArrayChange('importantNotes', index, e.target.value)} placeholder={`Note #${index + 1}`} />
+                       <Button type="button" variant="destructive" size="icon" onClick={() => removeDynamicArrayItem('importantNotes', index)}>
                          <Trash2 className="h-4 w-4" />
                        </Button>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" onClick={() => addArrayItem('prizes')}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Prize
+                  <Button type="button" variant="outline" onClick={() => addDynamicArrayItem('importantNotes')}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Note
                   </Button>
                 </div>
                 
+                 <div className="space-y-4">
+                  <Label>Announcements</Label>
+                  {(formData.announcements || []).map((announcement, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                       <Textarea value={announcement} onChange={(e) => handleDynamicArrayChange('announcements', index, e.target.value)} placeholder={`Announcement #${index + 1}`} />
+                       <Button type="button" variant="destructive" size="icon" onClick={() => removeDynamicArrayItem('announcements', index)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => addDynamicArrayItem('announcements')}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Announcement
+                  </Button>
+                </div>
+
                 <div className="space-y-4">
-                   <Label>Prize Images</Label>
-                   {(formData.prizeImages || []).map((img, index) => (
+                   <Label>Prizes</Label>
+                   {(formData.prizes || []).map((prize, index) => (
                      <Card key={index} className="p-4 relative bg-muted/50">
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <Input value={img.src} onChange={(e) => handleArrayChange('prizeImages', index, 'src', e.target.value)} placeholder="Image URL" />
-                            <Input value={img.alt} onChange={(e) => handleArrayChange('prizeImages', index, 'alt', e.target.value)} placeholder="Alt Text" />
-                            <Input value={img.hint} onChange={(e) => handleArrayChange('prizeImages', index, 'hint', e.target.value)} placeholder="AI Hint" />
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Input value={prize.rank} onChange={(e) => handleDynamicArrayChange('prizes', index, 'rank', e.target.value)} placeholder="e.g., 1st Prize" />
+                            <Input value={prize.details} onChange={(e) => handleDynamicArrayChange('prizes', index, 'details', e.target.value)} placeholder="e.g., 5000 Coins" />
                         </div>
-                       <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeArrayItem('prizeImages', index)}>
+                       <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeDynamicArrayItem('prizes', index)}>
                          <Trash2 className="h-4 w-4" />
                        </Button>
                      </Card>
                    ))}
-                   <Button type="button" variant="outline" onClick={() => addArrayItem('prizeImages')}>
-                     <PlusCircle className="mr-2 h-4 w-4" /> Add Prize Image
+                   <Button type="button" variant="outline" onClick={() => addDynamicArrayItem('prizes')}>
+                     <PlusCircle className="mr-2 h-4 w-4" /> Add Prize Row
                    </Button>
                 </div>
 

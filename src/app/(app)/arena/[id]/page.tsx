@@ -4,38 +4,73 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { getAuth } from 'firebase/auth';
 
 export default function ContestDetailPage() {
     const params = useParams();
+    const router = useRouter();
+    const { toast } = useToast();
     const id = params.id as string;
     const [contest, setContest] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRegistering, setIsRegistering] = useState(false);
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
 
     useEffect(() => {
         if (!id) return;
 
-        const fetchContest = async () => {
+        const contestDocRef = doc(db, 'events', id);
+        const unsubscribe = onSnapshot(contestDocRef, (docSnap) => {
             setIsLoading(true);
-            const contestDocRef = doc(db, 'events', id);
-            const contestSnap = await getDoc(contestDocRef);
-            if (contestSnap.exists()) {
-                setContest({ id: contestSnap.id, ...contestSnap.data() } as Event);
+            if (docSnap.exists()) {
+                setContest({ id: docSnap.id, ...docSnap.data() } as Event);
             } else {
                 console.log("No such contest!");
+                setContest(null);
             }
             setIsLoading(false);
-        };
-        fetchContest();
+        });
+
+        return () => unsubscribe();
     }, [id]);
+
+    const handleRegister = async () => {
+        if (!currentUser) {
+            toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to register for contests.' });
+            router.push('/login');
+            return;
+        }
+        if (!id) return;
+        setIsRegistering(true);
+
+        const contestDocRef = doc(db, 'events', id);
+        try {
+            await runTransaction(db, async (transaction) => {
+                const contestDoc = await transaction.get(contestDocRef);
+                if (!contestDoc.exists()) {
+                    throw new Error("Contest does not exist!");
+                }
+                transaction.update(contestDocRef, { enrolled: increment(1) });
+            });
+            toast({ title: "Registration Successful!", description: "You've been enrolled in the contest." });
+        } catch (error) {
+            console.error("Error registering for contest:", error);
+            toast({ variant: 'destructive', title: 'Registration Failed', description: 'Could not register for the contest. Please try again.' });
+        } finally {
+            setIsRegistering(false);
+        }
+    };
 
     const formatDate = (timestamp?: Timestamp) => {
         if (!timestamp) return 'Date not set';
@@ -87,17 +122,15 @@ export default function ContestDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
-                <Button>
-                    <RefreshCw className="mr-2 h-4 w-4" />
+                <Button onClick={handleRegister} disabled={isRegistering}>
+                    {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                     Register
                 </Button>
-                <Button variant="outline" size="icon">
-                    <Calendar className="h-4 w-4" />
-                </Button>
                 {contest.registrationLink && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="outline" asChild>
                         <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Official Registration
                         </a>
                     </Button>
                 )}
@@ -108,48 +141,54 @@ export default function ContestDetailPage() {
             <div className="prose max-w-none text-base">
                 <p>{contest.description}</p>
 
-                {contest.prizes && contest.prizes.length > 0 && (
-                    <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-                            <Star className="h-5 w-5 text-yellow-500" />
-                            Bonus Prizes
+                {contest.announcements && contest.announcements.length > 0 && (
+                     <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-blue-800">
+                            <Megaphone className="h-5 w-5" />
+                            Announcements
                         </h2>
                         <ul className="space-y-2 list-disc list-inside">
-                           {contest.prizes.map((prize: string, index: number) => (
-                                <li key={index}>{prize}</li>
+                           {contest.announcements.map((announcement: string, index: number) => (
+                                <li key={index}>{announcement}</li>
                            ))}
                         </ul>
-
-                        {contest.prizeImages && contest.prizeImages.length > 0 && (
-                            <div className="flex items-center justify-center gap-8 mt-6">
-                                {contest.prizeImages.map((img, index) => (
-                                    <div key={index} className="flex flex-col items-center gap-2">
-                                        <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center p-2 border shadow-sm">
-                                            <Image src={img.src || 'https://placehold.co/100x100.png'} alt={img.alt || 'Prize image'} width={100} height={100} data-ai-hint={img.hint} className="object-contain" />
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">{img.alt}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        
-                        <p className="text-xs text-muted-foreground mt-6">
-                             Only SMEC accounts are eligible for the bonus rewards. After the ranking is finalized, a faculty member will reach out to you through email regarding the gift!
-                        </p>
                     </div>
                 )}
                 
+                {contest.importantNotes && contest.importantNotes.length > 0 && (
+                    <div className="mt-8">
+                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                            <Info className="h-5 w-5 text-blue-500"/>
+                            Important Notes
+                        </h2>
+                        <ul className="space-y-2 list-disc list-inside">
+                           {contest.importantNotes.map((note: string, index: number) => (
+                                <li key={index}>{note}</li>
+                           ))}
+                        </ul>
+                    </div>
+                )}
 
-                <div className="mt-8">
-                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-                        <Info className="h-5 w-5 text-blue-500"/>
-                        Important Notes
-                    </h2>
-                    <ol className="space-y-2 list-decimal list-inside">
-                        <li>To provide a better contest and ensure fairness, we listened to our students' feedback and put in lots of thoughts behind the updated contest rule.</li>
-                        <li>All submissions will be checked for plagiarism. Any violation will result in disqualification from the contest.</li>
-                    </ol>
-                </div>
+                 {contest.prizes && contest.prizes.length > 0 && (
+                    <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-amber-800">
+                            <Star className="h-5 w-5" />
+                            Prizes
+                        </h2>
+                        <div className="space-y-3">
+                           {contest.prizes.map((prize, index) => (
+                                <div key={index} className="flex items-baseline">
+                                    <span className="font-bold w-24 shrink-0">{prize.rank}:</span>
+                                    <span>{prize.details}</span>
+                                </div>
+                           ))}
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground mt-6">
+                             Only SMEC accounts are eligible for rewards. After the ranking is finalized, a faculty member will reach out to you through email regarding the gift!
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     </div>
