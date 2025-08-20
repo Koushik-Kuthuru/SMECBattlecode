@@ -182,9 +182,6 @@ export default function ContestDetailPage() {
                            ))}
                         </div>
                         
-                        <p className="text-xs text-muted-foreground mt-6">
-                             Only SMEC accounts are eligible for rewards. After the ranking is finalized, a faculty member will reach out to you through email regarding the gift!
-                        </p>
                     </div>
                 )}
             </div>
@@ -192,5 +189,3 @@ export default function ContestDetailPage() {
     </div>
   );
 }
-
-    
