@@ -80,7 +80,7 @@ const FeaturedContestCard = ({ id, title, description, imageUrl, aiHint }: { id:
                 data-ai-hint={aiHint}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
-            <div className="relative flex h-48 flex-col justify-end p-6">
+            <div className="relative flex h-56 flex-col justify-end p-6">
                 <h3 className="text-2xl font-bold text-card-foreground">{title}</h3>
                 <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
             </div>
@@ -196,16 +196,17 @@ export default function ArenaPage() {
                                     Sponsor a Contest
                                 </Button>
                             </div>
-                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                                {pastContests.slice(0, 2).map(contest => (
-                                    <FeaturedContestCard
-                                        key={contest.id}
-                                        id={contest.id}
-                                        title={contest.title}
-                                        description={contest.description}
-                                        imageUrl={contest.imageUrl}
-                                        aiHint={contest.aiHint}
-                                    />
+                            <div className="flex overflow-x-auto gap-8 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                {pastContests.slice(0, 4).map(contest => (
+                                     <div key={contest.id} className="w-80 flex-shrink-0">
+                                        <FeaturedContestCard
+                                            id={contest.id}
+                                            title={contest.title}
+                                            description={contest.description}
+                                            imageUrl={contest.imageUrl}
+                                            aiHint={contest.aiHint}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         </div>
