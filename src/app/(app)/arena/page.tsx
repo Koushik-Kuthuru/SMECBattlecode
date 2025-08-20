@@ -64,7 +64,7 @@ export default function ArenaPage() {
             <div className="text-center">
                 <Trophy className="mx-auto h-16 w-16 text-yellow-500" />
                 <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-                    Contest Arena
+                    BATTLE ARENA
                 </h1>
                 <p className="mt-4 max-w-xl mx-auto text-lg text-muted-foreground">
                     Contest every week. Compete and see your ranking!
