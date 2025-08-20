@@ -12,6 +12,7 @@ import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'fireba
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
 import { formatDistanceToNow, differenceInSeconds } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
     const [now, setNow] = useState(new Date());
@@ -216,5 +217,3 @@ export default function ArenaPage() {
     </div>
   );
 }
-
-    
