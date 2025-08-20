@@ -39,33 +39,30 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
 };
 
 const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past' }) => (
-  <Link href={`/arena/${id}`} className="block">
-    <Card className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
-        <Image
-          src={imageUrl || 'https://placehold.co/600x400.png'}
-          alt={title}
-          width={600}
-          height={400}
-          className="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
-          data-ai-hint={aiHint}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent"></div>
-        
-        <div className="relative flex h-full flex-col p-6">
-          <div className="flex justify-between items-center">
-              {status === 'live' && <Badge className="bg-red-600 text-white animate-pulse">Live Now</Badge>}
-              <div className="rounded-lg bg-black/5 p-2 ml-auto">
-                  <CalendarDays className="h-5 w-5 text-card-foreground" />
-              </div>
-          </div>
-          <div className="flex-grow pt-10">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>{time}</span>
-              </div>
-              <h3 className="mt-2 text-xl font-bold text-card-foreground">{title}</h3>
-              <p className="text-sm text-muted-foreground">{schedule}</p>
-          </div>
+  <Link href={`/arena/${id}`} className="block group">
+    <Card className="overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:transform group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/20">
+        <div className="relative h-48">
+            <Image
+              src={imageUrl || 'https://placehold.co/600x400.png'}
+              alt={title}
+              width={600}
+              height={400}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              data-ai-hint={aiHint}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
+            <div className="absolute top-3 right-3 rounded-lg bg-black/30 p-2 backdrop-blur-sm">
+              <CalendarDays className="h-5 w-5 text-white" />
+            </div>
+            <div className="absolute bottom-3 left-3 flex items-center gap-2 text-sm text-white font-medium">
+                <Clock className="h-4 w-4" />
+                <span>{time}</span>
+            </div>
+             {status === 'live' && <Badge className="absolute top-3 left-3 bg-red-600 text-white animate-pulse">Live Now</Badge>}
+        </div>
+        <div className="p-4 bg-card">
+          <h3 className="text-lg font-bold text-card-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{schedule}</p>
         </div>
     </Card>
   </Link>
@@ -151,7 +148,7 @@ export default function ArenaPage() {
                     {liveContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Live Now</h2>
-                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                                 {liveContests.map(contest => (
                                     <ContestCard
                                         key={contest.id}
@@ -171,7 +168,7 @@ export default function ArenaPage() {
                     {upcomingContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Contests</h2>
-                            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                                 {upcomingContests.map(contest => (
                                     <ContestCard
                                         key={contest.id}
