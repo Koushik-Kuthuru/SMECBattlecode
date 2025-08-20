@@ -2,87 +2,116 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Trophy, Users, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clock, Trophy, Users, CheckCircle, CalendarDays, Heart } from 'lucide-react';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
-const ContestCard = ({ title, description, participants, time, isLive, isCompleted }: { title: string, description: string, participants: string, time: string, isLive?: boolean, isCompleted?: boolean }) => (
-  <Card className="hover:shadow-lg transition-shadow duration-300">
-    <CardHeader>
-      {isLive && <div className="text-red-500 font-bold mb-2 flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div> LIVE</div>}
-      {isCompleted && <div className="text-green-500 font-bold mb-2 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> COMPLETED</div>}
-      <CardTitle>{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-    </CardHeader>
-    <CardContent className="flex items-center text-sm text-muted-foreground gap-4">
-      <div className="flex items-center gap-1">
-        <Users className="h-4 w-4" />
-        <span>{participants}</span>
+
+const ContestCard = ({ title, time, schedule, imageUrl, aiHint }: { title: string, time: string, schedule: string, imageUrl: string, aiHint: string }) => (
+  <Card className="group relative overflow-hidden rounded-xl border-none bg-slate-800 text-white shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
+      <Image
+        src={imageUrl}
+        alt={title}
+        width={600}
+        height={400}
+        className="absolute inset-0 h-full w-full object-cover opacity-30 transition-opacity duration-300 group-hover:opacity-50"
+        data-ai-hint={aiHint}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-transparent"></div>
+      
+      <div className="relative flex h-full flex-col p-6">
+        <div className="flex justify-end">
+            <div className="rounded-lg bg-white/10 p-2">
+                <CalendarDays className="h-5 w-5 text-white" />
+            </div>
+        </div>
+        <div className="flex-grow pt-10">
+            <div className="flex items-center gap-2 text-sm text-slate-300">
+                <Clock className="h-4 w-4" />
+                <span>{time}</span>
+            </div>
+            <h3 className="mt-2 text-xl font-bold">{title}</h3>
+            <p className="text-sm text-slate-400">{schedule}</p>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
-        <Clock className="h-4 w-4" />
-        <span>{time}</span>
-      </div>
-    </CardContent>
-    <CardFooter>
-      <Button className="w-full" variant={isLive ? 'default' : 'secondary'} disabled={isCompleted}>
-        {isLive ? 'Join Now' : isCompleted ? 'View Results' : 'View Contest'}
-      </Button>
-    </CardFooter>
   </Card>
 );
 
+const FeaturedContestCard = ({ title, description, imageUrl, aiHint }: { title: string, description: string, imageUrl: string, aiHint: string }) => (
+    <Card className="group relative overflow-hidden rounded-xl border-none bg-slate-800 text-white shadow-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/20">
+         <Image
+            src={imageUrl}
+            alt={title}
+            width={800}
+            height={450}
+            className="absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity duration-300 group-hover:opacity-60"
+            data-ai-hint={aiHint}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
+        <div className="relative flex h-48 flex-col justify-end p-6">
+            <h3 className="text-2xl font-bold">{title}</h3>
+            <p className="text-sm text-slate-300">{description}</p>
+        </div>
+    </Card>
+);
+
+
 export default function ArenaPage() {
   return (
-    <div className="container mx-auto py-8 space-y-12">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight flex items-center justify-center gap-4">
-          <span className="font-mono text-primary">Battle</span>
-          <Trophy className="h-10 w-10 text-amber-400" />
-          <span className="font-mono">Arena</span>
-        </h1>
-        <p className="text-lg text-muted-foreground mt-2">Test your skills in our official programming contests.</p>
-      </div>
+    <div className="bg-slate-900 text-white min-h-screen -m-8 p-8">
+        <div className="container mx-auto max-w-5xl py-12">
+            <div className="text-center">
+                <Trophy className="mx-auto h-16 w-16 text-yellow-400" />
+                <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight">
+                    Contest Arena
+                </h1>
+                <p className="mt-4 max-w-xl mx-auto text-lg text-slate-300">
+                    Contest every week. Compete and see your ranking!
+                </p>
+            </div>
 
-      <div className="grid md:grid-cols-3 gap-8 items-center">
-        <div className="md:col-span-2">
-          <Card className="bg-gradient-to-br from-primary to-blue-700 text-primary-foreground shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-3xl">SMEC BATTLECODE'24</CardTitle>
-              <CardDescription className="text-primary-foreground/80">The flagship annual coding competition.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Prepare for the ultimate test of coding prowess. Solve challenging problems, compete against the best, and claim victory.</p>
-            </CardContent>
-            <CardFooter>
-              <Button variant="secondary" className="bg-white/90 text-black hover:bg-white">Learn More</Button>
-            </CardFooter>
-          </Card>
-        </div>
+            <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2">
+                <ContestCard 
+                    title="Weekly Contest 464" 
+                    time="Starts in 3d 11h 18m" 
+                    schedule="Sunday 8:00 AM GMT+5:30"
+                    imageUrl="https://placehold.co/600x400.png"
+                    aiHint="abstract geometric"
+                />
+                <ContestCard 
+                    title="Biweekly Contest 164" 
+                    time="Starts in 9d 23h 18m" 
+                    schedule="Saturday 8:00 PM GMT+5:30"
+                    imageUrl="https://placehold.co/600x400.png"
+                    aiHint="digital cube"
+                />
+            </div>
 
-        <div className="md:col-span-1 flex justify-center">
-            <div className="p-8 bg-card rounded-full border-8 border-amber-300 shadow-2xl">
-                <Trophy className="h-32 w-32 text-amber-500" />
+            <div className="mt-20">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold">Featured Contests</h2>
+                    <Button variant="link" className="text-cyan-400 hover:text-cyan-300">
+                        <Heart className="mr-2 h-4 w-4" />
+                        Sponsor a Contest
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                     <FeaturedContestCard 
+                        title="SMEC BATTLECODE '24"
+                        description="The flagship annual coding competition of SMEC."
+                        imageUrl="https://placehold.co/800x450.png"
+                        aiHint="futuristic technology"
+                    />
+                     <FeaturedContestCard 
+                        title="Logic Legion Finals"
+                        description="The ultimate test for logical thinkers and problem solvers."
+                        imageUrl="https://placehold.co/800x450.png"
+                        aiHint="cyberpunk city"
+                    />
+                </div>
             </div>
         </div>
-      </div>
-      
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Upcoming & Live Contests</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-            <ContestCard isLive title="Live Now: Algo Sprint" description="A fast-paced algorithmic challenge." participants="250+" time="60 Mins" />
-            <ContestCard title="Weekly Rumble #12" description="A quick 90-minute contest with 3 problems." participants="150+" time="90 Mins" />
-            <ContestCard title="Data Structures Showdown" description="Test your knowledge of advanced data structures." participants="80+" time="3 Hours" />
-        </div>
-      </div>
-
-       <div>
-        <h2 className="text-2xl font-bold mb-4">Completed Contests</h2>
-        <div className="grid md:grid-cols-3 gap-6">
-            <ContestCard isCompleted title="Python Code-Off" description="Python-exclusive problems for all skill levels." participants="120+" time="2 Hours" />
-            <ContestCard isCompleted title="Logic Legion" description="Put your logical thinking to the test." participants="200+" time="2.5 Hours" />
-            <ContestCard isCompleted title="Beginner's Bash" description="A friendly contest for newcomers." participants="95+" time="90 Mins" />
-        </div>
-      </div>
     </div>
   );
 }
