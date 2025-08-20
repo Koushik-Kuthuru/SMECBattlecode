@@ -151,7 +151,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            <div className="p-4">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2 mb-8">
                 <SmecBattleCodeLogo className="h-8 w-8" />
-                <span className="text-xl">SMEC Battle Code</span>
+                <span className="text-xl">SMEC Battlecode</span>
               </Link>
            </div>
             <ScrollArea className="flex-1 px-4">
