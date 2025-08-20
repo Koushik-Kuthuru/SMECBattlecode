@@ -73,12 +73,12 @@ export default function ArenaPage() {
     useEffect(() => {
         const eventsCollectionRef = collection(db, 'events');
         const q = query(eventsCollectionRef, 
-            where('type', '==', 'Challenge'),
-            where('isEnabled', '==', true),
             orderBy('startDate', 'desc')
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const contestList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+            const contestList = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Event))
+                .filter(event => event.type === 'Challenge' && event.isEnabled);
             setContests(contestList);
             setIsLoading(false);
         });
