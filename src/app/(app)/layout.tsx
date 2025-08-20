@@ -131,7 +131,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/dashboard', label: 'Home', icon: Home },
     { href: '/challenges', label: 'Challenges', icon: ListChecks },
     { href: '/arena', label: 'Arena', icon: Swords },
-    { href: '/leaderboard', label: 'Ranking Arena', icon: Trophy },
+    { href: '/leaderboard', label: 'Ranking', icon: Trophy },
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/about', label: 'About', icon: Info },
   ];
