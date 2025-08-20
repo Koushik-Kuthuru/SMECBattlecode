@@ -109,7 +109,7 @@ export default function ChallengeDetail() {
   return (
     <div className="h-full w-full flex flex-col bg-background">
        <div className="flex-shrink-0 p-2 flex justify-between items-center border-b bg-muted">
-         <Select value={language || ''} onValueChange={setLanguage} disabled={availableLanguages.length <= 1}>
+         <Select value={language || ''} onValueChange={(lang) => setLanguage(lang)} disabled={availableLanguages.length <= 1}>
              <SelectTrigger className="w-[180px]">
                  <SelectValue placeholder="Select language" />
              </SelectTrigger>

@@ -60,7 +60,7 @@ const defaultFormData: FormData = {
   examples: [{ input: '', output: '', explanation: '' }],
   testCases: [{ input: '', output: '', isHidden: false }],
   isEnabled: true,
-  languages: ALL_LANGUAGES,
+  languages: [],
   starterCode: ALL_LANGUAGES.reduce((acc, lang) => ({ ...acc, [lang]: '' }), {}),
 };
 
@@ -167,6 +167,15 @@ export default function ManageChallengesPage() {
       }));
   }, []);
 
+  const handleLanguageToggle = useCallback((language: string, checked: boolean) => {
+    setFormData(prev => {
+        const newLanguages = checked
+            ? [...prev.languages, language]
+            : prev.languages.filter(lang => lang !== language);
+        return { ...prev, languages: newLanguages };
+    });
+  }, []);
+
   const handleAddNewClick = () => {
     setEditingChallengeId(null);
     setFormData(defaultFormData);
@@ -200,10 +209,14 @@ export default function ManageChallengesPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Title is required.' });
         return;
     }
+     if (formData.languages.length === 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select at least one programming language.' });
+        return;
+    }
+
     const { solution, ...restOfFormData } = formData;
     const challengeDataToSave = {
         ...restOfFormData,
-        languages: ALL_LANGUAGES,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
     };
@@ -443,9 +456,25 @@ export default function ManageChallengesPage() {
                 </div>
 
                 <div className="space-y-4">
+                    <Label>Supported Languages</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 border p-4 rounded-md">
+                        {ALL_LANGUAGES.map(lang => (
+                            <div key={lang} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`lang-${lang}`}
+                                    checked={formData.languages.includes(lang)}
+                                    onCheckedChange={(checked) => handleLanguageToggle(lang, !!checked)}
+                                />
+                                <Label htmlFor={`lang-${lang}`}>{lang}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-4">
                     <Label>Starter Code</Label>
                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                        {ALL_LANGUAGES.map(lang => (
+                        {formData.languages.map(lang => (
                             <Button key={lang} type="button" variant="outline" onClick={() => setEditingLanguage(lang)}>
                                 <Code className="mr-2 h-4 w-4" />
                                 Edit {lang} Code
