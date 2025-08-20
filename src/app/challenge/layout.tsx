@@ -2,7 +2,7 @@
 
 'use client'
 
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -36,12 +36,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { BulletCoin } from '@/components/icons';
+import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster, useToast } from '@/components/ui/toaster';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 type CurrentUser = {
   uid: string;
@@ -89,6 +91,7 @@ export const useChallenge = () => {
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,6 +109,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   // Like functionality state
   const [likeCount, setLikeCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
+
+  // For next/prev navigation
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
 
   const auth = getAuth(app);
   const challengeId = params.id as string;
@@ -135,6 +141,19 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     });
     return () => unsubscribe();
   }, [auth]);
+
+  useEffect(() => {
+    const fetchAllChallenges = async () => {
+        const challengesCollection = collection(db, 'challenges');
+        const q = query(challengesCollection, orderBy('title'));
+        const snapshot = await getDocs(q);
+        const challengesList = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Challenge))
+          .filter(c => c.isEnabled !== false);
+        setAllChallenges(challengesList);
+    };
+    fetchAllChallenges();
+  }, []);
 
   useEffect(() => {
     if (challengeId) {
@@ -558,9 +577,53 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </Tabs>
   );
 
+  const currentIndex = allChallenges.findIndex(c => c.id === challengeId);
+  const prevChallengeId = currentIndex > 0 ? allChallenges[currentIndex - 1].id : null;
+  const nextChallengeId = currentIndex < allChallenges.length - 1 ? allChallenges[currentIndex + 1].id : null;
+
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
+            <header className="flex-shrink-0 bg-slate-900 text-white h-14 flex items-center justify-between px-4">
+                <div className="flex items-center gap-4">
+                    <Link href="/dashboard" className="flex items-center gap-2">
+                        <SmecBattleCodeLogo className="h-7 w-7" />
+                        <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
+                    </Link>
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
+                            <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
+                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                Prev
+                            </Link>
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
+                             <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
+                                Next
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-4">
+                    <Button variant="outline" size="sm" className="bg-transparent text-white hover:bg-white/10" asChild>
+                        <Link href="/challenges">
+                            <List className="h-4 w-4 mr-2" />
+                            Problem List
+                        </Link>
+                    </Button>
+                    {currentUser && (
+                         <Link href="/profile">
+                            <Avatar className="h-8 w-8">
+                               <AvatarImage src={currentUser.imageUrl} alt={currentUser.name} />
+                               <AvatarFallback>
+                                 <User />
+                               </AvatarFallback>
+                             </Avatar>
+                         </Link>
+                    )}
+                 </div>
+            </header>
             <main className="flex-1 flex flex-row overflow-hidden bg-muted/40">
                {isDesktop ? renderDesktopLayout() : renderMobileLayout()}
             </main>

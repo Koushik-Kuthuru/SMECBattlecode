@@ -1,6 +1,6 @@
 
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CodeEditor } from "@/components/code-editor";
 import { app, db } from "@/lib/firebase";
@@ -38,10 +38,10 @@ export default function ChallengeDetail() {
   useEffect(() => {
     if (!challenge) return;
     const availableLangs = challenge.languages || [];
-    const firstLang = availableLangs.length > 0 ? availableLangs[0].toLowerCase() : 'python';
+    const firstLang = availableLangs.length > 0 ? availableLangs[0] : 'Python';
+    setLanguage(firstLang.toLowerCase());
 
     const fetchSolution = async () => {
-      let userLang = firstLang;
       let userCode = (challenge.starterCode && challenge.starterCode[firstLang]) || '';
 
       if (user) {
@@ -52,14 +52,13 @@ export default function ChallengeDetail() {
           // Check if saved language is available for this challenge
           if(availableLangs.includes(data.language)) {
              userCode = data.code;
-             userLang = data.language.toLowerCase();
+             setLanguage(data.language.toLowerCase());
           } else if (challenge.starterCode) {
              // If not, fall back to the first available language's starter code
              userCode = challenge.starterCode[availableLangs[0]] || '';
           }
         }
       }
-      setLanguage(userLang);
       setSolution(userCode || '');
       setInitialSolution(userCode || '');
     };
