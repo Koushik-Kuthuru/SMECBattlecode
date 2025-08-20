@@ -4,86 +4,65 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-
-
-// Mock data - replace with real data fetching
-const contestData: { [key: string]: any } = {
-    'weekly-contest-464': {
-        title: 'Weekly Contest 464',
-        date: 'Sun, Aug 24, 08:00 GMT+05:30',
-        countdown: 'Starts in 3d 10:42:17',
-        welcomeMessage: 'Welcome to the 464th SMEC Weekly Contest. This contest is sponsored by SMEC.',
-        prizes: [
-            'Contestants ranked 1st - 3rd will win a SMEC Backpack',
-            'Contestants ranked 4th - 10th will win a SMEC Water Bottle',
-            'Contestants ranked 63rd, 463rd, and 1024th will win a SMEC Big O Notebook'
-        ],
-        prizeImages: [
-            { src: 'https://placehold.co/100x100.png', alt: 'Backpack', hint: 'tech backpack' },
-            { src: 'https://placehold.co/100x100.png', alt: 'Water Bottle', hint: 'water bottle' },
-            { src: 'https://placehold.co/100x100.png', alt: 'Notebook', hint: 'notebook' },
-        ],
-        notes: [
-            'To provide a better contest and ensure fairness, we listened to our students\' feedback and put in lots of thoughts behind the updated contest rule.',
-            'All submissions will be checked for plagiarism. Any violation will result in disqualification from the contest.'
-        ]
-    },
-    'biweekly-contest-164': {
-        title: 'Biweekly Contest 164',
-        date: 'Sat, Sep 6, 20:00 GMT+05:30',
-        countdown: 'Starts in 9d 23h 18m',
-        welcomeMessage: 'Welcome to the 164th SMEC Biweekly Contest.',
-        prizes: [
-            'Top 5 participants will receive a certificate of excellence.',
-            'Top scorer will get a special mention on the college website.'
-        ],
-        prizeImages: [],
-        notes: [
-            'This is a biweekly event to help you practice regularly.',
-            'Focus on clean, efficient code.'
-        ]
-    },
-    'smec-battlecode-24': {
-        title: "SMEC BATTLECODE '24",
-        date: 'Mon, Oct 20, 10:00 GMT+05:30',
-        countdown: 'Starts in 2 months',
-        welcomeMessage: 'Welcome to the flagship annual coding competition of St. Martin\'s Engineering College!',
-        prizes: [
-            'Winner gets the BATTLECODE Trophy and a cash prize.',
-            'Top 10 finishers get exclusive SMEC merchandise.'
-        ],
-        prizeImages: [
-            { src: 'https://placehold.co/100x100.png', alt: 'Trophy', hint: 'gold trophy' }
-        ],
-        notes: [
-            'This is the most prestigious coding event of the year.',
-            'Prepare well and good luck!'
-        ]
-    },
-     'logic-legion-finals': {
-        title: 'Logic Legion Finals',
-        date: 'Fri, Nov 1, 14:00 GMT+05:30',
-        countdown: 'Starts in 2 months 10 days',
-        welcomeMessage: 'The ultimate test for logical thinkers and problem solvers.',
-        prizes: [
-            'The winner will be crowned the "Logic King/Queen".',
-            'All finalists will receive internship interview opportunities.'
-        ],
-        prizeImages: [],
-        notes: [
-            'Only the top 50 participants from the qualifiers are eligible.'
-        ]
-    }
-};
+import { useEffect, useState } from 'react';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Event } from '@/lib/types';
+import { format } from 'date-fns';
 
 export default function ContestDetailPage() {
     const params = useParams();
     const id = params.id as string;
-    const contest = contestData[id] || contestData['weekly-contest-464']; // Fallback to a default
+    const [contest, setContest] = useState<Event | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!id) return;
+
+        const fetchContest = async () => {
+            setIsLoading(true);
+            const contestDocRef = doc(db, 'events', id);
+            const contestSnap = await getDoc(contestDocRef);
+            if (contestSnap.exists()) {
+                setContest({ id: contestSnap.id, ...contestSnap.data() } as Event);
+            } else {
+                console.log("No such contest!");
+            }
+            setIsLoading(false);
+        };
+        fetchContest();
+    }, [id]);
+
+    const formatDate = (timestamp?: Timestamp) => {
+        if (!timestamp) return 'Date not set';
+        return format(timestamp.toDate(), "EEE, MMM d, HH:mm zzz");
+    };
+
+    if (isLoading) {
+        return (
+            <div className="container mx-auto max-w-4xl py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+            </div>
+        );
+    }
+    
+    if (!contest) {
+        return (
+            <div className="container mx-auto max-w-4xl py-8">
+                <Link href="/arena" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6">
+                    <ArrowLeft className="h-4 w-4"/>
+                    Back to Arena
+                </Link>
+                <h1 className="text-3xl font-bold">Contest Not Found</h1>
+                <p className="text-muted-foreground">The contest you are looking for does not exist or may have been removed.</p>
+            </div>
+        );
+    }
+
 
   return (
     <div className="container mx-auto max-w-4xl py-8">
@@ -98,11 +77,11 @@ export default function ContestDetailPage() {
                  <div className="flex items-center gap-4 text-muted-foreground mt-2">
                      <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
-                        <span>{contest.date}</span>
+                        <span>{formatDate(contest.startDate)}</span>
                      </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-4 w-4" />
-                        <span>{contest.countdown}</span>
+                        <span>Ends {formatDate(contest.endDate)}</span>
                      </div>
                  </div>
             </div>
@@ -115,17 +94,19 @@ export default function ContestDetailPage() {
                 <Button variant="outline" size="icon">
                     <Calendar className="h-4 w-4" />
                 </Button>
-                 <Button variant="outline" size="icon">
-                    <ExternalLink className="h-4 w-4" />
+                 <Button variant="outline" size="icon" asChild>
+                    <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                    </a>
                 </Button>
             </div>
 
             <Separator />
 
             <div className="prose max-w-none text-base">
-                <p>{contest.welcomeMessage}</p>
+                <p>{contest.description}</p>
 
-                {contest.prizes.length > 0 && (
+                {contest.prizes && contest.prizes.length > 0 && (
                     <div className="mt-8 p-4 bg-muted/50 rounded-lg">
                         <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
                             <Star className="h-5 w-5 text-yellow-500" />
@@ -137,7 +118,7 @@ export default function ContestDetailPage() {
                            ))}
                         </ul>
 
-                        {contest.prizeImages.length > 0 && (
+                        {contest.prizeImages && contest.prizeImages.length > 0 && (
                             <div className="flex items-center justify-center gap-8 mt-6">
                                 {contest.prizeImages.map((img: any, index: number) => (
                                     <div key={index} className="flex flex-col items-center gap-2">
@@ -157,19 +138,16 @@ export default function ContestDetailPage() {
                 )}
                 
 
-                {contest.notes.length > 0 && (
-                     <div className="mt-8">
-                        <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-                           <Info className="h-5 w-5 text-blue-500"/>
-                           Important Notes
-                        </h2>
-                        <ol className="space-y-2 list-decimal list-inside">
-                            {contest.notes.map((note: string, index: number) => (
-                                 <li key={index}>{note}</li>
-                            ))}
-                        </ol>
-                    </div>
-                )}
+                <div className="mt-8">
+                    <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                        <Info className="h-5 w-5 text-blue-500"/>
+                        Important Notes
+                    </h2>
+                    <ol className="space-y-2 list-decimal list-inside">
+                        <li>To provide a better contest and ensure fairness, we listened to our students' feedback and put in lots of thoughts behind the updated contest rule.</li>
+                        <li>All submissions will be checked for plagiarism. Any violation will result in disqualification from the contest.</li>
+                    </ol>
+                </div>
             </div>
         </div>
     </div>

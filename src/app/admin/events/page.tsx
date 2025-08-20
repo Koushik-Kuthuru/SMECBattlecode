@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+type PrizeImage = { src: string; alt: string; hint: string };
+
 type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status'> & {
   startDate: Date;
   endDate: Date;
@@ -36,6 +38,8 @@ const defaultFormData: FormData = {
   startDate: new Date(),
   endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
   registrationLink: '',
+  prizes: [],
+  prizeImages: [],
 };
 
 export default function ManageEventsPage() {
@@ -69,9 +73,34 @@ export default function ManageEventsPage() {
     return () => unsubscribe();
   }, [db, toast]);
 
-  const handleInputChange = (field: keyof Omit<FormData, 'startDate' | 'endDate'>, value: string | boolean | number) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'prizeImages'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleArrayChange = (arrayName: 'prizes' | 'prizeImages', index: number, field: string, value: string) => {
+      setFormData(prev => {
+          const newArray = [...(prev[arrayName] || [])];
+          // @ts-ignore
+          newArray[index] = {...newArray[index], [field]: value};
+          return {...prev, [arrayName]: newArray};
+      });
   };
+
+  const addArrayItem = (arrayName: 'prizes' | 'prizeImages') => {
+      setFormData(prev => ({
+          ...prev,
+          [arrayName]: [...(prev[arrayName] || []), arrayName === 'prizes' ? '' : { src: '', alt: '', hint: '' }]
+      }));
+  };
+
+  const removeArrayItem = (arrayName: 'prizes' | 'prizeImages', index: number) => {
+      setFormData(prev => ({
+          ...prev,
+          // @ts-ignore
+          [arrayName]: (prev[arrayName] || []).filter((_, i) => i !== index)
+      }));
+  };
+
 
   const handleDateChange = (field: 'startDate' | 'endDate', value?: Date) => {
     if (value) {
@@ -88,6 +117,7 @@ export default function ManageEventsPage() {
   const handleEditClick = (event: Event) => {
     setEditingEventId(event.id);
     setFormData({
+      ...defaultFormData,
       ...event,
       startDate: event.startDate.toDate(),
       endDate: event.endDate.toDate(),
@@ -257,7 +287,42 @@ export default function ManageEventsPage() {
                     </Popover>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+
+               <div className="space-y-4">
+                  <Label>Prizes</Label>
+                  {(formData.prizes || []).map((prize, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                       <Input value={prize} onChange={(e) => handleArrayChange('prizes', index, 'prize', e.target.value)} placeholder={`Prize #${index + 1}`} />
+                       <Button type="button" variant="destructive" size="icon" onClick={() => removeArrayItem('prizes', index)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => addArrayItem('prizes')}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Prize
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                   <Label>Prize Images</Label>
+                   {(formData.prizeImages || []).map((img, index) => (
+                     <Card key={index} className="p-4 relative bg-muted/50">
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <Input value={img.src} onChange={(e) => handleArrayChange('prizeImages', index, 'src', e.target.value)} placeholder="Image URL" />
+                            <Input value={img.alt} onChange={(e) => handleArrayChange('prizeImages', index, 'alt', e.target.value)} placeholder="Alt Text" />
+                            <Input value={img.hint} onChange={(e) => handleArrayChange('prizeImages', index, 'hint', e.target.value)} placeholder="AI Hint" />
+                        </div>
+                       <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeArrayItem('prizeImages', index)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                     </Card>
+                   ))}
+                   <Button type="button" variant="outline" onClick={() => addArrayItem('prizeImages')}>
+                     <PlusCircle className="mr-2 h-4 w-4" /> Add Prize Image
+                   </Button>
+                </div>
+
+              <div className="flex items-center space-x-2 pt-4">
                 <Switch id="isEnabled" checked={formData.isEnabled} onCheckedChange={(checked) => handleInputChange('isEnabled', checked)} />
                 <Label htmlFor="isEnabled">Enable this event</Label>
               </div>
