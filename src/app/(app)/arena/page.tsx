@@ -151,7 +151,7 @@ export default function ArenaPage() {
                     {liveContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Live Now</h2>
-                            <Carousel opts={{ align: "start", loop: liveContests.length > 1 }} className="w-full">
+                            <Carousel opts={{ align: "start" }} className="w-full">
                                 <CarouselContent>
                                     {liveContests.map(contest => (
                                         <CarouselItem key={contest.id} className="basis-full md:basis-1/2 lg:basis-1/3">
@@ -176,7 +176,7 @@ export default function ArenaPage() {
                     {upcomingContests.length > 0 && (
                         <div className="mt-16">
                             <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Contests</h2>
-                           <Carousel opts={{ align: "start", loop: upcomingContests.length > 1 }} className="w-full">
+                           <Carousel opts={{ align: "start" }} className="w-full">
                                 <CarouselContent>
                                     {upcomingContests.map(contest => (
                                          <CarouselItem key={contest.id} className="basis-full md:basis-1/2 lg:basis-1/3">
