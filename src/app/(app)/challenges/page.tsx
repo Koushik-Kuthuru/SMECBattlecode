@@ -358,7 +358,7 @@ export default function ChallengesPage() {
       return { percentage: 0, text: 'N/A' };
     }
     const rate = Math.round((stats.solved / stats.attempted) * 100);
-    return { percentage: rate, text: `${rate}% (${stats.solved}/${stats.attempted})` };
+    return { percentage: rate, text: `${rate}%` };
   };
 
   return (
