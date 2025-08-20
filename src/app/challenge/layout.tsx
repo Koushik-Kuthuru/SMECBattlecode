@@ -78,6 +78,12 @@ type ChallengeContextType = {
   isChallengeCompleted: boolean;
   isResultsPanelFolded: boolean;
   setIsResultsPanelFolded: React.Dispatch<React.SetStateAction<boolean>>;
+  solution: string;
+  setSolution: React.Dispatch<React.SetStateAction<string>>;
+  language: string;
+  setLanguage: React.Dispatch<React.SetStateAction<string>>;
+  runCodeHandler: (customInput: string) => void;
+  submitHandler: () => void;
 };
 
 const ChallengeContext = createContext<ChallengeContextType | null>(null);
@@ -121,73 +127,71 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  const runCodeHandler = useCallback(async () => {
+  const runCodeHandler = useCallback(async (customInput: string) => {
     if (!challenge) return;
     
-    const visibleTestCases = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
+    // Determine if we're running against examples or custom debug input
+    const isDebugRun = activeTab === 'debug';
     
-    if (!visibleTestCases || visibleTestCases.length === 0) {
+    let testCasesToRun;
+    if (isDebugRun) {
+        // For a debug run, we need an expected output. We can leave it blank
+        // as the debug flow doesn't use it, but the type expects it.
+        testCasesToRun = [{ input: customInput, output: '' }];
+    } else {
+        testCasesToRun = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
+    }
+    
+    if (!testCasesToRun || testCasesToRun.length === 0) {
         toast({
             variant: "destructive",
             title: "Missing Test Cases",
-            description: "This challenge has no example test cases to run against. You can still submit.",
+            description: "No test cases available to run against.",
         });
         return;
     }
     
     setIsRunning(true);
-    setRunResult({ feedback: '', results: [], allPassed: false }); // Show loading state in results
+    setRunResult(null); 
     setDebugOutput(null);
-    setActiveTab('result'); // Switch to result tab
+    setActiveTab(isDebugRun ? 'debug' : 'description'); // Stay on the current tab
     setIsResultsPanelFolded(false);
+
     try {
-        const {evaluateCode} = await import("@/ai/flows/evaluate-code");
-        const result = await evaluateCode({
-            code: solution,
-            programmingLanguage: language,
-            problemDescription: challenge.description,
-            testCases: visibleTestCases,
-        });
-        setRunResult(result);
-        if (result.allPassed) {
-            toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
+        if(isDebugRun) {
+            const {debugCode} = await import("@/ai/flows/debug-code");
+            const result = await debugCode({
+                code: solution,
+                programmingLanguage: language,
+                input: customInput,
+            });
+            setDebugOutput(result);
+
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
+            const {evaluateCode} = await import("@/ai/flows/evaluate-code");
+            const result = await evaluateCode({
+                code: solution,
+                programmingLanguage: language,
+                problemDescription: challenge.description,
+                testCases: testCasesToRun,
+            });
+            setRunResult(result);
+            if (result.allPassed) {
+                toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
+            } else {
+                 toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
+            }
         }
     } catch(error) {
         console.error("Error running code:", error);
         toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
-        setRunResult(null); // Clear loading state on error
+        setRunResult(null);
+        setDebugOutput(null);
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast]);
+  }, [challenge, language, solution, toast, activeTab]);
 
-  const debugCodeHandler = useCallback(async (input: string) => {
-    if (!challenge) return;
-    setIsRunning(true);
-    setRunResult(null);
-    setDebugOutput({ stdout: '', stderr: 'Running in debug mode...' });
-    setActiveTab('result');
-    setIsResultsPanelFolded(false);
-
-    try {
-      const {debugCode} = await import("@/ai/flows/debug-code");
-      const result = await debugCode({
-        code: solution,
-        programmingLanguage: language,
-        input: input,
-      });
-      setDebugOutput(result);
-    } catch(error) {
-      console.error("Error debugging code:", error);
-      toast({ variant: "destructive", title: "Debug Error", description: "Could not run the code for debugging." });
-      setDebugOutput(null);
-    } finally {
-      setIsRunning(false);
-    }
-  }, [challenge, language, solution, toast]);
-  
   const submitHandler = useCallback(async () => {
     if (!currentUser || !challenge || !challengeId) {
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
@@ -196,7 +200,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setIsRunning(true);
     setRunResult({ feedback: '', results: [], allPassed: false });
     setDebugOutput(null);
-    setActiveTab('result');
+    setActiveTab('description');
     setIsResultsPanelFolded(false);
 
     try {
@@ -435,6 +439,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       isChallengeCompleted,
       isResultsPanelFolded,
       setIsResultsPanelFolded,
+      solution,
+      setSolution,
+      language,
+      setLanguage,
+      runCodeHandler,
+      submitHandler,
   };
   
   const difficultyColors = {
@@ -515,7 +525,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 />
             </div>
             <Button 
-                onClick={() => debugCodeHandler(customInput)}
+                onClick={() => runCodeHandler(customInput)}
                 disabled={isRunning}
                 size="sm"
             >
@@ -528,7 +538,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const leftPanel = (
     <div className="h-full flex flex-col bg-background">
-       <Tabs defaultValue="description" className="h-full flex flex-col">
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="flex-shrink-0 p-2 border-b">
             <TabsList>
                 <TabsTrigger value="description">Description</TabsTrigger>
@@ -686,7 +696,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 )}
             </ResizablePanel>
              <ResizableHandle />
-             <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 40} minSize={15} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
+             <ResizablePanel defaultSize={isResultsPanelFolded ? 0 : 40} minSize={15} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
                 {testResultPanel}
             </ResizablePanel>
         </ResizablePanelGroup>
@@ -717,7 +727,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         </Tabs>
       </ResizablePanel>
        <ResizableHandle />
-       <ResizablePanel defaultSize={50} minSize={20} collapsed={isResultsPanelFolded} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
+       <ResizablePanel defaultSize={50} minSize={20} collapsible onCollapse={() => setIsResultsPanelFolded(true)} onExpand={() => setIsResultsPanelFolded(false)}>
          {testResultPanel}
        </ResizablePanel>
     </ResizablePanelGroup>
@@ -745,7 +755,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                         </Link>
                     </Button>
                      <Button variant="ghost" size="sm" asChild>
-                        <Link href="/challenges">
+                        <Link href="/challenges" className="hover:bg-white/10">
                             <List className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -780,3 +790,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
