@@ -57,18 +57,25 @@ export type EvaluateCodeOutput = z.infer<typeof EvaluateCodeOutputSchema>;
  * @returns The Judge0 submission result
  */
 async function runOnJudge0(languageId: number, sourceCode: string, stdin: string) {
+  const usePublicAPI = !process.env.JUDGE0_API_URL;
+  const url = usePublicAPI 
+    ? 'https://judge0-ce.p.rapidapi.com/submissions' 
+    : `${process.env.JUDGE0_API_URL}/submissions`;
+
+  const headers: any = { 'content-type': 'application/json' };
+  if (usePublicAPI) {
+    headers['X-RapidAPI-Key'] = process.env.JUDGE0_API_KEY;
+    headers['X-RapidAPI-Host'] = 'judge0-ce.p.rapidapi.com';
+  }
+
   const options = {
     method: 'POST',
-    url: 'https://judge0-ce.p.rapidapi.com/submissions',
+    url: url,
     params: {
       base64_encoded: 'false',
       fields: '*'
     },
-    headers: {
-      'content-type': 'application/json',
-      'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-    },
+    headers: headers,
     data: {
       language_id: languageId,
       source_code: sourceCode,
@@ -79,14 +86,18 @@ async function runOnJudge0(languageId: number, sourceCode: string, stdin: string
   const submissionResponse = await axios.request(options);
   const token = submissionResponse.data.token;
 
-  // Poll for the result
+  if (!token) {
+    // Self-hosted instances might return results immediately
+    return submissionResponse.data;
+  }
+
+  // Poll for the result if using public API
+  const getResultUrl = usePublicAPI
+    ? `https://judge0-ce.p.rapidapi.com/submissions/${token}`
+    : `${process.env.JUDGE0_API_URL}/submissions/${token}`;
+
   while (true) {
-    const resultResponse = await axios.get(`https://judge0-ce.p.rapidapi.com/submissions/${token}?base64_encoded=false&fields=*`, {
-        headers: {
-            'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-        }
-    });
+    const resultResponse = await axios.get(`${getResultUrl}?base64_encoded=false&fields=*`, { headers });
     const statusId = resultResponse.data.status.id;
     if (statusId > 2) { // Statuses: 1-In Queue, 2-Processing. Others are final.
         return resultResponse.data;
@@ -111,8 +122,8 @@ const evaluateCodeFlow = ai.defineFlow(
     if (!languageId) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
-    if (!process.env.JUDGE0_API_KEY) {
-        throw new Error('JUDGE0_API_KEY is not set in the environment variables.');
+    if (!process.env.JUDGE0_API_URL && !process.env.JUDGE0_API_KEY) {
+      throw new Error('JUDGE0_API_KEY must be set in the environment variables if not using a self-hosted Judge0 instance.');
     }
 
     const results: z.infer<typeof TestCaseResultSchema>[] = [];
@@ -145,6 +156,8 @@ const evaluateCodeFlow = ai.defineFlow(
              let errorMessage = `Execution Error: ${error.message}`;
              if (error.response?.status === 429) {
                 errorMessage = "Execution Error: Too many requests. You have exceeded the API rate limit for code execution. Please wait a moment and try again.";
+             } else if(error.response?.data?.message?.includes('exceeded the DAILY quota')) {
+                errorMessage = "Execution Error: You have exceeded the daily quota for the public code execution API. Please try again tomorrow or set up a self-hosted instance.";
              } else if(error.response?.status === 403) {
                 errorMessage = "Execution Error: 403 Forbidden. This may be due to an invalid API key or exceeding your daily quota. Please check your Judge0 API key and plan.";
              } else if (error.response?.data?.message) {
