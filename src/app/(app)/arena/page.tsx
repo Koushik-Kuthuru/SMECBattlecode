@@ -175,7 +175,7 @@ export default function ArenaPage() {
                     
                     {upcomingContests.length > 0 && (
                         <div className="mt-16">
-                            <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Contests</h2>
+                            <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Battles</h2>
                            <Carousel opts={{ align: "start" }} className="w-full">
                                 <CarouselContent>
                                     {upcomingContests.map(contest => (
