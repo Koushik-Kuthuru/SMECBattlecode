@@ -42,7 +42,7 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
     return <span>{`Starts in ${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
 };
 
-const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past' }) => (
+const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status, enrolled }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past'; enrolled: number; }) => (
   <Link href={`/arena/${id}`} className="block group">
     <Card className="overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:transform group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:shadow-primary/20">
         <div className="relative h-56">
@@ -67,6 +67,10 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { 
         <div className="p-4 bg-card">
           <h3 className="text-lg font-bold text-card-foreground">{title}</h3>
           <p className="text-sm text-muted-foreground">{schedule}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+            <Users className="h-4 w-4" />
+            <span>{enrolled} users registered</span>
+          </div>
         </div>
     </Card>
   </Link>
@@ -176,6 +180,7 @@ export default function ArenaPage() {
                                                     imageUrl={contest.imageUrl}
                                                     aiHint={contest.aiHint}
                                                     status="live"
+                                                    enrolled={contest.enrolled || 0}
                                                 />
                                             </div>
                                         </CarouselItem>
@@ -201,6 +206,7 @@ export default function ArenaPage() {
                                                     imageUrl={contest.imageUrl}
                                                     aiHint={contest.aiHint}
                                                     status="upcoming"
+                                                    enrolled={contest.enrolled || 0}
                                                 />
                                             </div>
                                         </CarouselItem>
