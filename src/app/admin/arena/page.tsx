@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 type Prize = { rank: string; details: string };
 
-type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color' | 'registeredUsers' | 'enrolled'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color' | 'registeredUsers'> & {
   startDate: Date;
   endDate: Date;
   prizes: Prize[];
@@ -50,6 +50,7 @@ export default function ManageArenaPage() {
     prizes: [],
     importantNotes: [],
     announcements: [],
+    enrolled: 0,
     color: '#3b82f6',
   };
 
@@ -143,6 +144,7 @@ export default function ManageArenaPage() {
       prizes: event.prizes || [],
       importantNotes: event.importantNotes || [],
       announcements: event.announcements || [],
+      enrolled: event.enrolled || 0,
       color: event.color || '#3b82f6',
     });
     setIsFormVisible(true);
@@ -159,7 +161,6 @@ export default function ManageArenaPage() {
     setIsSaving(true);
     
     // Admin no longer sets enrolled count, but we need to preserve it if it exists.
-    const currentEnrolledCount = editingContestId ? (contests.find(c => c.id === editingContestId)?.enrolled || 0) : 0;
     const currentRegisteredUsers = editingContestId ? (contests.find(c => c.id === editingContestId)?.registeredUsers || []) : [];
 
     const { description, ...restOfFormData } = formData;
@@ -168,7 +169,6 @@ export default function ManageArenaPage() {
         startDate: Timestamp.fromDate(formData.startDate),
         endDate: Timestamp.fromDate(formData.endDate),
         type: 'Challenge' as const,
-        enrolled: currentEnrolledCount, // Preserve existing enrolled count
         registeredUsers: currentRegisteredUsers,
     };
 
@@ -275,7 +275,7 @@ export default function ManageArenaPage() {
                 <Label htmlFor='title'>Title</Label>
                 <Input id='title' placeholder="Contest Title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
               </div>
-              <div className="grid md:grid-cols-2 gap-6">
+               <div className="grid md:grid-cols-2 gap-6">
                  <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL</Label>
                     <Input id="imageUrl" placeholder="https://example.com/image.png" value={formData.imageUrl} onChange={(e) => handleInputChange('imageUrl', e.target.value)} required />
@@ -285,13 +285,19 @@ export default function ManageArenaPage() {
                     <Input id="aiHint" placeholder="e.g., coding contest" value={formData.aiHint} onChange={(e) => handleInputChange('aiHint', e.target.value)} />
                  </div>
               </div>
-               <div className="space-y-2">
+               <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                     <Label htmlFor="color">Theme Color</Label>
                     <div className="flex items-center gap-2">
                         <Input id="color" type="color" value={formData.color} onChange={(e) => handleInputChange('color', e.target.value)} className="w-12 h-10 p-1" />
                         <Input value={formData.color} onChange={(e) => handleInputChange('color', e.target.value)} />
                     </div>
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="enrolled">Enrolled Count (initial)</Label>
+                    <Input id="enrolled" type="number" placeholder="0" value={formData.enrolled} onChange={(e) => handleInputChange('enrolled', parseInt(e.target.value, 10) || 0)} required />
+                 </div>
+               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 {renderDateTimePicker('startDate')}
                 {renderDateTimePicker('endDate')}
