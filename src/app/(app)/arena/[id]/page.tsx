@@ -5,7 +5,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -272,7 +272,12 @@ export default function ContestDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-stretch gap-2">
-                {isRegistered ? (
+                {contestStatus === 'past' ? (
+                     <Button disabled>
+                        <Play className="mr-2 h-4 w-4" />
+                        Virtual Contest
+                    </Button>
+                ) : isRegistered ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                              <Button className="bg-green-600 hover:bg-red-600 group" disabled={isRegistering}>
@@ -402,5 +407,3 @@ export default function ContestDetailPage() {
     </div>
   );
 }
-
-    
