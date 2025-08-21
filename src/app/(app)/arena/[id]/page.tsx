@@ -284,7 +284,7 @@ export default function ContestDetailPage() {
                              <AlertDialogHeader>
                                 <AlertDialogTitle className="flex items-center gap-2">
                                     <Gamepad2 className="h-5 w-5" />
-                                    Replay Past Contests
+                                    Replay Past Battle
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                    Practice in virtual mode! Earn scores & rankings without impacting your official profile.
