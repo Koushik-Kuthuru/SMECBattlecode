@@ -36,6 +36,7 @@ export type Event = {
     importantNotes?: string[];
     announcements?: string[];
     color?: string;
+    registeredUsers?: string[];
 };
 
 export type StudyPlan = {

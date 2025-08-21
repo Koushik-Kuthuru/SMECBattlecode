@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
 import { format } from 'date-fns';
@@ -49,7 +49,12 @@ export default function ContestDetailPage() {
         const unsubscribe = onSnapshot(contestDocRef, (docSnap) => {
             setIsLoading(true);
             if (docSnap.exists()) {
-                setContest({ id: docSnap.id, ...docSnap.data() } as Event);
+                const contestData = { id: docSnap.id, ...docSnap.data() } as Event;
+                setContest(contestData);
+                // Check if current user is registered
+                if (currentUser && contestData.registeredUsers?.includes(currentUser.uid)) {
+                    setIsRegistered(true);
+                }
             } else {
                 console.log("No such contest!");
                 setContest(null);
@@ -58,7 +63,7 @@ export default function ContestDetailPage() {
         });
 
         return () => unsubscribe();
-    }, [id]);
+    }, [id, currentUser]);
 
     const handleRegisterConfirm = async () => {
         if (!currentUser) {
@@ -76,7 +81,15 @@ export default function ContestDetailPage() {
                 if (!contestDoc.exists()) {
                     throw new Error("Contest does not exist!");
                 }
-                transaction.update(contestDocRef, { enrolled: increment(1) });
+                 const contestData = contestDoc.data();
+                 // Prevent double registration in transaction
+                if (contestData.registeredUsers?.includes(currentUser.uid)) {
+                    return;
+                }
+                transaction.update(contestDocRef, { 
+                    enrolled: increment(1),
+                    registeredUsers: arrayUnion(currentUser.uid)
+                });
             });
             setIsRegistered(true);
         } catch (error) {
@@ -178,26 +191,13 @@ export default function ContestDetailPage() {
                  </div>
             </div>
 
-            {isRegistered ? (
-                 <Card className="bg-card">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                            <CheckCircle className="h-10 w-10 text-green-500 flex-shrink-0" />
-                            <div className="flex-1 text-center sm:text-left">
-                                <h3 className="text-xl font-bold">Registered</h3>
-                                <p className="text-muted-foreground">The contest hasn't begun yet — sharpen your skills with past questions!</p>
-                            </div>
-                             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                                <Button variant="ghost" className="w-full sm:w-auto">Maybe Later</Button>
-                                <Button asChild className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
-                                    <Link href="/challenges">Start Practicing</Link>
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="flex flex-wrap items-stretch gap-2">
+            <div className="flex flex-wrap items-stretch gap-2">
+                {isRegistered ? (
+                    <Button disabled className="bg-green-600 hover:bg-green-600">
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Registered
+                    </Button>
+                ) : (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
@@ -221,21 +221,21 @@ export default function ContestDetailPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
+                )}
 
-                    <Button variant="outline" onClick={handleShare} disabled={isSharing}>
-                        {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
-                        Share
+                <Button variant="outline" onClick={handleShare} disabled={isSharing}>
+                    {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                    Share
+                </Button>
+                {contest.registrationLink && (
+                    <Button variant="outline" asChild>
+                        <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Official Registration
+                        </a>
                     </Button>
-                    {contest.registrationLink && (
-                        <Button variant="outline" asChild>
-                            <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                Official Registration
-                            </a>
-                        </Button>
-                    )}
-                </div>
-            )}
+                )}
+            </div>
 
 
             <Separator />
