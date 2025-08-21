@@ -5,7 +5,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -273,10 +273,31 @@ export default function ContestDetailPage() {
 
             <div className="flex flex-wrap items-stretch gap-2">
                 {contestStatus === 'past' ? (
-                     <Button disabled>
-                        <Play className="mr-2 h-4 w-4" />
-                        Virtual Contest
-                    </Button>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button>
+                                <Play className="mr-2 h-4 w-4" />
+                                Digital Duel
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                             <AlertDialogHeader>
+                                <AlertDialogTitle className="flex items-center gap-2">
+                                    <Gamepad2 className="h-5 w-5" />
+                                    Replay Past Contests
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                   Practice in virtual mode! Earn scores & rankings without impacting your official profile.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Not Now</AlertDialogCancel>
+                                <AlertDialogAction>
+                                    Start Practice
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 ) : isRegistered ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
