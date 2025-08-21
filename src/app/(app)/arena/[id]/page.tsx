@@ -17,6 +17,17 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
 import { BulletCoin } from '@/components/icons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ContestDetailPage() {
     const params = useParams();
@@ -48,7 +59,7 @@ export default function ContestDetailPage() {
         return () => unsubscribe();
     }, [id]);
 
-    const handleRegister = async () => {
+    const handleRegisterConfirm = async () => {
         if (!currentUser) {
             toast({ variant: 'destructive', title: 'Not Logged In', description: 'Please log in to register for contests.' });
             router.push('/login');
@@ -167,10 +178,30 @@ export default function ContestDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-stretch gap-2">
-                <Button onClick={handleRegister} disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
-                    {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />}
-                    Register
-                </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
+                            <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />
+                            Register
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Register for Contest?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                If you can't participate, you can unregister before the contest begins to keep your rating safe. Are you sure you want to proceed?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleRegisterConfirm} disabled={isRegistering}>
+                                {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Confirm Registration
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
                 <Button variant="outline" onClick={handleShare} disabled={isSharing}>
                     {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
                     Share
