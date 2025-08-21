@@ -5,12 +5,12 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
 import { format } from 'date-fns';
@@ -54,6 +54,8 @@ export default function ContestDetailPage() {
                 // Check if current user is registered
                 if (currentUser && contestData.registeredUsers?.includes(currentUser.uid)) {
                     setIsRegistered(true);
+                } else {
+                    setIsRegistered(false);
                 }
             } else {
                 console.log("No such contest!");
@@ -100,6 +102,32 @@ export default function ContestDetailPage() {
         }
     };
     
+    const handleUnregisterConfirm = async () => {
+        if (!currentUser || !id) return;
+        setIsRegistering(true); // Reuse the same loading state
+
+        const contestDocRef = doc(db, 'events', id);
+        try {
+            await runTransaction(db, async (transaction) => {
+                const contestDoc = await transaction.get(contestDocRef);
+                if (!contestDoc.exists()) {
+                    throw new Error("Contest does not exist!");
+                }
+                transaction.update(contestDocRef, {
+                    enrolled: increment(-1),
+                    registeredUsers: arrayRemove(currentUser.uid)
+                });
+            });
+            setIsRegistered(false);
+            toast({ title: 'Unregistered', description: 'You have successfully left the contest.' });
+        } catch (error) {
+            console.error("Error unregistering from contest:", error);
+            toast({ variant: 'destructive', title: 'Unregistration Failed', description: 'Could not leave the contest. Please try again.' });
+        } finally {
+            setIsRegistering(false);
+        }
+    };
+
     const handleShare = async () => {
         if (!contest) return;
         setIsSharing(true);
@@ -193,10 +221,35 @@ export default function ContestDetailPage() {
 
             <div className="flex flex-wrap items-stretch gap-2">
                 {isRegistered ? (
-                    <Button disabled className="bg-green-600 hover:bg-green-600">
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Registered
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button className="bg-green-600 hover:bg-red-600 group" disabled={isRegistering}>
+                                <span className="group-hover:hidden flex items-center">
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Registered
+                                </span>
+                                <span className="hidden group-hover:flex items-center">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Leave the Contest?
+                                </span>
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                             <AlertDialogHeader>
+                                <AlertDialogTitle>Leave the Contest?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                   Are you sure you want to unregister? You can always join back before the contest starts.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleUnregisterConfirm} disabled={isRegistering} className="bg-destructive hover:bg-destructive/90">
+                                    {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Leave Contest
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 ) : (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -297,3 +350,5 @@ export default function ContestDetailPage() {
     </div>
   );
 }
+
+    
