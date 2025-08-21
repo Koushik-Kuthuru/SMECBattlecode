@@ -283,17 +283,17 @@ export default function ContestDetailPage() {
                         <AlertDialogContent>
                              <AlertDialogHeader>
                                 <AlertDialogTitle className="flex items-center gap-2">
-                                    <Gamepad2 className="h-5 w-5" />
-                                    Replay Past Battle
+                                    <CheckCircle className="h-5 w-5 text-primary" />
+                                    Ready to Go! 🚀
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                   Practice in virtual mode! Earn scores & rankings without impacting your official profile.
+                                   The virtual contest is live! Jump in and showcase your skills.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Not Now</AlertDialogCancel>
+                                <AlertDialogCancel>Maybe Later</AlertDialogCancel>
                                 <AlertDialogAction>
-                                    Start Practice
+                                    Join Now
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
