@@ -16,7 +16,7 @@ import { formatDistanceToNow, differenceInSeconds, format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
-const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
+const Countdown = ({ to, prefix }: { to: Date, prefix: string }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -24,22 +24,21 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
             const newNow = new Date();
             setNow(newNow);
             if (differenceInSeconds(to, newNow) <= 0) {
-                onEnd();
                 clearInterval(timer);
             }
         }, 1000);
         return () => clearInterval(timer);
-    }, [to, onEnd]);
+    }, [to]);
 
     const seconds = differenceInSeconds(to, now);
-    if (seconds <= 0) return <span>Event is live!</span>;
+    if (seconds <= 0) return null;
 
     const days = Math.floor(seconds / (3600 * 24));
     const hours = Math.floor((seconds % (3600*24)) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    return <span>{`Starts in ${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
+    return <span>{`${prefix} ${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
 };
 
 const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status, enrolled }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past'; enrolled: number; }) => (
@@ -128,10 +127,13 @@ export default function ArenaPage() {
     const pastContests = contests.filter(c => c.endDate.toDate() < now);
 
     const getTimeDisplay = (contest: Event) => {
+        const startDate = contest.startDate.toDate();
+        const endDate = contest.endDate.toDate();
         const now = new Date();
-        if (contest.endDate.toDate() < now) return 'Contest Ended';
-        if (contest.startDate.toDate() <= now) return `Ends ${formatDistanceToNow(contest.endDate.toDate(), { addSuffix: true })}`;
-        return <Countdown to={contest.startDate.toDate()} onEnd={() => setTick(t => t + 1)} />;
+
+        if (now > endDate) return 'Contest Ended';
+        if (now >= startDate && now <= endDate) return <Countdown to={endDate} prefix="Ends in" />;
+        return <Countdown to={startDate} prefix="Starts in" />;
     };
     
     const getScheduleDisplay = (contest: Event) => {
@@ -245,3 +247,5 @@ export default function ArenaPage() {
     </div>
   );
 }
+
+    

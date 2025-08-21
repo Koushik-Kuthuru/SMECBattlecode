@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
-import { format, differenceInSeconds } from 'date-fns';
+import { format, formatDistanceToNow, differenceInSeconds } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
 import { BulletCoin } from '@/components/icons';
@@ -29,7 +29,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-const Countdown = ({ to }: { to: Date }) => {
+const Countdown = ({ to, prefix }: { to: Date, prefix: string }) => {
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -51,7 +51,7 @@ const Countdown = ({ to }: { to: Date }) => {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    return `Starts in ${days}d ${hours}h ${minutes}m ${secs}s`;
+    return `${prefix} ${days}d ${hours}h ${minutes}m ${secs}s`;
 };
 
 export default function ContestDetailPage() {
@@ -225,7 +225,29 @@ export default function ContestDetailPage() {
 
   const customColorStyle = contest.color ? { color: contest.color } : {};
   const customBgColorStyle = contest.color ? { backgroundColor: contest.color } : {};
-  const isUpcoming = contest.startDate.toDate() > new Date();
+  
+  const now = new Date();
+  const startDate = contest.startDate.toDate();
+  const endDate = contest.endDate.toDate();
+
+  let contestStatus: 'upcoming' | 'live' | 'past' = 'upcoming';
+  if (now >= startDate && now <= endDate) {
+    contestStatus = 'live';
+  } else if (now > endDate) {
+    contestStatus = 'past';
+  }
+
+  const getStatusDisplay = () => {
+    switch (contestStatus) {
+        case 'upcoming':
+            return <Countdown to={startDate} prefix="Starts in" />;
+        case 'live':
+            return <Countdown to={endDate} prefix="Ends in" />;
+        case 'past':
+            return <span>Ended {formatDistanceToNow(endDate, { addSuffix: true })}</span>;
+    }
+  };
+
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
@@ -242,12 +264,10 @@ export default function ContestDetailPage() {
                         <Calendar className="h-4 w-4" />
                         <span>{formatFullDate(contest.startDate)}</span>
                     </div>
-                    {isUpcoming && (
-                        <div className="flex items-center gap-1.5 font-medium text-primary">
-                            <Clock className="h-4 w-4" />
-                            <Countdown to={contest.startDate.toDate()} />
-                        </div>
-                    )}
+                    <div className="flex items-center gap-1.5 font-medium text-primary">
+                        <Clock className="h-4 w-4" />
+                        {getStatusDisplay()}
+                    </div>
                  </div>
             </div>
 
@@ -285,7 +305,7 @@ export default function ContestDetailPage() {
                 ) : (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
+                            <Button disabled={isRegistering || contestStatus === 'past'} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
                                 <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />
                                 Register
                             </Button>
@@ -382,3 +402,5 @@ export default function ContestDetailPage() {
     </div>
   );
 }
+
+    
