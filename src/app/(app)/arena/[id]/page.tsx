@@ -37,6 +37,7 @@ export default function ContestDetailPage() {
     const [contest, setContest] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRegistering, setIsRegistering] = useState(false);
+    const [isRegistered, setIsRegistered] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -77,7 +78,7 @@ export default function ContestDetailPage() {
                 }
                 transaction.update(contestDocRef, { enrolled: increment(1) });
             });
-            toast({ title: "Registration Successful!", description: "You've been enrolled in the contest." });
+            setIsRegistered(true);
         } catch (error) {
             console.error("Error registering for contest:", error);
             toast({ variant: 'destructive', title: 'Registration Failed', description: 'Could not register for the contest. Please try again.' });
@@ -177,44 +178,65 @@ export default function ContestDetailPage() {
                  </div>
             </div>
 
-            <div className="flex flex-wrap items-stretch gap-2">
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
-                            <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />
-                            Register
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Register for Contest?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                If you can't participate, you can unregister before the contest begins to keep your rating safe. Are you sure you want to proceed?
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleRegisterConfirm} disabled={isRegistering}>
-                                {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Confirm Registration
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+            {isRegistered ? (
+                 <Card className="bg-card">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                            <CheckCircle className="h-10 w-10 text-green-500 flex-shrink-0" />
+                            <div className="flex-1 text-center sm:text-left">
+                                <h3 className="text-xl font-bold">Registered</h3>
+                                <p className="text-muted-foreground">The contest hasn't begun yet — sharpen your skills with past questions!</p>
+                            </div>
+                             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <Button variant="ghost" className="w-full sm:w-auto">Maybe Later</Button>
+                                <Button asChild className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
+                                    <Link href="/challenges">Start Practicing</Link>
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="flex flex-wrap items-stretch gap-2">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button disabled={isRegistering} className="group transition-transform hover:scale-105" style={customBgColorStyle}>
+                                <Swords className="mr-2 h-4 w-4 transition-transform group-hover:rotate-6" />
+                                Register
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Register for Contest?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    If you can't participate, you can unregister before the contest begins to keep your rating safe. Are you sure you want to proceed?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleRegisterConfirm} disabled={isRegistering}>
+                                    {isRegistering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Confirm Registration
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
 
-                <Button variant="outline" onClick={handleShare} disabled={isSharing}>
-                    {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
-                    Share
-                </Button>
-                {contest.registrationLink && (
-                    <Button variant="outline" asChild>
-                        <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Official Registration
-                        </a>
+                    <Button variant="outline" onClick={handleShare} disabled={isSharing}>
+                        {isSharing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                        Share
                     </Button>
-                )}
-            </div>
+                    {contest.registrationLink && (
+                        <Button variant="outline" asChild>
+                            <a href={contest.registrationLink} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                Official Registration
+                            </a>
+                        </Button>
+                    )}
+                </div>
+            )}
+
 
             <Separator />
 
