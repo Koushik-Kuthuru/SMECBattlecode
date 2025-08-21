@@ -20,19 +20,23 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, setHours, setMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Challenge } from '@/lib/data';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Prize = { rank: string; details: string };
 
-type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color' | 'registeredUsers'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color' | 'registeredUsers' | 'challengeIds'> & {
   startDate: Date;
   endDate: Date;
   prizes: Prize[];
   color: string;
+  challengeIds: string[];
 };
 
 export default function ManageArenaPage() {
   const { toast } = useToast();
   const [contests, setContests] = useState<Event[]>([]);
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingContestId, setEditingContestId] = useState<string | null>(null);
@@ -52,6 +56,7 @@ export default function ManageArenaPage() {
     announcements: [],
     enrolled: 0,
     color: '#3b82f6',
+    challengeIds: [],
   };
 
   const [formData, setFormData] = useState<FormData>(defaultFormData);
@@ -59,6 +64,7 @@ export default function ManageArenaPage() {
   
   const db = getFirestore(app);
   const eventsCollectionRef = collection(db, 'events');
+  const challengesCollectionRef = collection(db, 'challenges');
 
   useEffect(() => {
     const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
@@ -77,11 +83,20 @@ export default function ManageArenaPage() {
       });
       setIsLoading(false);
     });
+    
+    const challengesQuery = query(challengesCollectionRef, orderBy('title'));
+    const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
+        const challengesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
+        setAllChallenges(challengesList);
+    });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        unsubscribeChallenges();
+    }
   }, [db, toast]);
 
-  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements' | 'description'>, value: string | boolean | number) => {
+  const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements' | 'description' | 'challengeIds'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
@@ -127,6 +142,15 @@ export default function ManageArenaPage() {
       setFormData(prev => ({ ...prev, [field]: updatedDate }));
   };
 
+  const handleChallengeSelection = (challengeId: string, checked: boolean) => {
+    setFormData(prev => {
+        const newChallengeIds = checked
+            ? [...prev.challengeIds, challengeId]
+            : prev.challengeIds.filter(id => id !== challengeId);
+        return { ...prev, challengeIds: newChallengeIds };
+    });
+  };
+
   const handleAddNewClick = () => {
     setEditingContestId(null);
     setFormData(defaultFormData);
@@ -146,6 +170,7 @@ export default function ManageArenaPage() {
       announcements: event.announcements || [],
       enrolled: event.enrolled || 0,
       color: event.color || '#3b82f6',
+      challengeIds: event.challengeIds || [],
     });
     setIsFormVisible(true);
   };
@@ -284,7 +309,7 @@ export default function ManageArenaPage() {
                     <Label htmlFor="aiHint">AI Hint (for image search)</Label>
                     <Input id="aiHint" placeholder="e.g., coding contest" value={formData.aiHint} onChange={(e) => handleInputChange('aiHint', e.target.value)} />
                  </div>
-              </div>
+               </div>
                <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="color">Theme Color</Label>
@@ -349,6 +374,26 @@ export default function ManageArenaPage() {
                    <Button type="button" variant="outline" onClick={() => addDynamicArrayItem('prizes')}>
                      <PlusCircle className="mr-2 h-4 w-4" /> Add Prize Row
                    </Button>
+                </div>
+
+                <div className="space-y-4">
+                    <Label>Contest Challenges (select 4)</Label>
+                    <Card className="max-h-60 overflow-y-auto p-4">
+                        <div className="space-y-2">
+                            {allChallenges.map(challenge => (
+                                <div key={challenge.id} className="flex items-center gap-2">
+                                    <Checkbox
+                                        id={`challenge-${challenge.id}`}
+                                        checked={formData.challengeIds.includes(challenge.id!)}
+                                        onCheckedChange={(checked) => handleChallengeSelection(challenge.id!, !!checked)}
+                                        disabled={!formData.challengeIds.includes(challenge.id!) && formData.challengeIds.length >= 4}
+                                    />
+                                    <Label htmlFor={`challenge-${challenge.id}`} className="font-normal">{challenge.title}</Label>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                    <p className="text-sm text-muted-foreground">{formData.challengeIds.length} / 4 selected</p>
                 </div>
 
               <div className="flex items-center space-x-2 pt-4">

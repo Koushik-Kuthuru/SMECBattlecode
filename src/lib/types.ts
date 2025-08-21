@@ -37,6 +37,7 @@ export type Event = {
     announcements?: string[];
     color?: string;
     registeredUsers?: string[];
+    challengeIds?: string[];
 };
 
 export type StudyPlan = {
