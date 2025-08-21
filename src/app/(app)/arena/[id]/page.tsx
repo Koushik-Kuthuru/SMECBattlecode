@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, differenceInSeconds } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
 import { BulletCoin } from '@/components/icons';
@@ -28,6 +28,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+
+const Countdown = ({ to }: { to: Date }) => {
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const newNow = new Date();
+            setNow(newNow);
+            if (differenceInSeconds(to, newNow) <= 0) {
+                clearInterval(timer);
+            }
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [to]);
+
+    const seconds = differenceInSeconds(to, now);
+    if (seconds <= 0) return null;
+
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600*24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return `Starts in ${days}d ${hours}h ${minutes}m ${secs}s`;
+};
 
 export default function ContestDetailPage() {
     const params = useParams();
@@ -167,9 +192,14 @@ export default function ContestDetailPage() {
         }
     };
 
-    const formatDate = (timestamp?: Timestamp) => {
+    const formatFullDate = (timestamp?: Timestamp) => {
         if (!timestamp) return 'Date not set';
-        return format(timestamp.toDate(), "EEE, MMM d, h:mm a");
+        const date = timestamp.toDate();
+        const offset = -date.getTimezoneOffset();
+        const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+        const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, '0');
+        const sign = offset >= 0 ? '+' : '-';
+        return `${format(date, "EEE, MMM d, HH:mm")} GMT${sign}${offsetHours}:${offsetMinutes}`;
     };
 
     if (isLoading) {
@@ -195,7 +225,7 @@ export default function ContestDetailPage() {
 
   const customColorStyle = contest.color ? { color: contest.color } : {};
   const customBgColorStyle = contest.color ? { backgroundColor: contest.color } : {};
-
+  const isUpcoming = contest.startDate.toDate() > new Date();
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6">
@@ -207,15 +237,17 @@ export default function ContestDetailPage() {
         <div className="space-y-8">
             <div>
                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight" style={customColorStyle}>{contest.title}</h1>
-                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-muted-foreground mt-2">
-                     <div className="flex items-center gap-1.5">
+                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-x-4 gap-y-2 text-muted-foreground mt-2">
+                    <div className="flex items-center gap-1.5">
                         <Calendar className="h-4 w-4" />
-                        <span>{formatDate(contest.startDate)}</span>
-                     </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
-                        <span>Ends {formatDate(contest.endDate)}</span>
-                     </div>
+                        <span>{formatFullDate(contest.startDate)}</span>
+                    </div>
+                    {isUpcoming && (
+                        <div className="flex items-center gap-1.5 font-medium text-primary">
+                            <Clock className="h-4 w-4" />
+                            <Countdown to={contest.startDate.toDate()} />
+                        </div>
+                    )}
                  </div>
             </div>
 
@@ -350,5 +382,3 @@ export default function ContestDetailPage() {
     </div>
   );
 }
-
-    

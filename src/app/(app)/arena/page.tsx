@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -20,9 +21,11 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
 
     useEffect(() => {
         const timer = setInterval(() => {
-            setNow(new Date());
-            if (differenceInSeconds(to, new Date()) <= 0) {
+            const newNow = new Date();
+            setNow(newNow);
+            if (differenceInSeconds(to, newNow) <= 0) {
                 onEnd();
+                clearInterval(timer);
             }
         }, 1000);
         return () => clearInterval(timer);
@@ -36,7 +39,7 @@ const Countdown = ({ to, onEnd }: { to: Date, onEnd: () => void }) => {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    return <span>{`${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
+    return <span>{`Starts in ${days}d ${hours}h ${minutes}m ${secs}s`}</span>;
 };
 
 const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status }: { id: string; title: string; time: string | JSX.Element; schedule: string; imageUrl: string; aiHint?: string; status: 'live' | 'upcoming' | 'past' }) => (
@@ -119,7 +122,7 @@ export default function ArenaPage() {
     }, []);
 
     const now = new Date();
-    const upcomingContests = contests.filter(c => c.startDate.toDate() > now);
+    const upcomingContests = contests.filter(c => c.startDate.toDate() > now).sort((a, b) => a.startDate.toDate().getTime() - b.startDate.toDate().getTime());
     const liveContests = contests.filter(c => c.startDate.toDate() <= now && c.endDate.toDate() >= now);
     const pastContests = contests.filter(c => c.endDate.toDate() < now);
 
@@ -128,6 +131,15 @@ export default function ArenaPage() {
         if (contest.endDate.toDate() < now) return 'Contest Ended';
         if (contest.startDate.toDate() <= now) return `Ends ${formatDistanceToNow(contest.endDate.toDate(), { addSuffix: true })}`;
         return <Countdown to={contest.startDate.toDate()} onEnd={() => setTick(t => t + 1)} />;
+    };
+    
+    const getScheduleDisplay = (contest: Event) => {
+        const date = contest.startDate.toDate();
+        const offset = -date.getTimezoneOffset();
+        const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+        const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, '0');
+        const sign = offset >= 0 ? '+' : '-';
+        return `${format(date, "EEE, MMM d, HH:mm")} GMT${sign}${offsetHours}:${offsetMinutes}`;
     };
 
   return (
@@ -160,7 +172,7 @@ export default function ArenaPage() {
                                                     id={contest.id}
                                                     title={contest.title}
                                                     time={getTimeDisplay(contest)}
-                                                    schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                                                    schedule={getScheduleDisplay(contest)}
                                                     imageUrl={contest.imageUrl}
                                                     aiHint={contest.aiHint}
                                                     status="live"
@@ -185,7 +197,7 @@ export default function ArenaPage() {
                                                     id={contest.id}
                                                     title={contest.title}
                                                     time={getTimeDisplay(contest)}
-                                                    schedule={contest.startDate.toDate().toLocaleDateString('en-US', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                                                    schedule={getScheduleDisplay(contest)}
                                                     imageUrl={contest.imageUrl}
                                                     aiHint={contest.aiHint}
                                                     status="upcoming"
