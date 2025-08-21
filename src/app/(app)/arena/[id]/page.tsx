@@ -287,7 +287,7 @@ export default function ContestDetailPage() {
                                     Ready to Go! 🚀
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                   The virtual contest is live! Jump in and showcase your skills.
+                                   The virtual battle is live! Jump in and showcase your skills.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
