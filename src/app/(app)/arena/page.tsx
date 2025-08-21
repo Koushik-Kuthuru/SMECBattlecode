@@ -55,9 +55,6 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status, enro
               data-ai-hint={aiHint}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
-            <div className="absolute top-3 right-3 rounded-lg bg-black/30 p-2 backdrop-blur-sm">
-              <CalendarDays className="h-5 w-5 text-white" />
-            </div>
             <div className="absolute bottom-3 left-3 flex items-center gap-2 text-sm text-white font-medium">
                 <Clock className="h-4 w-4" />
                 <span>{time}</span>
