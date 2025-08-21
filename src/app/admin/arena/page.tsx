@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 type Prize = { rank: string; details: string };
 
-type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color'> & {
+type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status' | 'prizes' | 'color' | 'registeredUsers' | 'enrolled'> & {
   startDate: Date;
   endDate: Date;
   prizes: Prize[];
@@ -43,7 +43,6 @@ export default function ManageArenaPage() {
     imageUrl: '',
     aiHint: '',
     type: 'Challenge',
-    enrolled: 0,
     isEnabled: true,
     startDate: new Date(),
     endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
@@ -161,7 +160,8 @@ export default function ManageArenaPage() {
     
     // Admin no longer sets enrolled count, but we need to preserve it if it exists.
     const currentEnrolledCount = editingContestId ? (contests.find(c => c.id === editingContestId)?.enrolled || 0) : 0;
-    
+    const currentRegisteredUsers = editingContestId ? (contests.find(c => c.id === editingContestId)?.registeredUsers || []) : [];
+
     const { description, ...restOfFormData } = formData;
     const dataToSave = {
         ...restOfFormData,
@@ -169,6 +169,7 @@ export default function ManageArenaPage() {
         endDate: Timestamp.fromDate(formData.endDate),
         type: 'Challenge' as const,
         enrolled: currentEnrolledCount, // Preserve existing enrolled count
+        registeredUsers: currentRegisteredUsers,
     };
 
     try {
@@ -421,5 +422,3 @@ export default function ManageArenaPage() {
     </div>
   );
 }
-
-    
