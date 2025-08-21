@@ -89,7 +89,7 @@ export default function EventsPage() {
             }
             return { id: doc.id, ...data, status } as Event;
         })
-        .filter(event => event.isEnabled); // Filter on the client-side
+        .filter(event => event.isEnabled && event.type !== 'Challenge'); // Filter on the client-side
 
       setEvents(eventsList);
       setIsLoading(false);
@@ -120,7 +120,6 @@ export default function EventsPage() {
             <SelectContent>
                 <SelectItem value="All">All Types</SelectItem>
                 <SelectItem value="Podcast">Podcast</SelectItem>
-                <SelectItem value="Challenge">Challenge</SelectItem>
                 <SelectItem value="Workshop">Workshop</SelectItem>
             </SelectContent>
         </Select>
