@@ -41,7 +41,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved' | 'Favorites';
-type SortBy = 'Default' | 'Difficulty' | 'Points' | 'Title';
+type SortBy = 'Difficulty' | 'Points' | 'Title';
 type SolveStats = { [challengeId: string]: { solved: number, attempted: number } };
 
 const icons: { [key: string]: React.ElementType } = {
@@ -262,33 +262,27 @@ export default function ChallengesPage() {
         return difficultyMatch && searchMatch && topicMatch && statusMatch && isEnabled;
       })
       .sort((a, b) => {
-        if (sortBy === 'Title') {
+        switch (sortBy) {
+          case 'Title':
             const numA = parseInt(a.title.match(/^\d+/)?.[0] || 'NaN', 10);
             const numB = parseInt(b.title.match(/^\d+/)?.[0] || 'NaN', 10);
-
             if (!isNaN(numA) && !isNaN(numB)) {
                 return numA - numB;
             }
             return a.title.localeCompare(b.title);
-        }
-        if (sortBy === 'Difficulty') {
+          case 'Difficulty':
             const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
             return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-        }
-        if (sortBy === 'Points') {
+          case 'Points':
             return b.points - a.points;
+          default:
+            const numADefault = parseInt(a.title.match(/^\d+/)?.[0] || 'NaN', 10);
+            const numBDefault = parseInt(b.title.match(/^\d+/)?.[0] || 'NaN', 10);
+            if (!isNaN(numADefault) && !isNaN(numBDefault)) {
+                return numADefault - numBDefault;
+            }
+            return a.title.localeCompare(b.title);
         }
-
-        // Default sort
-        const aCompleted = !!completedChallenges[a.id!];
-        const bCompleted = !!completedChallenges[b.id!];
-        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
-        
-        const aInProgress = !!inProgressChallenges[a.id!];
-        const bInProgress = !!inProgressChallenges[b.id!];
-        if (aInProgress !== bInProgress) return aInProgress ? -1 : 1;
-        
-        return 0;
       });
   }, [challenges, difficultyFilter, searchTerm, topicFilter, statusFilter, currentUser, completedChallenges, inProgressChallenges, favoriteChallenges, sortBy]);
 
@@ -448,7 +442,6 @@ export default function ChallengesPage() {
                 <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                  <DropdownMenuRadioItem value="Default">Default</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Title">Title</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Difficulty">Difficulty</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Points">Points</DropdownMenuRadioItem>
@@ -632,5 +625,3 @@ export default function ChallengesPage() {
     </div>
   );
 }
-
-    
