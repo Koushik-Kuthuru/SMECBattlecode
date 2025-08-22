@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { User, CheckCircle, Edit } from 'lucide-react';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import { UserData, Submission, Challenge } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { BulletCoin } from '@/components/icons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
+import { ProfileStats } from '@/components/profile-stats';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -25,6 +26,11 @@ export default function ProfilePage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [challenges, setChallenges] = useState<Record<string, Challenge>>({});
   const [isLoading, setIsLoading] = useState(true);
+
+  // New state for profile stats
+  const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
+  const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
+  const [attemptedChallenges, setAttemptedChallenges] = useState<string[]>([]);
 
   const auth = getAuth(app);
 
@@ -42,6 +48,19 @@ export default function ProfilePage() {
                 }
                  setIsLoading(false);
             });
+            
+            // Fetch challenges and user progress for stats
+            const challengesCollection = collection(db, 'challenges');
+            const challengesSnapshot = await getDocs(challengesCollection);
+            const challengesList = challengesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
+            setAllChallenges(challengesList);
+
+            const completedRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
+            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
+            
+            const unsubscribeCompleted = onSnapshot(completedRef, (snap) => setCompletedChallenges(snap.exists() ? Object.keys(snap.data()) : []));
+            const unsubscribeInProgress = onSnapshot(inProgressRef, (snap) => setAttemptedChallenges(snap.exists() ? Object.keys(snap.data()).filter(k => snap.data()[k] === true) : []));
+
 
             // Fetch recent submissions
             const submissionsRef = collection(db, `users/${user.uid}/submissions`);
@@ -73,6 +92,8 @@ export default function ProfilePage() {
             return () => {
                 unsubscribeUser();
                 unsubscribeSubmissions();
+                unsubscribeCompleted();
+                unsubscribeInProgress();
             }
         } else {
             router.push('/login');
@@ -92,6 +113,21 @@ export default function ProfilePage() {
   }
   
   if (!currentUser) return null;
+  
+  const solvedCount = completedChallenges.length;
+  const attemptedCount = attemptedChallenges.length;
+
+  const totalChallengesByDifficulty = {
+      Easy: allChallenges.filter(c => c.difficulty === 'Easy').length,
+      Medium: allChallenges.filter(c => c.difficulty === 'Medium').length,
+      Hard: allChallenges.filter(c => c.difficulty === 'Hard').length,
+  };
+
+  const solvedByDifficulty = {
+      Easy: completedChallenges.filter(id => allChallenges.find(c => c.id === id)?.difficulty === 'Easy').length,
+      Medium: completedChallenges.filter(id => allChallenges.find(c => c.id === id)?.difficulty === 'Medium').length,
+      Hard: completedChallenges.filter(id => allChallenges.find(c => c.id === id)?.difficulty === 'Hard').length,
+  };
 
   return (
     <div className="container mx-auto max-w-6xl py-8">
@@ -116,14 +152,9 @@ export default function ProfilePage() {
                     </Button>
                 </CardContent>
             </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Statistics</CardTitle>
-                    <CardDescription>Your performance at a glance.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
@@ -141,11 +172,22 @@ export default function ProfilePage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Challenges Solved</p>
-                            <p className="text-2xl font-bold">{Object.keys(submissions).length}</p>
+                            <p className="text-2xl font-bold">{solvedCount}</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-6">
+            <ProfileStats 
+                solvedCount={solvedCount}
+                attemptedCount={attemptedCount}
+                totalChallenges={allChallenges.length}
+                totalChallengesByDifficulty={totalChallengesByDifficulty}
+                solvedByDifficulty={solvedByDifficulty}
+            />
 
             <Card>
                 <CardHeader>
