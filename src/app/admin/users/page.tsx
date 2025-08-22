@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, KeyRound, Search, AlertTriangle, Download } from 'lucide-react';
+import { User, KeyRound, Search, AlertTriangle, Download, List } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,16 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { UserData as AppUserData } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 
 type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
@@ -118,10 +128,45 @@ export default function ManageUsersPage() {
         <div className="container mx-auto py-8">
              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-3xl font-bold">Manage Users</h1>
-                <Button onClick={handleDownload} disabled={isLoading || users.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Data
-                </Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button disabled={isLoading || users.length === 0}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Data
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirm Data Download</DialogTitle>
+                            <DialogDescription>
+                                This will download an Excel sheet with the following data for all filtered users.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
+                                <li>Name</li>
+                                <li>Email</li>
+                                <li>Student ID</li>
+                                <li>Branch</li>
+                                <li>Year</li>
+                                <li>Section</li>
+                                <li>Total Points</li>
+                                <li>Last Seen</li>
+                            </ul>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Button onClick={handleDownload}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download
+                                </Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
             
             <div className="mb-6 relative">
