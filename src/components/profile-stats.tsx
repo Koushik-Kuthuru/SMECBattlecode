@@ -47,7 +47,7 @@ export function ProfileStats({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Problems Solved</CardTitle>
+        <CardTitle>Challenges Solved</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
