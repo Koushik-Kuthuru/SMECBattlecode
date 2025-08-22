@@ -232,6 +232,15 @@ export default function EditProfilePage() {
                             <CardDescription>Update your public profile details.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                             <div className="space-y-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input id="name" value={currentUser.name} disabled />
+                             </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="studentId">Student ID</Label>
+                                <Input id="studentId" value={currentUser.studentId} disabled />
+                            </div>
+
                             <div className="flex items-center gap-6">
                                 <Avatar className="h-20 w-20 border-4 border-primary">
                                     <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
@@ -327,5 +336,3 @@ export default function EditProfilePage() {
       </div>
   );
 }
-
-    
