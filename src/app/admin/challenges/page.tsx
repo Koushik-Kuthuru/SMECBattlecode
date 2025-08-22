@@ -37,12 +37,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Pagination } from '@/components/ui/pagination';
 
 
 type SortType = 'title' | 'difficulty';
 
 const DIFFICULTY_ORDER: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 };
 const ALL_LANGUAGES = ['C', 'C++', 'Java', 'Python', 'JavaScript'];
+const ITEMS_PER_PAGE = 10;
 
 type FormData = Omit<Challenge, 'id' | 'tags' | 'languages' | 'starterCode' | 'solution' | 'likes'> & { 
   tags: string;
@@ -74,6 +76,7 @@ export default function ManageChallengesPage() {
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [challengeToDelete, setChallengeToDelete] = useState<string | null>(null);
   const [editingLanguage, setEditingLanguage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const db = getFirestore(app);
 
@@ -315,6 +318,10 @@ export default function ManageChallengesPage() {
           return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
       });
   }, [challenges]);
+  
+  const totalPages = Math.ceil(sortedChallenges.length / ITEMS_PER_PAGE);
+  const paginatedChallenges = sortedChallenges.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
 
   const handleToggleEnable = async (challengeId: string, isEnabled: boolean) => {
       setIsSaving(true);
@@ -542,8 +549,9 @@ export default function ManageChallengesPage() {
            {isLoading ? (
               <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
            ) : (
+            <>
               <div className="space-y-4">
-                {sortedChallenges.length > 0 ? sortedChallenges.map(challenge => (
+                {paginatedChallenges.length > 0 ? paginatedChallenges.map(challenge => (
                   <div key={challenge.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4 cursor-pointer hover:bg-muted/50" onClick={() => handleEditClick(challenge)}>
                     <div>
                       <h3 className="font-semibold">{challenge.title}</h3>
@@ -576,6 +584,12 @@ export default function ManageChallengesPage() {
                   </div>
                 )}
               </div>
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                setPage={setCurrentPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

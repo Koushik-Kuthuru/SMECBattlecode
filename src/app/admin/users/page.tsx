@@ -25,6 +25,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Pagination } from '@/components/ui/pagination';
 
 
 type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
@@ -47,11 +48,14 @@ const BRANCH_MAP: Record<string, string> = {
     civil: 'Civil',
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [firestoreError, setFirestoreError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
     const db = getFirestore(app);
 
     useEffect(() => {
@@ -105,6 +109,10 @@ export default function ManageUsersPage() {
             (user.studentId || '').toLowerCase().includes(searchTerm.toLowerCase())
         )
     );
+    
+    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
 
     const handleDownload = () => {
         const dataToExport = filteredUsers.map(user => ({
@@ -194,7 +202,8 @@ export default function ManageUsersPage() {
                             <p className="font-semibold text-lg">Firestore Connection Error</p>
                             <p className="max-w-md">{firestoreError}</p>
                         </div>
-                    ) : filteredUsers.length > 0 ? (
+                    ) : paginatedUsers.length > 0 ? (
+                        <>
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -207,7 +216,7 @@ export default function ManageUsersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredUsers.map(user => (
+                                {paginatedUsers.map(user => (
                                     <TableRow key={user.uid}>
                                         <TableCell>
                                             <div className="flex items-center gap-4">
@@ -242,6 +251,12 @@ export default function ManageUsersPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                        <Pagination 
+                            page={currentPage}
+                            totalPages={totalPages}
+                            setPage={setCurrentPage}
+                        />
+                        </>
                     ) : (
                         <div className="text-center py-16 text-muted-foreground">
                             <p>{searchTerm ? 'No users found matching your search.' : 'No users have registered yet.'}</p>
