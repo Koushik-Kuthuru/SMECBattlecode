@@ -13,7 +13,6 @@ export type UserData = {
     section: string;
     imageUrl?: string;
     profileComplete: boolean;
-    preferredLanguages: string[];
     isAdmin?: boolean;
     lastSeen?: Timestamp;
 };
@@ -57,4 +56,37 @@ export type LeaderboardUser = {
   points: number;
   imageUrl?: string;
   isAdmin?: boolean;
+};
+
+export type Submission = {
+  id: string;
+  challengeId: string;
+  code: string;
+  language: string;
+  status: 'Accepted' | 'Failed';
+  timestamp: Timestamp;
+};
+
+export type Challenge = {
+  id?: string;
+  title: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  points: number;
+  description: string;
+  tags: string[];
+  examples: {
+    input: string;
+    output: string;
+    explanation?: string;
+  }[];
+  testCases: {
+    input: string;
+    output: string;
+    isHidden?: boolean;
+  }[];
+  isEnabled?: boolean;
+  likes?: number;
+  createdAt?: Timestamp;
+  languages: string[];
+  starterCode: { [language: string]: string };
 };

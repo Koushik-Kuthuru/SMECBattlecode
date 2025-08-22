@@ -10,58 +10,46 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, Upload, Mail, KeyRound, LogOut, CaseSensitive, Loader2, Settings } from 'lucide-react';
+import { User, Upload, Mail, KeyRound, LogOut, CaseSensitive, Loader2, Settings, List, CheckCircle, BarChart2 } from 'lucide-react';
 import { getAuth, onAuthStateChanged, updateEmail, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser, signOut, verifyBeforeUpdateEmail } from 'firebase/auth';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
-
-type CurrentUser = {
-  uid: string;
-  name: string;
-  email: string;
-  studentId: string;
-}
+import { UserData, Submission, Challenge } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
+import { BulletCoin } from '@/components/icons';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type ProfileData = {
     branch: string;
     year: string;
     section:string;
     imageUrl: string;
-    preferredLanguages: string[];
 }
-
-const LANGUAGES = ['C', 'C++', 'Java', 'Python', 'JavaScript'];
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [profile, setProfile] = useState<ProfileData>({
     branch: '',
     year: '',
     section: '',
     imageUrl: '',
-    preferredLanguages: [],
   });
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [challenges, setChallenges] = useState<Record<string, Challenge>>({});
   const [newEmail, setNewEmail] = useState('');
   const [passwordForEmail, setPasswordForEmail] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingEmail, setIsChangingEmail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const auth = getAuth(app);
-  const db = getFirestore(app);
   const storage = getStorage(app);
-
-  const showSavingToast = () => toast({
-      title: 'Saving...',
-      description: 'Your changes are being saved automatically.',
-  });
 
   const saveProfileData = useCallback(async (dataToSave: Partial<ProfileData>) => {
     if (!currentUser) return;
@@ -85,77 +73,73 @@ export default function ProfilePage() {
       setIsSaving(false);
     }
   }, [currentUser, db, toast]);
-
-  useEffect(() => {
-    // This effect handles auto-saving for text fields and selections
-    if (isLoading) return; // Don't save on initial load
-
-    if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-        // We only want to save the fields that are part of the debounced update
-        const { imageUrl, ...otherProfileData } = profile;
-        saveProfileData(otherProfileData);
-    }, 2000); // 2-second debounce delay
-
-    return () => {
-        if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
-        }
-    };
-  }, [profile.branch, profile.year, profile.section, profile.preferredLanguages, saveProfileData, isLoading]);
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
         if (user) {
             const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
+            const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
+                if (userDoc.exists()) {
+                    const userData = userDoc.data() as UserData;
+                    const userEmail = user.email || userData.email;
+                    setCurrentUser({ ...userData, uid: user.uid, email: userEmail });
+                    setNewEmail(userEmail);
+                    setProfile({
+                        branch: userData.branch || '',
+                        year: userData.year || '',
+                        section: userData.section || '',
+                        imageUrl: userData.imageUrl || '',
+                    });
+                } else {
+                    router.push('/login');
+                }
+                 setIsLoading(false);
+            });
 
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const userEmail = user.email || userData.email;
-                setCurrentUser({
-                    uid: user.uid,
-                    name: userData.name,
-                    email: userEmail,
-                    studentId: userData.studentId,
+            // Fetch recent submissions
+            const submissionsRef = collection(db, `users/${user.uid}/submissions`);
+            const q = query(submissionsRef, orderBy('timestamp', 'desc'), limit(5));
+            const unsubscribeSubmissions = onSnapshot(q, async (querySnapshot) => {
+                const subs: Submission[] = [];
+                const challengeIds = new Set<string>();
+
+                querySnapshot.forEach(doc => {
+                    const subData = doc.data() as Submission;
+                    subs.push({ ...subData, id: doc.id });
+                    if(subData.challengeId) challengeIds.add(subData.challengeId);
                 });
-                setNewEmail(userEmail);
-                setProfile({
-                    branch: userData.branch || '',
-                    year: userData.year || '',
-                    section: userData.section || '',
-                    imageUrl: userData.imageUrl || '',
-                    preferredLanguages: userData.preferredLanguages || [],
-                });
-            } else {
-                router.push('/login');
+                
+                // Fetch challenge details for the submissions
+                if(challengeIds.size > 0) {
+                    const challengesData: Record<string, Challenge> = {};
+                    for (const id of Array.from(challengeIds)) {
+                         const challengeDoc = await getDoc(doc(db, 'challenges', id));
+                         if(challengeDoc.exists()) {
+                            challengesData[id] = challengeDoc.data() as Challenge;
+                         }
+                    }
+                    setChallenges(challengesData);
+                }
+                setSubmissions(subs);
+            });
+
+            return () => {
+                unsubscribeUser();
+                unsubscribeSubmissions();
             }
         } else {
             router.push('/login');
+            setIsLoading(false);
         }
-        setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [auth, db, router]);
   
-  const handleInputChange = (field: keyof Omit<ProfileData, 'imageUrl' | 'preferredLanguages'>, value: string) => {
+  const handleInputChange = async (field: keyof ProfileData, value: string) => {
       setProfile(prev => ({...prev, [field]: value}));
-      showSavingToast();
+      await saveProfileData({[field]: value});
   }
-  
-  const handleLanguageChange = (language: string, checked: boolean) => {
-    setProfile(prev => {
-        const newLangs = checked 
-            ? [...prev.preferredLanguages, language]
-            : prev.preferredLanguages.filter(lang => lang !== language);
-        return {...prev, preferredLanguages: newLangs};
-    });
-    showSavingToast();
-  };
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !currentUser) return;
@@ -246,50 +230,35 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="container mx-auto max-w-4xl py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold">Your Profile</h1>
-        {isSaving && (
-            <div className="hidden md:flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Saving...</span>
-            </div>
-        )}
-      </div>
+    <div className="container mx-auto max-w-6xl py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column */}
+        <div className="lg:col-span-1 space-y-6">
+           <Card>
+                <CardHeader className="items-center text-center">
+                     <Avatar className="h-24 w-24 mb-4 border-4 border-primary">
+                        <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
+                        <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
+                    </Avatar>
+                    <CardTitle>{currentUser.name}</CardTitle>
+                    <CardDescription>{currentUser.studentId}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {isSaving ? 'Uploading...' : 'Change Picture'}
+                    </Button>
+                    <Input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                </CardContent>
+            </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-        <div className="md:col-span-2 space-y-8">
-            {/* Personal Information */}
             <Card>
                 <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>Update your public profile details. Changes are saved automatically.</CardDescription>
+                    <CardDescription>Update your public profile details.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex flex-col sm:flex-row items-center gap-6">
-                        <Avatar className="h-24 w-24">
-                          <AvatarImage src={profile.imageUrl} alt={currentUser.name} />
-                          <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
-                        </Avatar>
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Change Picture
-                        </Button>
-                        <Input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Name</Label>
-                            <Input value={currentUser.name} disabled />
-                        </div>
-                         <div className="space-y-2">
-                            <Label>Student ID</Label>
-                            <Input value={currentUser.studentId} disabled />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
+                <CardContent className="space-y-4">
+                     <div className="space-y-2">
                         <Label htmlFor="branch">Branch</Label>
                         <Select value={profile.branch} onValueChange={(value) => handleInputChange('branch', value)}>
                             <SelectTrigger id="branch"><SelectValue placeholder="Select your branch" /></SelectTrigger>
@@ -308,7 +277,7 @@ export default function ProfilePage() {
                         </Select>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="year">Year</Label>
                              <Select value={profile.year} onValueChange={(value) => handleInputChange('year', value)}>
@@ -336,18 +305,7 @@ export default function ProfilePage() {
                     </div>
                 </CardContent>
             </Card>
-             <div className="md:hidden mt-6">
-                {isSaving && (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground mb-4">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Auto-saving...</span>
-                    </div>
-                )}
-            </div>
-        </div>
 
-        <aside className="md:col-span-1 space-y-6">
-            {/* Account Settings */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-3"><Settings className="h-6 w-6"/> Account Settings</CardTitle>
@@ -368,22 +326,82 @@ export default function ProfilePage() {
                     <Button onClick={handleChangeEmail} disabled={isChangingEmail || newEmail === currentUser.email} className="w-full">
                         {isChangingEmail ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Updating...</> : 'Update Email'}
                     </Button>
-                </CardContent>
-            </Card>
-
-            {/* Logout */}
-            <Card>
-                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><LogOut className="h-5 w-5"/> Logout</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">Are you sure you want to log out of your account?</p>
-                    <Button variant="destructive-outline" onClick={handleLogout} className="w-full">
-                        Logout
+                    <Separator />
+                     <Button variant="destructive-outline" onClick={handleLogout} className="w-full">
+                        <LogOut className="mr-2 h-4 w-4" /> Logout
                     </Button>
                 </CardContent>
             </Card>
-        </aside>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-2 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Statistics</CardTitle>
+                    <CardDescription>Your performance at a glance.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                        <div className="p-3 bg-primary/10 rounded-full">
+                            <BulletCoin className="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Total Points</p>
+                            <p className="text-2xl font-bold">{currentUser.points}</p>
+                        </div>
+                    </div>
+                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                        <div className="p-3 bg-green-500/10 rounded-full">
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Challenges Solved</p>
+                            <p className="text-2xl font-bold">{Object.keys(submissions).length}</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Recent Submissions</CardTitle>
+                    <CardDescription>Your latest attempts on challenges.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Challenge</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="hidden md:table-cell">Language</TableHead>
+                                <TableHead className="text-right">Time</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {submissions.length > 0 ? submissions.map(sub => (
+                                <TableRow key={sub.id}>
+                                    <TableCell className="font-medium">{challenges[sub.challengeId]?.title || 'Unknown Challenge'}</TableCell>
+                                    <TableCell>
+                                         <Badge variant={sub.status === 'Accepted' ? 'default' : 'destructive'} className={sub.status === 'Accepted' ? 'bg-green-600' : ''}>
+                                            {sub.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">{sub.language}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs">
+                                        {sub.timestamp ? formatDistanceToNow(sub.timestamp.toDate(), { addSuffix: true }) : 'N/A'}
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">No submissions yet.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
       </div>
     </div>
   );
