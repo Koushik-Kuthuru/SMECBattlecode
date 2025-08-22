@@ -415,7 +415,7 @@ export default function ChallengesPage() {
         ))}
         {allTopicTags.length > 5 && (
             <Button variant="ghost" size="sm" onClick={() => setIsTagsExpanded(!isTagsExpanded)} className="text-sm">
-                {isTagsExpanded ? 'Show Less' : 'Show More'}
+                {isTagsExpanded ? 'Show Less' : `+${allTopicTags.length - 5} more`}
                 <ChevronDown className={cn("ml-1 h-4 w-4 transition-transform", isTagsExpanded && "rotate-180")} />
             </Button>
         )}
@@ -625,3 +625,5 @@ export default function ChallengesPage() {
     </div>
   );
 }
+
+    
