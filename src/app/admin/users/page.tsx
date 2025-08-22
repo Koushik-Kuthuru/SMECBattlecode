@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User, KeyRound, Search, AlertTriangle } from 'lucide-react';
+import { User, KeyRound, Search, AlertTriangle, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { app } from '@/lib/firebase';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { UserData as AppUserData } from '@/lib/types';
+import * as XLSX from 'xlsx';
 
 
 type UserData = Omit<AppUserData, 'lastSeen' | 'branch'> & {
@@ -56,7 +57,7 @@ export default function ManageUsersPage() {
                     name: data.name,
                     studentId: data.studentId,
                     points: data.points || 0,
-                    branch: data.branch ? BRANCH_MAP[data.branch] || data.branch : 'N/A',
+                    branch: data.branch,
                     year: data.year ? `${data.year} Year` : 'N/A',
                     imageUrl: data.imageUrl,
                     lastSeen: data.lastSeen,
@@ -95,9 +96,33 @@ export default function ManageUsersPage() {
         )
     );
 
+    const handleDownload = () => {
+        const dataToExport = filteredUsers.map(user => ({
+            Name: user.name,
+            Email: user.email,
+            'Student ID': user.studentId,
+            Branch: user.branch ? BRANCH_MAP[user.branch] || user.branch : 'N/A',
+            Year: user.year,
+            Section: user.section || 'N/A',
+            'Total Points': user.points,
+            'Last Seen': user.lastSeen ? user.lastSeen.toDate().toLocaleString() : 'Never',
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+        XLSX.writeFile(workbook, "SMECBattleCode_Users.xlsx");
+    };
+
     return (
         <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold mb-6">Manage Users</h1>
+             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h1 className="text-3xl font-bold">Manage Users</h1>
+                <Button onClick={handleDownload} disabled={isLoading || users.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Data
+                </Button>
+            </div>
             
             <div className="mb-6 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -155,7 +180,7 @@ export default function ManageUsersPage() {
                                             <Badge variant="outline">{user.studentId}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <p>{user.branch}</p>
+                                            <p>{user.branch ? BRANCH_MAP[user.branch] || user.branch : 'N/A'}</p>
                                             <p className="text-sm text-muted-foreground">{user.year}</p>
                                         </TableCell>
                                         <TableCell>
