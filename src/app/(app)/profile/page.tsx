@@ -152,31 +152,6 @@ export default function ProfilePage() {
                     </Button>
                 </CardContent>
             </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Statistics</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                        <div className="p-3 bg-primary/10 rounded-full">
-                            <BulletCoin className="h-8 w-8 text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Total Points</p>
-                            <p className="text-2xl font-bold">{currentUser.points}</p>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                        <div className="p-3 bg-green-500/10 rounded-full">
-                            <CheckCircle className="h-8 w-8 text-green-500" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Challenges Solved</p>
-                            <p className="text-2xl font-bold">{solvedCount}</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
 
         {/* Right Column */}
