@@ -66,33 +66,37 @@ export default function ProfilePage() {
                  setIsLoading(false);
             });
             
-            // Fetch all challenges once
+            // Fetch all challenges in real-time
             const challengesCollection = collection(db, 'challenges');
-            const challengesSnapshot = await getDocs(challengesCollection);
-            const challengesList = challengesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
-            const challengesMap = challengesList.reduce((acc, c) => ({...acc, [c.id!]: c}), {});
-            setAllChallenges(challengesList);
-            setChallenges(challengesMap);
+            const challengesQuery = query(challengesCollection, orderBy('createdAt', 'desc'));
+            const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
+                const challengesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Challenge));
+                const challengesMap = challengesList.reduce((acc, c) => ({...acc, [c.id!]: c}), {});
+                setAllChallenges(challengesList);
+                setChallenges(challengesMap);
+            });
 
+            // Listen for changes in completed challenges
             const completedRef = doc(db, `users/${user.uid}/challengeData`, 'completed');
-            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
-            
-            const unsubscribeCompleted = onSnapshot(completedRef, async (snap) => {
-                const completedIds = snap.exists() ? Object.keys(snap.data()) : [];
+            const unsubscribeCompleted = onSnapshot(completedRef, async (completedSnap) => {
+                const completedIds = completedSnap.exists() ? Object.keys(completedSnap.data()) : [];
                 setCompletedChallenges(completedIds);
                 
-                // Process stats when completed challenges are loaded/updated
-                if (completedIds.length > 0) {
-                    const submissionsRef = collection(db, `users/${user.uid}/submissions`);
-                    const q = query(submissionsRef, where('status', '==', 'Accepted'));
-                    const acceptedSubmissionsSnapshot = await getDocs(q);
-                    
+                // When completed challenges change, re-calculate stats
+                // Note: We need allChallenges map to be ready for this calculation.
+                // It's generally available quickly, but for robustness, a loading state could be added.
+                const challengesMap = (await getDocs(collection(db, 'challenges'))).docs.reduce((acc, doc) => ({...acc, [doc.id]: doc.data()}), {});
+
+                const submissionsRef = collection(db, `users/${user.uid}/submissions`);
+                const q = query(submissionsRef, where('status', '==', 'Accepted'));
+                
+                // Real-time listener for accepted submissions
+                onSnapshot(q, (acceptedSubmissionsSnapshot) => {
                     const langStats: LanguageStats = {};
                     const skStats: SkillStats = { Fundamental: {}, Intermediate: {}, Advanced: {} };
 
                     acceptedSubmissionsSnapshot.forEach(subDoc => {
                         const submission = subDoc.data() as Submission;
-                        // Language Stats
                         langStats[submission.language] = (langStats[submission.language] || 0) + 1;
                     });
                     
@@ -108,15 +112,19 @@ export default function ProfilePage() {
                         const category = difficultyMap[challenge.difficulty];
 
                         challenge.tags?.forEach(tag => {
-                            skStats[category][tag] = (skStats[category][tag] || 0) + 1;
+                            if (category) {
+                                skStats[category][tag] = (skStats[category][tag] || 0) + 1;
+                            }
                         });
                     });
 
                     setLanguageStats(langStats);
                     setSkillStats(skStats);
-                }
+                });
             });
 
+            // Listen for changes in in-progress challenges
+            const inProgressRef = doc(db, `users/${user.uid}/challengeData`, 'inProgress');
             const unsubscribeInProgress = onSnapshot(inProgressRef, (snap) => setAttemptedChallenges(snap.exists() ? Object.keys(snap.data()).filter(k => snap.data()[k] === true) : []));
 
             // Fetch recent submissions for the table
@@ -133,6 +141,7 @@ export default function ProfilePage() {
 
             return () => {
                 unsubscribeUser();
+                unsubscribeChallenges();
                 unsubscribeSubmissions();
                 unsubscribeCompleted();
                 unsubscribeInProgress();
@@ -323,5 +332,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
