@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy, setDoc, collectionGroup } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, onSnapshot, query, orderBy, setDoc, collectionGroup, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { type Challenge, challenges as initialChallenges } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -263,6 +263,12 @@ export default function ChallengesPage() {
       })
       .sort((a, b) => {
         if (sortBy === 'Title') {
+            const numA = parseInt(a.title.match(/^\d+/)?.[0] || 'NaN', 10);
+            const numB = parseInt(b.title.match(/^\d+/)?.[0] || 'NaN', 10);
+
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+            }
             return a.title.localeCompare(b.title);
         }
         if (sortBy === 'Difficulty') {
@@ -626,3 +632,5 @@ export default function ChallengesPage() {
     </div>
   );
 }
+
+    
