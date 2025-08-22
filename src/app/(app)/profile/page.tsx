@@ -334,22 +334,6 @@ export default function ProfilePage() {
                             </Select>
                         </div>
                     </div>
-
-                    <div className="space-y-4">
-                        <Label>Preferred Programming Languages</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 rounded-lg border p-4">
-                            {LANGUAGES.map(lang => (
-                                <div key={lang} className="flex items-center gap-2">
-                                    <Checkbox 
-                                        id={`prof-lang-${lang}`}
-                                        checked={profile.preferredLanguages.includes(lang)}
-                                        onCheckedChange={(checked) => handleLanguageChange(lang, !!checked)}
-                                    />
-                                    <Label htmlFor={`prof-lang-${lang}`} className="font-normal">{lang}</Label>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </CardContent>
             </Card>
              <div className="md:hidden mt-6">
