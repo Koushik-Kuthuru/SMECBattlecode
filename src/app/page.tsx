@@ -273,7 +273,7 @@ export default function LandingPage() {
                  )}
                  <div className="text-center mt-12 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
                     <Button size="lg" variant="outline" asChild>
-                        <Link href="/login">View Full Leaderboard</Link>
+                        <Link href="/public-leaderboard">View Full Leaderboard</Link>
                     </Button>
                 </div>
             </div>
