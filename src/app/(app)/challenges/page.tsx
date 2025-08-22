@@ -442,7 +442,7 @@ export default function ChallengesPage() {
                 <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                  <DropdownMenuRadioItem value="Title">Title</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Title">Default</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Difficulty">Difficulty</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Points">Points</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>

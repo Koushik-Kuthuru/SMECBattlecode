@@ -71,8 +71,6 @@ export default function ManageChallengesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
-  const [languageFilter, setLanguageFilter] = useState('All');
-  const [sortType, setSortType] = useState<SortType>('title');
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [challengeToDelete, setChallengeToDelete] = useState<string | null>(null);
   const [editingLanguage, setEditingLanguage] = useState<string | null>(null);
@@ -311,19 +309,12 @@ export default function ManageChallengesPage() {
     }
   };
 
-  const sortedAndFilteredChallenges = useMemo(() => {
+  const sortedChallenges = useMemo(() => {
     return [...challenges]
-      .filter(challenge => languageFilter === 'All' || (challenge.languages && challenge.languages.includes(languageFilter)))
       .sort((a, b) => {
-        if (sortType === 'title') {
-          return a.title.localeCompare(b.title);
-        }
-        if (sortType === 'difficulty') {
-          return (DIFFICULTY_ORDER[a.difficulty] || 0) - (DIFFICULTY_ORDER[b.difficulty] || 0);
-        }
-        return 0;
+          return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
       });
-  }, [challenges, languageFilter, sortType]);
+  }, [challenges]);
 
   const handleToggleEnable = async (challengeId: string, isEnabled: boolean) => {
       setIsSaving(true);
@@ -542,31 +533,9 @@ export default function ManageChallengesPage() {
            {isLoading ? (
               <CardDescription>Loading challenges...</CardDescription>
            ) : (
-              <div className="mt-4 flex flex-col md:flex-row items-center gap-4">
-                  <Select value={languageFilter} onValueChange={setLanguageFilter}>
-                      <SelectTrigger className="w-full md:w-[180px]">
-                          <SelectValue placeholder="Filter by language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="All">All Languages</SelectItem>
-                          <SelectItem value="C">C</SelectItem>
-                          <SelectItem value="C++">C++</SelectItem>
-                          <SelectItem value="Java">Java</SelectItem>
-                          <SelectItem value="Python">Python</SelectItem>
-                          <SelectItem value="JavaScript">JavaScript</SelectItem>
-                      </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                      <Button variant={sortType === 'title' ? 'secondary' : 'ghost'} onClick={() => setSortType('title')}>
-                          <ArrowDownAZ className="mr-2 h-4 w-4" />
-                          Sort by Title
-                      </Button>
-                      <Button variant={sortType === 'difficulty' ? 'secondary' : 'ghost'} onClick={() => setSortType('difficulty')}>
-                          <ArrowDownUp className="mr-2 h-4 w-4" />
-                          Sort by Difficulty
-                      </Button>
-                  </div>
-              </div>
+              <CardDescription>
+                A list of all challenges currently in the database. Click on a challenge to edit it.
+              </CardDescription>
            )}
         </CardHeader>
         <CardContent>
@@ -574,7 +543,7 @@ export default function ManageChallengesPage() {
               <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
            ) : (
               <div className="space-y-4">
-                {sortedAndFilteredChallenges.length > 0 ? sortedAndFilteredChallenges.map(challenge => (
+                {sortedChallenges.length > 0 ? sortedChallenges.map(challenge => (
                   <div key={challenge.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4 cursor-pointer hover:bg-muted/50" onClick={() => handleEditClick(challenge)}>
                     <div>
                       <h3 className="font-semibold">{challenge.title}</h3>
