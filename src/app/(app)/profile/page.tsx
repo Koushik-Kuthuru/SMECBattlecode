@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { User, CheckCircle, Edit, Code, BrainCircuit, Star } from 'lucide-react';
+import { User, CheckCircle, Edit, Code, BrainCircuit, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDoc, collection, query, orderBy, limit, onSnapshot, getDocs, where } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Link from 'next/link';
 import { ProfileStats } from '@/components/profile-stats';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type LanguageStats = { [key: string]: number };
 type SkillStats = {
@@ -26,6 +27,7 @@ type SkillStats = {
     Intermediate: { [key: string]: number };
     Advanced: { [key: string]: number };
 };
+type SkillCategory = keyof SkillStats;
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -41,6 +43,11 @@ export default function ProfilePage() {
   const [attemptedChallenges, setAttemptedChallenges] = useState<string[]>([]);
   const [languageStats, setLanguageStats] = useState<LanguageStats>({});
   const [skillStats, setSkillStats] = useState<SkillStats>({ Fundamental: {}, Intermediate: {}, Advanced: {} });
+  const [isSkillsExpanded, setIsSkillsExpanded] = useState({
+    Fundamental: false,
+    Intermediate: false,
+    Advanced: false,
+  });
 
   const auth = getAuth(app);
 
@@ -164,27 +171,43 @@ export default function ProfilePage() {
       Hard: completedChallenges.filter(id => allChallenges.find(c => c.id === id)?.difficulty === 'Hard').length,
   };
 
-  const renderSkillSection = (title: string, color: string, skills: {[key: string]: number}) => (
-    <div key={title}>
-        <h4 className="flex items-center gap-2 font-semibold">
-            <span className={`h-2 w-2 rounded-full ${color}`}></span>
-            {title}
-        </h4>
-        <div className="pl-4 mt-2">
-            {Object.keys(skills).length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {Object.entries(skills).map(([skill, count]) => (
-                        <Badge key={skill} variant="secondary" className="text-sm">
-                            {skill} <span className="ml-1.5 text-muted-foreground font-mono">x{count}</span>
-                        </Badge>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-sm text-muted-foreground">Not enough data</p>
-            )}
-        </div>
-    </div>
-  );
+  const renderSkillSection = (title: SkillCategory, color: string, skills: {[key: string]: number}) => {
+    const sortedSkills = Object.entries(skills).sort(([, countA], [, countB]) => countB - countA);
+    const isExpanded = isSkillsExpanded[title];
+    const displayedSkills = isExpanded ? sortedSkills : sortedSkills.slice(0, 5);
+
+    const toggleExpansion = () => {
+        setIsSkillsExpanded(prev => ({ ...prev, [title]: !prev[title] }));
+    };
+
+    return (
+      <div key={title}>
+          <h4 className="flex items-center gap-2 font-semibold">
+              <span className={`h-2 w-2 rounded-full ${color}`}></span>
+              {title}
+          </h4>
+          <div className="pl-4 mt-2">
+              {Object.keys(skills).length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                      {displayedSkills.map(([skill, count]) => (
+                          <Badge key={skill} variant="secondary" className="text-sm">
+                              {skill} <span className="ml-1.5 text-muted-foreground font-mono">x{count}</span>
+                          </Badge>
+                      ))}
+                      {sortedSkills.length > 5 && (
+                          <Button variant="ghost" size="sm" onClick={toggleExpansion} className="text-xs h-auto p-1">
+                            {isExpanded ? 'Show Less' : `+${sortedSkills.length - 5} more`}
+                            {isExpanded ? <ChevronUp className="ml-1 h-3 w-3" /> : <ChevronDown className="ml-1 h-3 w-3" />}
+                          </Button>
+                      )}
+                  </div>
+              ) : (
+                  <p className="text-sm text-muted-foreground">Not enough data</p>
+              )}
+          </div>
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto max-w-6xl py-8">
@@ -300,3 +323,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
