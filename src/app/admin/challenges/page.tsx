@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { challenges as initialChallenges, type Challenge } from '@/lib/data';
 import { PlusCircle, Trash2, Edit, ArrowDownAZ, ArrowDownUp, ShieldOff, Shield, Code, Loader2 } from 'lucide-react';
 import { CodeEditor } from '@/components/code-editor';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, runTransaction, getDoc, deleteField, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, runTransaction, getDoc, deleteField, updateDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -83,7 +83,8 @@ export default function ManageChallengesPage() {
     setIsLoading(true);
     try {
       const challengesCollection = collection(db, 'challenges');
-      let challengesSnapshot = await getDocs(challengesCollection);
+      const q = query(challengesCollection, orderBy('createdAt', 'desc'));
+      let challengesSnapshot = await getDocs(q);
 
       if (challengesSnapshot.empty) {
         console.log("No challenges found, seeding initial data...");
@@ -97,13 +98,14 @@ export default function ManageChallengesPage() {
               languages: [challengeData.language],
               starterCode: { [challengeData.language]: challengeData.starterCode },
               language: deleteField(),
-              likes: challengeData.likes || 0
+              likes: challengeData.likes || 0,
+              createdAt: serverTimestamp()
             };
             batch.set(challengeRef, migratedData);
         });
         await batch.commit();
         
-        challengesSnapshot = await getDocs(challengesCollection); // Re-fetch after seeding
+        challengesSnapshot = await getDocs(q); // Re-fetch after seeding
         toast({
           title: 'Challenges Seeded',
           description: 'Initial challenges have been loaded into Firestore.',
@@ -228,7 +230,7 @@ export default function ManageChallengesPage() {
       } else {
         const challengesRef = collection(db, 'challenges');
         const newDocRef = doc(challengesRef); // Create ref to get ID first
-        await setDoc(newDocRef, { ...challengeDataToSave, id: newDocRef.id }); // Save data with its own ID
+        await setDoc(newDocRef, { ...challengeDataToSave, id: newDocRef.id, createdAt: serverTimestamp() }); // Save data with its own ID
       }
       
       toast({

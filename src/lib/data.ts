@@ -1,5 +1,7 @@
 
 
+import type { Timestamp } from "firebase/firestore";
+
 export type Challenge = {
   id?: string;
   title: string;
@@ -19,6 +21,7 @@ export type Challenge = {
   }[];
   isEnabled?: boolean;
   likes?: number;
+  createdAt?: Timestamp;
   // Multi-language support
   languages: string[]; // e.g., ['Python', 'JavaScript']
   starterCode: { [language: string]: string };
