@@ -41,7 +41,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 type Status = 'All' | 'Solved' | 'Attempted' | 'Unsolved' | 'Favorites';
-type SortBy = 'Default' | 'Difficulty' | 'Points';
+type SortBy = 'Default' | 'Difficulty' | 'Points' | 'Title';
 type SolveStats = { [challengeId: string]: { solved: number, attempted: number } };
 
 const icons: { [key: string]: React.ElementType } = {
@@ -101,7 +101,7 @@ export default function ChallengesPage() {
   const [solveStats, setSolveStats] = useState<SolveStats>({});
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('All');
-  const [sortBy, setSortBy] = useState<SortBy>('Default');
+  const [sortBy, setSortBy] = useState<SortBy>('Title');
   const [searchTerm, setSearchTerm] = useState('');
   const [topicFilter, setTopicFilter] = useState<string>('All');
   const [isTagsExpanded, setIsTagsExpanded] = useState(false);
@@ -196,18 +196,19 @@ export default function ChallengesPage() {
     setIsChallengesLoading(true);
     try {
       const challengesCollection = collection(db, 'challenges');
-      let challengesSnapshot = await getDocs(challengesCollection);
+      const q = query(challengesCollection, orderBy('createdAt', 'desc'));
+      let challengesSnapshot = await getDocs(q);
 
       if (challengesSnapshot.empty) {
           console.log("No challenges found, seeding initial data...");
           const batch = writeBatch(db);
           initialChallenges.forEach(challengeData => {
               const challengeRef = doc(collection(db, 'challenges'));
-              batch.set(challengeRef, { ...challengeData, id: challengeRef.id });
+              batch.set(challengeRef, { ...challengeData, id: challengeRef.id, createdAt: serverTimestamp() });
           });
           await batch.commit();
           
-          challengesSnapshot = await getDocs(challengesCollection); // Re-fetch after seeding
+          challengesSnapshot = await getDocs(q); // Re-fetch after seeding
           toast({
             title: 'Welcome!',
             description: 'Initial challenges have been loaded for you.'
@@ -261,6 +262,9 @@ export default function ChallengesPage() {
         return difficultyMatch && searchMatch && topicMatch && statusMatch && isEnabled;
       })
       .sort((a, b) => {
+        if (sortBy === 'Title') {
+            return a.title.localeCompare(b.title);
+        }
         if (sortBy === 'Difficulty') {
             const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
             return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
@@ -439,6 +443,7 @@ export default function ChallengesPage() {
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
                   <DropdownMenuRadioItem value="Default">Default</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Title">Title</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Difficulty">Difficulty</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="Points">Points</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
@@ -621,5 +626,3 @@ export default function ChallengesPage() {
     </div>
   );
 }
-
-    
