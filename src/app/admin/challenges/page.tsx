@@ -66,6 +66,13 @@ const defaultFormData: FormData = {
   starterCode: ALL_LANGUAGES.reduce((acc, lang) => ({ ...acc, [lang]: '' }), {}),
 };
 
+const createSlug = (title: string) => {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with -
+        .replace(/(^-|-$)+/g, '');   // Remove leading/trailing dashes
+};
+
 export default function ManageChallengesPage() {
   const { toast } = useToast();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -91,11 +98,11 @@ export default function ManageChallengesPage() {
         console.log("No challenges found, seeding initial data...");
         const batch = writeBatch(db);
         initialChallenges.forEach(challengeData => {
-            const challengeRef = doc(collection(db, 'challenges')); // Create ref with new ID
-            // Quick migration for single language to multi-language
+            const slug = createSlug(challengeData.title);
+            const challengeRef = doc(db, 'challenges', slug);
             const migratedData = {
               ...challengeData,
-              id: challengeRef.id,
+              id: slug,
               languages: [challengeData.language],
               starterCode: { [challengeData.language]: challengeData.starterCode },
               language: deleteField(),
@@ -106,7 +113,7 @@ export default function ManageChallengesPage() {
         });
         await batch.commit();
         
-        challengesSnapshot = await getDocs(q); // Re-fetch after seeding
+        challengesSnapshot = await getDocs(q);
         toast({
           title: 'Challenges Seeded',
           description: 'Initial challenges have been loaded into Firestore.',
@@ -229,9 +236,20 @@ export default function ManageChallengesPage() {
         const challengeRef = doc(db, 'challenges', editingChallengeId);
         await setDoc(challengeRef, { ...challengeDataToSave, id: editingChallengeId }, { merge: true });
       } else {
-        const challengesRef = collection(db, 'challenges');
-        const newDocRef = doc(challengesRef); // Create ref to get ID first
-        await setDoc(newDocRef, { ...challengeDataToSave, id: newDocRef.id, createdAt: serverTimestamp() }); // Save data with its own ID
+        const slug = createSlug(formData.title);
+        const newDocRef = doc(db, 'challenges', slug);
+        const docExists = await getDoc(newDocRef);
+
+        if(docExists.exists()) {
+            toast({
+                variant: 'destructive',
+                title: 'ID Exists',
+                description: 'A challenge with this title already exists. Please choose a unique title.'
+            });
+            return;
+        }
+
+        await setDoc(newDocRef, { ...challengeDataToSave, id: slug, createdAt: serverTimestamp() });
       }
       
       toast({
@@ -239,7 +257,6 @@ export default function ManageChallengesPage() {
           description: `Successfully saved "${challengeDataToSave.title}".`,
       });
       
-      // Refresh local state
       fetchChallenges();
 
     } catch (error) {
