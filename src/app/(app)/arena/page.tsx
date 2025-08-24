@@ -4,7 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Trophy, Users, CheckCircle, CalendarDays, Heart, Loader2 } from 'lucide-react';
+import { Clock, Trophy, Users, CheckCircle, CalendarDays, Heart, Loader2, Play } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -73,25 +73,27 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status, enro
 );
 
 const PastContestItem = ({ id, title, date, imageUrl, aiHint }: { id: string; title: string; date: string; imageUrl: string; aiHint?: string }) => (
-  <div className="flex flex-col sm:flex-row items-center justify-between p-4 transition-colors hover:bg-muted/50 gap-4">
-    <div className="flex items-center gap-4 w-full">
-      <Image
-        src={imageUrl || 'https://placehold.co/128x72.png'}
-        alt={title}
-        width={128}
-        height={72}
-        className="h-12 w-20 rounded-md object-cover"
-        data-ai-hint={aiHint}
-      />
-      <div className="flex-1">
-        <h3 className="font-semibold text-card-foreground">{title}</h3>
-        <p className="text-sm text-muted-foreground">{date}</p>
+    <Link href={`/arena/${id}`} className="block transition-colors hover:bg-muted/50 rounded-lg">
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4">
+        <div className="flex items-center gap-4 w-full">
+          <Image
+            src={imageUrl || 'https://placehold.co/128x72.png'}
+            alt={title}
+            width={128}
+            height={72}
+            className="h-12 w-20 rounded-md object-cover"
+            data-ai-hint={aiHint}
+          />
+          <div className="flex-1">
+            <h3 className="font-semibold text-card-foreground">{title}</h3>
+            <p className="text-sm text-muted-foreground">{date}</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" asChild className="w-full sm:w-auto flex-shrink-0">
+          <div><Play className="mr-2 h-4 w-4" />Battle</div>
+        </Button>
       </div>
-    </div>
-    <Button variant="outline" size="sm" asChild className="w-full sm:w-auto flex-shrink-0">
-      <Link href={`/arena/${id}`}>View</Link>
-    </Button>
-  </div>
+    </Link>
 );
 
 
