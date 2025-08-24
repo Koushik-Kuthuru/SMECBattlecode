@@ -1,7 +1,8 @@
 
+
 'use client'
 
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List, Swords } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List, Swords, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
@@ -56,6 +57,12 @@ export type Submission = {
     seconds: number;
     nanoseconds: number;
   } | null;
+};
+
+type Contest = {
+    id: string;
+    title: string;
+    challengeIds: string[];
 };
 
 type ChallengeContextType = {
@@ -116,6 +123,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [hasLiked, setHasLiked] = useState(false);
 
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
+  const [contestDetails, setContestDetails] = useState<Contest | null>(null);
 
   const auth = getAuth(app);
   const challengeId = params.id as string;
@@ -330,6 +338,21 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     });
     return () => unsubscribe();
   }, [auth]);
+  
+  useEffect(() => {
+    if (isVirtualBattle && contestId) {
+        const contestDocRef = doc(db, 'events', contestId);
+        const unsubscribe = onSnapshot(contestDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const contestData = { id: docSnap.id, ...docSnap.data() } as Contest;
+                setContestDetails(contestData);
+            } else {
+                setContestDetails(null);
+            }
+        });
+        return () => unsubscribe();
+    }
+  }, [isVirtualBattle, contestId]);
 
   useEffect(() => {
     const fetchAllChallenges = async () => {
@@ -449,6 +472,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const prevChallengeId = currentChallengeIndex > 0 ? allChallenges[currentChallengeIndex - 1].id : null;
   const nextChallengeId = currentChallengeIndex < allChallenges.length - 1 ? allChallenges[currentChallengeIndex + 1].id : null;
   
+  const currentContestChallengeIndex = contestDetails?.challengeIds.findIndex(id => id === challengeId) ?? -1;
+  const prevContestChallengeId = contestDetails && currentContestChallengeIndex > 0 ? contestDetails.challengeIds[currentContestChallengeIndex - 1] : null;
+  const nextContestChallengeId = contestDetails && currentContestChallengeIndex < contestDetails.challengeIds.length - 1 ? contestDetails.challengeIds[currentContestChallengeIndex + 1] : null;
+
   if (isLoading || isChallengeLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -773,8 +800,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 <div className="flex items-center gap-4">
                    {isVirtualBattle ? (
                      <Link href={`/arena/${contestId}`} className="flex items-center gap-2">
-                        <Swords className="h-7 w-7" />
-                        <span className="font-semibold hidden sm:inline">Virtual Battle Mode</span>
+                        <SmecBattleCodeLogo className="h-7 w-7" />
                     </Link>
                    ) : (
                      <Link href="/dashboard" className="flex items-center gap-2">
@@ -783,7 +809,30 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     </Link>
                    )}
                 </div>
-                 {!isVirtualBattle && (
+                 {isVirtualBattle ? (
+                    <div className="flex items-center gap-2">
+                         <Button variant="ghost" size="icon" className="h-8 w-8">
+                             <List className="h-5 w-5" />
+                         </Button>
+                         <span className="font-semibold">{contestDetails?.title || 'Contest'}</span>
+                         <div className="flex items-center border border-slate-700 rounded-md">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!prevContestChallengeId}>
+                                <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}` : '#'}>
+                                    <ChevronLeft className="h-5 w-5" />
+                                </Link>
+                            </Button>
+                             <div className="w-px h-4 bg-slate-700"></div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!nextContestChallengeId}>
+                                 <Link href={nextContestChallengeId ? `/challenge/${nextContestChallengeId}?contestId=${contestId}` : '#'}>
+                                    <ChevronRight className="h-5 w-5" />
+                                </Link>
+                            </Button>
+                         </div>
+                         <Button variant="ghost" size="icon" className="h-8 w-8">
+                             <BarChart2 className="h-5 w-5" />
+                         </Button>
+                    </div>
+                 ) : (
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
                             <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
@@ -823,3 +872,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
