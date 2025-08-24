@@ -224,6 +224,8 @@ export default function ManageChallengesPage() {
         return;
     }
 
+    setIsSaving(true);
+    
     const { solution, ...restOfFormData } = formData;
     const challengeDataToSave = {
         ...restOfFormData,
@@ -232,31 +234,34 @@ export default function ManageChallengesPage() {
     };
 
     try {
-      if(editingChallengeId) {
-        const challengeRef = doc(db, 'challenges', editingChallengeId);
-        await setDoc(challengeRef, { ...challengeDataToSave, id: editingChallengeId }, { merge: true });
-      } else {
-        const slug = createSlug(formData.title);
-        const newDocRef = doc(db, 'challenges', slug);
-        const docExists = await getDoc(newDocRef);
+      const slug = editingChallengeId || createSlug(formData.title);
+      const challengeRef = doc(db, 'challenges', slug);
 
-        if(docExists.exists()) {
+      if (!editingChallengeId) {
+        const docExists = await getDoc(challengeRef);
+        if (docExists.exists()) {
             toast({
                 variant: 'destructive',
                 title: 'ID Exists',
-                description: 'A challenge with this title already exists. Please choose a unique title.'
+                description: 'A challenge with this title already exists, creating a conflict. Please choose a unique title.'
             });
+            setIsSaving(false);
             return;
         }
-
-        await setDoc(newDocRef, { ...challengeDataToSave, id: slug, createdAt: serverTimestamp() });
       }
+      
+      const dataWithTimestamp = editingChallengeId 
+          ? { ...challengeDataToSave, id: slug }
+          : { ...challengeDataToSave, id: slug, createdAt: serverTimestamp() };
+
+      await setDoc(challengeRef, dataWithTimestamp, { merge: true });
       
       toast({
           title: `Challenge ${editingChallengeId ? 'Updated' : 'Added'}!`,
           description: `Successfully saved "${challengeDataToSave.title}".`,
       });
       
+      handleCancel();
       fetchChallenges();
 
     } catch (error) {
@@ -267,7 +272,7 @@ export default function ManageChallengesPage() {
           description: 'Could not save the challenge to Firestore.'
         });
     } finally {
-      handleCancel();
+      setIsSaving(false);
     }
   };
   
@@ -332,7 +337,7 @@ export default function ManageChallengesPage() {
   const sortedChallenges = useMemo(() => {
     return [...challenges]
       .sort((a, b) => {
-          return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
+          return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
       });
   }, [challenges]);
   
@@ -508,7 +513,10 @@ export default function ManageChallengesPage() {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                    <Button type="submit">{editingChallengeId ? 'Update Challenge' : 'Create Challenge'}</Button>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                        {editingChallengeId ? 'Update Challenge' : 'Create Challenge'}
+                    </Button>
                     <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
                 </div>
               </form>
