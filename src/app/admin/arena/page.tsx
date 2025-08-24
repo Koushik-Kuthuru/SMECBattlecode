@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc, updateDoc, runTransaction, getDocs } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users, Search } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -283,11 +283,31 @@ export default function ManageArenaPage() {
     
     setIsSaving(true);
     try {
-      await deleteDoc(doc(db, "events", contestToDelete));
-      toast({
-        title: "Contest Deleted",
-        description: "The contest has been removed.",
-      });
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        
+        await runTransaction(db, async (transaction) => {
+            const contestRef = doc(db, "events", contestToDelete);
+            
+            // For each user, delete their virtual solutions for this contest.
+            for (const userDoc of usersSnapshot.docs) {
+                const userId = userDoc.id;
+                // The collection of a user's solutions for a specific virtual contest
+                const virtualSolutionsForContestRef = collection(db, `users/${userId}/virtual_solutions/${contestToDelete}`);
+                const virtualSolutionsSnapshot = await getDocs(virtualSolutionsForContestRef);
+                
+                virtualSolutionsSnapshot.forEach(solutionDoc => {
+                    transaction.delete(solutionDoc.ref);
+                });
+            }
+            
+            // Finally, delete the main contest document.
+            transaction.delete(contestRef);
+        });
+
+        toast({
+            title: "Contest Deleted",
+            description: "The contest and all associated virtual battle data have been removed.",
+        });
     } catch (error) {
       console.error("Error deleting contest: ", error);
       toast({
