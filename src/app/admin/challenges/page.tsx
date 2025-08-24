@@ -351,10 +351,11 @@ export default function ManageChallengesPage() {
   };
 
   const sortedChallenges = useMemo(() => {
-    return [...challenges]
-      .sort((a, b) => {
-          return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
-      });
+    return [...challenges].sort((a, b) => {
+      const dateA = a.createdAt?.toMillis() || 0;
+      const dateB = b.createdAt?.toMillis() || 0;
+      return dateB - dateA;
+    });
   }, [challenges]);
   
   const totalPages = Math.ceil(sortedChallenges.length / ITEMS_PER_PAGE);
