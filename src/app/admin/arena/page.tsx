@@ -79,7 +79,7 @@ export default function ManageArenaPage() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const contestList = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Event))
-        .filter(event => event.type === 'Challenge'); // Only get Arena contests
+        .filter(event => event.type === 'Challenge');
       setContests(contestList);
       setIsLoading(false);
     }, (error) => {
@@ -265,7 +265,6 @@ export default function ManageArenaPage() {
         title: "Contest Deleted",
         description: "The contest has been successfully removed.",
       });
-      // The onSnapshot listener will automatically update the state.
     } catch (error) {
       console.error("Error deleting contest: ", error);
       toast({
