@@ -15,6 +15,17 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { StudyPlan } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 type FormData = Omit<StudyPlan, 'id' | 'createdAt'>;
 
@@ -46,6 +57,7 @@ export default function ManageStudyPlansPage() {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   
   const db = getFirestore(app);
   const plansCollectionRef = collection(db, 'study_plans');
@@ -132,11 +144,11 @@ export default function ManageStudyPlansPage() {
     }
   };
 
-  const handleDelete = async (planId: string) => {
-    if (!window.confirm("Are you sure you want to delete this study plan?")) return;
+  const handleDelete = async () => {
+    if (!planToDelete) return;
 
     try {
-      await deleteDoc(doc(db, "study_plans", planId));
+      await deleteDoc(doc(db, "study_plans", planToDelete));
       toast({
         title: "Study Plan Deleted",
         description: "The study plan has been removed successfully.",
@@ -148,6 +160,8 @@ export default function ManageStudyPlansPage() {
         title: "Error Deleting",
         description: "Could not delete the study plan.",
       });
+    } finally {
+        setPlanToDelete(null);
     }
   };
   
@@ -226,6 +240,7 @@ export default function ManageStudyPlansPage() {
   }
 
   return (
+    <>
     <div className="container mx-auto py-8">
        <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Study Plans</h1>
@@ -265,7 +280,7 @@ export default function ManageStudyPlansPage() {
                              <Edit className="mr-2 h-4 w-4" />
                              Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(plan.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => setPlanToDelete(plan.id)}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
@@ -282,5 +297,22 @@ export default function ManageStudyPlansPage() {
         </CardContent>
       </Card>
     </div>
+     <AlertDialog open={!!planToDelete} onOpenChange={(open) => !open && setPlanToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the study plan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPlanToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

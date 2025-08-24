@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Event } from '@/lib/types';
@@ -19,8 +19,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-type PrizeImage = { src: string; alt: string; hint: string };
 
 type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status'> & {
   slug: string;
@@ -41,7 +50,6 @@ const defaultFormData: FormData = {
   endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
   registrationLink: '',
   prizes: [],
-  prizeImages: [],
 };
 
 const createSlug = (title: string) => {
@@ -60,6 +68,7 @@ export default function ManageEventsPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   
   const db = getFirestore(app);
   const eventsCollectionRef = collection(db, 'events');
@@ -182,11 +191,11 @@ export default function ManageEventsPage() {
     }
   };
 
-  const handleDelete = async (eventId: string) => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+  const handleDelete = async () => {
+    if (!eventToDelete) return;
 
     try {
-      await deleteDoc(doc(db, "events", eventId));
+      await deleteDoc(doc(db, "events", eventToDelete));
       toast({
         title: "Event Deleted",
         description: "The event has been removed successfully.",
@@ -198,6 +207,8 @@ export default function ManageEventsPage() {
         title: "Error Deleting",
         description: "Could not delete the event.",
       });
+    } finally {
+        setEventToDelete(null);
     }
   };
   
@@ -323,6 +334,7 @@ export default function ManageEventsPage() {
   }
 
   return (
+    <>
     <div className="container mx-auto py-8">
        <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Events</h1>
@@ -362,7 +374,7 @@ export default function ManageEventsPage() {
                              <Edit className="mr-2 h-4 w-4" />
                              Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(event.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => setEventToDelete(event.id)}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
@@ -379,5 +391,22 @@ export default function ManageEventsPage() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the event.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setEventToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

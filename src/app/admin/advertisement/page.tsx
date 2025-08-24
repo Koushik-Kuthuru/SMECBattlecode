@@ -13,6 +13,17 @@ import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 type Advertisement = {
   id: string;
@@ -52,7 +63,8 @@ export default function ManageAdvertisementPage() {
   const [editingAdId, setEditingAdId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
-  
+  const [adToDelete, setAdToDelete] = useState<string | null>(null);
+
   const db = getFirestore(app);
   const adsCollectionRef = collection(db, 'advertisements');
 
@@ -161,11 +173,11 @@ export default function ManageAdvertisementPage() {
     }
   };
 
-  const handleDelete = async (adId: string) => {
-    if (!window.confirm("Are you sure you want to delete this advertisement?")) return;
+  const handleDelete = async () => {
+    if (!adToDelete) return;
 
     try {
-      await deleteDoc(doc(db, "advertisements", adId));
+      await deleteDoc(doc(db, "advertisements", adToDelete));
       toast({
         title: "Advertisement Deleted",
         description: "The advertisement has been removed successfully.",
@@ -177,6 +189,8 @@ export default function ManageAdvertisementPage() {
         title: "Error Deleting",
         description: "Could not delete the advertisement.",
       });
+    } finally {
+        setAdToDelete(null);
     }
   };
   
@@ -243,6 +257,7 @@ export default function ManageAdvertisementPage() {
   }
 
   return (
+    <>
     <div className="container mx-auto py-8">
        <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Advertisements</h1>
@@ -282,7 +297,7 @@ export default function ManageAdvertisementPage() {
                              <Edit className="mr-2 h-4 w-4" />
                              Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(ad.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => setAdToDelete(ad.id)}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
@@ -299,5 +314,22 @@ export default function ManageAdvertisementPage() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={!!adToDelete} onOpenChange={(open) => !open && setAdToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the advertisement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAdToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
