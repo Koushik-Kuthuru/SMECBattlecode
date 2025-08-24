@@ -1,9 +1,9 @@
 
 'use client'
 
-import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List } from 'lucide-react';
+import { LogOut, User, Home, XCircle, CheckCircle, AlertCircle, Code, Loader2, HelpCircle, GitDiff, ThumbsUp, Play, Bug, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, List, Swords } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { getAuth, onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
@@ -94,6 +94,7 @@ export const useChallenge = () => {
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -119,6 +120,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const auth = getAuth(app);
   const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const contestId = searchParams.get('contestId');
+  const isVirtualBattle = !!contestId;
 
   const startCooldown = () => {
     setIsSubmitting(true);
@@ -203,6 +207,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
+    if (isVirtualBattle) {
+        toast({ title: "Virtual Battle", description: "Points and submissions are not saved in virtual battle mode." });
+        return; // Don't allow official submission in virtual battle
+    }
+
     setIsRunning(true);
     startCooldown();
     setRunResult({ feedback: '', results: [], allPassed: false });
@@ -294,7 +303,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     } finally {
       setIsRunning(false);
     }
-  }, [currentUser, challenge, challengeId, solution, language, toast]);
+  }, [currentUser, challenge, challengeId, solution, language, toast, isVirtualBattle]);
 
 
   useEffect(() => {
@@ -356,7 +365,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [challengeId, language]);
   
   useEffect(() => {
-      if (!currentUser || !challengeId) return;
+      if (!currentUser || !challengeId || isVirtualBattle) return;
 
       const setInProgress = async () => {
           const completedDocRef = doc(db, `users/${currentUser.uid}/challengeData`, 'completed');
@@ -383,10 +392,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         unsubscribeCompleted();
         unsubscribeLikes();
       }
-  }, [currentUser, challengeId]);
+  }, [currentUser, challengeId, isVirtualBattle]);
 
   useEffect(() => {
-    if (!currentUser || !challengeId) return;
+    if (!currentUser || !challengeId || isVirtualBattle) return;
 
     const submissionsRef = collection(db, `users/${currentUser.uid}/submissions/${challengeId}/attempts`);
     const q = query(submissionsRef, orderBy('timestamp', 'desc'));
@@ -397,7 +406,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     });
 
     return () => unsubscribe();
-  }, [currentUser, challengeId]);
+  }, [currentUser, challengeId, isVirtualBattle]);
 
   useEffect(() => {
     if(runResult || debugOutput) {
@@ -492,10 +501,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                   <span className={cn("font-semibold", difficultyTextColors[challenge.difficulty])}>{challenge.difficulty}</span>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="flex items-center gap-1.5 h-8" onClick={handleLikeToggle}>
-              <ThumbsUp className={cn("h-4 w-4 transition-colors", hasLiked && "text-blue-500 fill-blue-500/20")} />
-              <span className="font-semibold text-muted-foreground">{likeCount.toLocaleString()}</span>
-            </Button>
+             {!isVirtualBattle && (
+                <Button variant="ghost" size="sm" className="flex items-center gap-1.5 h-8" onClick={handleLikeToggle}>
+                    <ThumbsUp className={cn("h-4 w-4 transition-colors", hasLiked && "text-blue-500 fill-blue-500/20")} />
+                    <span className="font-semibold text-muted-foreground">{likeCount.toLocaleString()}</span>
+                </Button>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-4 whitespace-pre-wrap">{challenge.description}</p>
           
@@ -634,7 +645,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="debug">Debug</TabsTrigger>
                 <TabsTrigger value="result">Result</TabsTrigger>
-                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+                {!isVirtualBattle && <TabsTrigger value="submissions">Submissions</TabsTrigger>}
             </TabsList>
           </div>
           <div className="flex-grow overflow-auto">
@@ -760,30 +771,39 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         <div className="flex h-screen w-full flex-col overflow-hidden">
             <header className="flex-shrink-0 bg-slate-900 text-white h-14 flex items-center justify-between px-4">
                 <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="flex items-center gap-2">
+                   {isVirtualBattle ? (
+                     <Link href={`/arena/${contestId}`} className="flex items-center gap-2">
+                        <Swords className="h-7 w-7" />
+                        <span className="font-semibold hidden sm:inline">Virtual Battle Mode</span>
+                    </Link>
+                   ) : (
+                     <Link href="/dashboard" className="flex items-center gap-2">
                         <SmecBattleCodeLogo className="h-7 w-7" />
                         <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
                     </Link>
+                   )}
                 </div>
-                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
-                        <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
-                            <ChevronLeft className="h-4 w-4 mr-1" />
-                            Prev
-                        </Link>
-                    </Button>
-                     <Button variant="outline" size="sm" asChild className="bg-transparent text-white">
-                        <Link href="/challenges">
-                            <List className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
-                         <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
-                            Next
-                            <ChevronRight className="h-4 w-4 ml-1" />
-                        </Link>
-                    </Button>
-                 </div>
+                 {!isVirtualBattle && (
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
+                            <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
+                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                Prev
+                            </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild className="bg-transparent text-white">
+                            <Link href="/challenges">
+                                <List className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <Button variant="ghost" size="sm" asChild disabled={!nextChallengeId}>
+                            <Link href={nextChallengeId ? `/challenge/${nextChallengeId}` : '#'}>
+                                Next
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                            </Link>
+                        </Button>
+                    </div>
+                 )}
                  <div className="flex items-center gap-4">
                   {currentUser && (
                     <Avatar className="h-8 w-8">

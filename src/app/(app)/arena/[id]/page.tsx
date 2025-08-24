@@ -151,6 +151,15 @@ export default function ContestDetailPage() {
             setIsRegistering(false);
         }
     };
+    
+    const handleVirtualBattle = () => {
+        if (!contest || !contest.challengeIds || contest.challengeIds.length === 0) {
+            toast({ variant: 'destructive', title: 'No Challenges', description: 'This contest has no challenges to practice.' });
+            return;
+        }
+        const firstChallengeId = contest.challengeIds[0];
+        router.push(`/challenge/${firstChallengeId}?contestId=${id}`);
+    };
 
     const handleShare = async () => {
         if (!contest) return;
@@ -272,31 +281,10 @@ export default function ContestDetailPage() {
 
             <div className="flex flex-wrap items-stretch gap-2">
                 {contestStatus === 'past' ? (
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                             <Button>
-                                <Play className="mr-2 h-4 w-4" />
-                                Virtual Battle
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                             <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-primary" />
-                                    Ready to Go! 🚀
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                   The virtual battle is live! Jump in and showcase your skills.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Maybe Later</AlertDialogCancel>
-                                <AlertDialogAction>
-                                    Join Now
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                     <Button onClick={handleVirtualBattle}>
+                        <Play className="mr-2 h-4 w-4" />
+                        Virtual Battle
+                    </Button>
                 ) : isRegistered ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
