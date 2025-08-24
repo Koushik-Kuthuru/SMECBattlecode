@@ -822,10 +822,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                            </SheetTrigger>
                            <SheetContent side="left" className="p-0">
                                 <SheetHeader className="p-4 border-b">
-                                  <SheetTitle>{contestDetails?.title}</SheetTitle>
-                                  <SheetDescription>
-                                    <Badge variant="outline">Virtual</Badge>
-                                  </SheetDescription>
+                                  <SheetTitle className="flex items-center gap-2">
+                                      {contestDetails?.title}
+                                      <Badge variant="outline">Virtual</Badge>
+                                  </SheetTitle>
                                 </SheetHeader>
                                 <Tabs defaultValue="problems" className="mt-4">
                                   <TabsList className="grid w-full grid-cols-2">
@@ -908,6 +908,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
 
 
 
