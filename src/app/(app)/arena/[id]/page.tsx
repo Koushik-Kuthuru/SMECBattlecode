@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2, Rocket } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -281,10 +281,29 @@ export default function ContestDetailPage() {
 
             <div className="flex flex-wrap items-stretch gap-2">
                 {contestStatus === 'past' ? (
-                     <Button onClick={handleVirtualBattle}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Virtual Battle
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button>
+                                <Play className="mr-2 h-4 w-4" />
+                                Virtual Battle
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader className="text-center items-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-2">
+                                    <Rocket className="h-6 w-6 text-primary" />
+                                </div>
+                                <AlertDialogTitle>Ready to Go! 🚀</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    The virtual contest is live! You will have 2 hours to solve the problems. Jump in and showcase your skills.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="w-full">Maybe Later</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleVirtualBattle} className="w-full">Join Now</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 ) : isRegistered ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
