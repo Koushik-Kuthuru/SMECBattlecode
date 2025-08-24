@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2, Rocket } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2, Rocket, StopCircle, SkipForward } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -69,17 +69,19 @@ export default function ContestDetailPage() {
     const [isSharing, setIsSharing] = useState(false);
     const auth = getAuth();
     const currentUser = auth.currentUser;
-    const [virtualBattleEndTime, setVirtualBattleEndTime] = useState<Date | null>(null);
+    const [activeVirtualBattle, setActiveVirtualBattle] = useState<{ endTime: Date; startTime: number } | null>(null);
+
 
     useEffect(() => {
         if (!id) return;
         
         // Check for active virtual battle in local storage
-        const activeBattle = localStorage.getItem(`virtualBattle_${id}`);
-        if (activeBattle) {
-            const endTime = new Date(JSON.parse(activeBattle));
+        const battleData = localStorage.getItem(`virtualBattle_${id}`);
+        if (battleData) {
+            const parsedData = JSON.parse(battleData);
+            const endTime = new Date(parsedData.endTime);
             if (endTime > new Date()) {
-                setVirtualBattleEndTime(endTime);
+                setActiveVirtualBattle({ endTime, startTime: parsedData.startTime });
             } else {
                 localStorage.removeItem(`virtualBattle_${id}`);
             }
@@ -166,7 +168,7 @@ export default function ContestDetailPage() {
         }
     };
     
-    const handleVirtualBattle = () => {
+    const handleVirtualBattleStart = () => {
         if (!contest || !contest.challengeIds || contest.challengeIds.length === 0) {
             toast({ variant: 'destructive', title: 'No Challenges', description: 'This contest has no challenges to practice.' });
             return;
@@ -175,11 +177,28 @@ export default function ContestDetailPage() {
         const startTime = Date.now();
         const endTime = addHours(new Date(startTime), 2);
         
-        localStorage.setItem(`virtualBattle_${id}`, JSON.stringify(endTime));
-        setVirtualBattleEndTime(endTime);
+        const battleData = {
+            startTime: startTime,
+            endTime: endTime.toISOString(),
+        };
+
+        localStorage.setItem(`virtualBattle_${id}`, JSON.stringify(battleData));
+        setActiveVirtualBattle({ endTime, startTime });
         
         const firstChallengeId = contest.challengeIds[0];
         window.open(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${startTime}`, '_blank');
+    };
+    
+    const handleContinueBattle = () => {
+        if (!contest || !contest.challengeIds || contest.challengeIds.length === 0 || !activeVirtualBattle) return;
+        const firstChallengeId = contest.challengeIds[0];
+        window.open(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${activeVirtualBattle.startTime}`, '_blank');
+    };
+    
+    const handleEndBattle = () => {
+        localStorage.removeItem(`virtualBattle_${id}`);
+        setActiveVirtualBattle(null);
+        toast({ title: 'Battle Ended', description: 'Your virtual battle session has ended.' });
     };
 
     const handleShare = async () => {
@@ -266,12 +285,12 @@ export default function ContestDetailPage() {
   }
 
   const getStatusDisplay = () => {
-    if (contestStatus === 'past' && virtualBattleEndTime) {
-        if (virtualBattleEndTime > new Date()) {
-            return <Countdown to={virtualBattleEndTime} prefix="Battle Ends in" />;
+    if (contestStatus === 'past' && activeVirtualBattle) {
+        if (activeVirtualBattle.endTime > new Date()) {
+            return <Countdown to={activeVirtualBattle.endTime} prefix="Battle Ends in" />;
         } else {
              localStorage.removeItem(`virtualBattle_${id}`);
-             setVirtualBattleEndTime(null);
+             setActiveVirtualBattle(null);
         }
     }
     
@@ -310,29 +329,42 @@ export default function ContestDetailPage() {
 
             <div className="flex flex-wrap items-stretch gap-2">
                 {contestStatus === 'past' ? (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button>
-                                <Play className="mr-2 h-4 w-4" />
-                                Virtual Battle
+                    activeVirtualBattle ? (
+                        <>
+                            <Button onClick={handleContinueBattle}>
+                                <SkipForward className="mr-2 h-4 w-4" />
+                                Continue Battle
                             </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader className="text-center items-center">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-2">
-                                    <Rocket className="h-6 w-6 text-primary" />
-                                </div>
-                                <AlertDialogTitle>Ready to Go! 🚀</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    The virtual contest is live! You will have 2 hours to solve the problems. Jump in and showcase your skills.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                <AlertDialogCancel className="w-full">Maybe Later</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleVirtualBattle} className="w-full">Join Now</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                            <Button variant="destructive-outline" onClick={handleEndBattle}>
+                                <StopCircle className="mr-2 h-4 w-4" />
+                                End Battle
+                            </Button>
+                        </>
+                    ) : (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button>
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Virtual Battle
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader className="text-center items-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-2">
+                                        <Rocket className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <AlertDialogTitle>Ready to Go! 🚀</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        The virtual contest is live! You will have 2 hours to solve the problems. Jump in and showcase your skills.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                    <AlertDialogCancel className="w-full">Maybe Later</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleVirtualBattleStart} className="w-full">Join Now</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )
                 ) : isRegistered ? (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -462,4 +494,5 @@ export default function ContestDetailPage() {
         </div>
     </div>
   );
-}
+
+    
