@@ -25,7 +25,7 @@ import { type DebugCodeOutput } from '@/ai/flows/debug-code';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, addHours, differenceInSeconds } from 'date-fns';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   Accordion,
@@ -33,6 +33,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
@@ -99,6 +107,33 @@ export const useChallenge = () => {
     return context;
 }
 
+const CountdownTimer = ({ endTime, onEnd }: { endTime: Date, onEnd: () => void }) => {
+    const [remaining, setRemaining] = useState('');
+    
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const diff = differenceInSeconds(endTime, now);
+
+            if (diff <= 0) {
+                setRemaining('00:00:00');
+                clearInterval(interval);
+                onEnd();
+                return;
+            }
+
+            const hours = String(Math.floor(diff / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            const seconds = String(diff % 60).padStart(2, '0');
+            setRemaining(`${hours}:${minutes}:${seconds}`);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [endTime, onEnd]);
+
+    return <span className="font-mono text-orange-400">{remaining}</span>;
+}
+
 export default function ChallengeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
@@ -125,13 +160,24 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
   const [contestDetails, setContestDetails] = useState<Contest | null>(null);
+  const [battleEndTime, setBattleEndTime] = useState<Date | null>(null);
+  const [isBattleOver, setIsBattleOver] = useState(false);
 
   const auth = getAuth(app);
   const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const contestId = searchParams.get('contestId');
+  const startTimeParam = searchParams.get('startTime');
   const isVirtualBattle = !!contestId;
+  
+  useEffect(() => {
+    if (startTimeParam) {
+      const startTime = new Date(parseInt(startTimeParam, 10));
+      const endTime = addHours(startTime, 2);
+      setBattleEndTime(endTime);
+    }
+  }, [startTimeParam]);
 
   const startCooldown = () => {
     setIsSubmitting(true);
@@ -835,7 +881,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                   <TabsContent value="problems" className="p-4">
                                     <div className="space-y-2">
                                       {contestChallengeDetails.map((c, index) => (
-                                        <Link key={c.id} href={`/challenge/${c.id}?contestId=${contestId}`}>
+                                        <Link key={c.id} href={`/challenge/${c.id}?contestId=${contestId}&startTime=${startTimeParam}`}>
                                             <div className={cn("p-3 rounded-md hover:bg-muted", c.id === challengeId && "bg-muted")}>
                                               <p className="font-semibold">Q{index + 1}. {c.title}</p>
                                                <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
@@ -854,15 +900,21 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                            </SheetContent>
                          </Sheet>
 
+                         <div className="flex items-center border border-slate-700 rounded-md p-1">
+                            {battleEndTime ? (
+                               <CountdownTimer endTime={battleEndTime} onEnd={() => setIsBattleOver(true)} />
+                            ) : <Skeleton className="h-5 w-20" />}
+                         </div>
+
                          <div className="flex items-center border border-slate-700 rounded-md">
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!prevContestChallengeId}>
-                                <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}` : '#'}>
+                                <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}&startTime=${startTimeParam}` : '#'}>
                                     <ChevronLeft className="h-5 w-5" />
                                 </Link>
                             </Button>
                              <div className="w-px h-4 bg-slate-700"></div>
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!nextContestChallengeId}>
-                                 <Link href={nextContestChallengeId ? `/challenge/${nextContestChallengeId}?contestId=${contestId}` : '#'}>
+                                 <Link href={nextContestChallengeId ? `/challenge/${nextContestChallengeId}?contestId=${contestId}&startTime=${startTimeParam}` : '#'}>
                                     <ChevronRight className="h-5 w-5" />
                                 </Link>
                             </Button>
@@ -905,9 +957,23 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             </main>
         </div>
         <Toaster />
+        <AlertDialog open={isBattleOver}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Battle Done!</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your 2-hour virtual battle session has ended.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogAction asChild>
+                    <Link href={`/arena/${contestId}`}>Exit</Link>
+                </AlertDialogAction>
+            </AlertDialogContent>
+        </AlertDialog>
     </ChallengeContext.Provider>
   );
 }
+
 
 
 

@@ -158,7 +158,7 @@ export default function ContestDetailPage() {
             return;
         }
         const firstChallengeId = contest.challengeIds[0];
-        router.push(`/challenge/${firstChallengeId}?contestId=${id}`);
+        router.push(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${Date.now()}`);
     };
 
     const handleShare = async () => {
