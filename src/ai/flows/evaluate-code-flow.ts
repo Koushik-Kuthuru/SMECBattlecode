@@ -101,17 +101,7 @@ export const evaluateCodeFlow = ai.defineFlow(
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
     if (!process.env.JUDGE0_API_KEY) {
-      const mockSuccessFeedback = `(Mock Response) JUDGE0_API_KEY not set. Returning a simulated success. To get real results, add your API key to the .env file.`;
-      return {
-        results: testCases.map(tc => ({
-          testCaseInput: tc.input,
-          expectedOutput: tc.output,
-          actualOutput: tc.output, // Pretend the output was correct
-          passed: true,
-        })),
-        allPassed: true,
-        feedback: mockSuccessFeedback,
-      };
+        throw new Error("JUDGE0_API_KEY is not set in the environment variables. Cannot execute code.");
     }
 
     const results: z.infer<typeof TestCaseResultSchema>[] = [];
