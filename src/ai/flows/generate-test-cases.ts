@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -8,7 +9,6 @@
  * - GenerateTestCasesOutput - The return type for the generateTestCases function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateTestCasesInputSchema = z.object({
@@ -26,33 +26,6 @@ const GenerateTestCasesOutputSchema = z.object({
 export type GenerateTestCasesOutput = z.infer<typeof GenerateTestCasesOutputSchema>;
 
 export async function generateTestCases(input: GenerateTestCasesInput): Promise<GenerateTestCasesOutput> {
-  return generateTestCasesFlow(input);
+  const generateTestCasesFlow = await import('./generate-test-cases-flow');
+  return generateTestCasesFlow.generateTestCasesFlow(input);
 }
-
-const prompt = ai.definePrompt({
-  name: 'generateTestCasesPrompt',
-  input: {schema: GenerateTestCasesInputSchema},
-  output: {schema: GenerateTestCasesOutputSchema},
-  prompt: `You are a test case generator for coding problems.
-
-  Given a code submission, programming language, and problem description, generate a set of test cases to assess the correctness of the code.
-
-  Problem Description: {{{problemDescription}}}
-  Programming Language: {{{programmingLanguage}}}
-  Code Submission: {{{code}}}
-
-  Generate a diverse set of test cases that cover various scenarios, including edge cases and boundary conditions.  Return an array of strings. Each string should be a valid test case for the specified programming language.
-  `,
-});
-
-const generateTestCasesFlow = ai.defineFlow(
-  {
-    name: 'generateTestCasesFlow',
-    inputSchema: GenerateTestCasesInputSchema,
-    outputSchema: GenerateTestCasesOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);

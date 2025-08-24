@@ -27,48 +27,6 @@ export type CompareCodeOutput = z.infer<typeof CompareCodeOutputSchema>;
 
 
 export async function compareCode(input: CompareCodeInput): Promise<CompareCodeOutput> {
-  return compareCodeFlow(input);
+  const compareCodeFlow = await import('./compare-code-flow');
+  return compareCodeFlow.compareCodeFlow(input);
 }
-
-
-const prompt = ai.definePrompt({
-  name: 'compareCodePrompt',
-  input: {schema: CompareCodeInputSchema},
-  output: {schema: CompareCodeOutputSchema},
-  prompt: `You are an expert in code analysis and plagiarism detection. Your task is to compare two code submissions and determine how similar they are.
-
-  **Programming Language:**
-  {{{language}}}
-
-  **Code Submission 1:**
-  \`\`\`{{{language}}}
-  {{{code1}}}
-  \`\`\`
-
-  **Code Submission 2:**
-  \`\`\`{{{language}}}
-  {{{code2}}}
-  \`\`\`
-
-  **Instructions:**
-  1.  Analyze the logic, structure, algorithms, and variable naming of both code snippets.
-  2.  Calculate a similarity score from 0 (completely different) to 100 (identical or trivially different).
-  3.  Provide a brief explanation for your score. Mention key similarities (e.g., "Both solutions use a two-pointer approach with identical loop conditions") or differences (e.g., "Submission 1 uses recursion, while Submission 2 uses an iterative approach"). Ignore minor differences like comments or whitespace unless they are part of a larger pattern of obfuscation.
-
-  Return a JSON object matching the specified output schema.
-  `,
-});
-
-const compareCodeFlow = ai.defineFlow(
-  {
-    name: 'compareCodeFlow',
-    inputSchema: CompareCodeInputSchema,
-    outputSchema: CompareCodeOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
-
-    
