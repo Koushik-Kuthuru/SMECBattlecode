@@ -94,32 +94,37 @@ export const challenges: (Omit<Challenge, 'languages' | 'starterCode' | 'solutio
         { input: '[]', output: '[]', isHidden: true },
         { input: '[1]', output: '[1]', isHidden: true },
     ],
-    starterCode: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
-class Solution {
+    starterCode: `// Helper class, do not edit
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // This is the entry point. Your solution will be called from here.
+        // You do not need to read from stdin or print to stdout.
+    }
+
+    // Your solution
     public ListNode reverseList(ListNode head) {
         // Write your code here
     }
 }`,
-    solution: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
-class Solution {
+    solution: `// Helper class, do not edit
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // This is the entry point. Your solution will be called from here.
+    }
+
+    // Your solution
     public ListNode reverseList(ListNode head) {
         ListNode prev = null;
         ListNode current = head;
@@ -310,42 +315,36 @@ class Solution:
         { input: '[1,1]', output: 'false', isHidden: true },
         { input: '[5,4,6,null,null,3,7]', output: 'false', isHidden: true },
     ],
-    starterCode: `/**
- * Definition for a binary tree node.
- * public class TreeNode {
- *     int val;
- *     TreeNode left;
- *     TreeNode right;
- *     TreeNode() {}
- *     TreeNode(int val) { this.val = val; }
- *     TreeNode(int val, TreeNode left, TreeNode right) {
- *         this.val = val;
- *         this.left = left;
- *         this.right = right;
- *     }
- * }
- */
-class Solution {
+    starterCode: `// Helper class, do not edit
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode(int x) { val = x; }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // This is the entry point. Your solution will be called from here.
+    }
+
     public boolean isValidBST(TreeNode root) {
         // Write your code here
     }
 }`,
-    solution: `/**
- * Definition for a binary tree node.
- * public class TreeNode {
- *     int val;
- *     TreeNode left;
- *     TreeNode right;
- *     TreeNode() {}
- *     TreeNode(int val) { this.val = val; }
- *     TreeNode(int val, TreeNode left, TreeNode right) {
- *         this.val = val;
- *         this.left = left;
- *         this.right = right;
- *     }
- * }
- */
-class Solution {
+    solution: `// Helper class, do not edit
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode(int x) { val = x; }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // This is the entry point.
+    }
+
     public boolean isValidBST(TreeNode root) {
         return isValid(root, null, null);
     }
@@ -457,7 +456,7 @@ double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Si
         { input: '[4,2,3]', output: '1', isHidden: true },
         { input: '[5,4,1,2]', output: '1', isHidden: true },
     ],
-    starterCode: `from typing import List
+    starterCode: `from typing import list
 
 class Solution:
     def trap(self, height: list[int]) -> int:
@@ -571,34 +570,38 @@ public:
         { input: '[]', output: '[]' },
         { input: '[[]]', output: '[]', isHidden: true },
     ],
-    starterCode: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
+    starterCode: `// Helper class, do not edit
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
 import java.util.PriorityQueue;
 
-class Solution {
+public class Main {
+    public static void main(String[] args) {
+        // This is the entry point.
+    }
+    
     public ListNode mergeKLists(ListNode[] lists) {
         // Write your code here
     }
 }`,
-    solution: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
-class Solution {
+    solution: `// Helper class, do not edit
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+
+import java.util.PriorityQueue;
+
+public class Main {
+     public static void main(String[] args) {
+        // This is the entry point.
+    }
+    
     public ListNode mergeKLists(ListNode[] lists) {
         if (lists == null || lists.length == 0) {
             return null;
