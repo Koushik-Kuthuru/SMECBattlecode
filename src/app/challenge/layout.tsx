@@ -847,20 +847,12 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
             <header className="flex-shrink-0 bg-slate-900 text-white h-14 flex items-center justify-between px-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                    {isVirtualBattle ? (
-                     <Link href={`/arena/${contestId}`} className="flex items-center gap-2">
-                        <SmecBattleCodeLogo className="h-7 w-7" />
-                    </Link>
-                   ) : (
-                     <Link href="/dashboard" className="flex items-center gap-2">
-                        <SmecBattleCodeLogo className="h-7 w-7" />
-                        <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
-                    </Link>
-                   )}
-                </div>
-                 {isVirtualBattle ? (
-                    <div className="flex items-center gap-2">
+                     <>
+                        <Link href={`/arena/${contestId}`} className="flex items-center gap-2">
+                            <SmecBattleCodeLogo className="h-7 w-7" />
+                        </Link>
                          <Sheet>
                            <SheetTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -900,14 +892,18 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 </Tabs>
                            </SheetContent>
                          </Sheet>
-
-                         <div className="flex items-center border border-slate-700 rounded-md p-1">
-                            {battleEndTime ? (
-                               <CountdownTimer endTime={battleEndTime} onEnd={() => setIsBattleOver(true)} />
-                            ) : <Skeleton className="h-5 w-20" />}
-                         </div>
-
-                         <div className="flex items-center border border-slate-700 rounded-md">
+                     </>
+                   ) : (
+                     <Link href="/dashboard" className="flex items-center gap-2">
+                        <SmecBattleCodeLogo className="h-7 w-7" />
+                        <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
+                    </Link>
+                   )}
+                </div>
+                 
+                <div className="flex items-center gap-2">
+                   {isVirtualBattle ? (
+                        <div className="flex items-center border border-slate-700 rounded-md">
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!prevContestChallengeId}>
                                 <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}&startTime=${startTimeParam}` : '#'}>
                                     <ChevronLeft className="h-5 w-5" />
@@ -920,9 +916,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 </Link>
                             </Button>
                          </div>
-                    </div>
-                 ) : (
-                    <div className="flex items-center gap-2">
+                   ) : (
+                    <>
                         <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
                             <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
                                 <ChevronLeft className="h-4 w-4 mr-1" />
@@ -940,9 +935,18 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 <ChevronRight className="h-4 w-4 ml-1" />
                             </Link>
                         </Button>
-                    </div>
-                 )}
+                    </>
+                   )}
+                </div>
+
                  <div className="flex items-center gap-4">
+                  {isVirtualBattle && (
+                     <div className="flex items-center border border-slate-700 rounded-md p-1">
+                        {battleEndTime ? (
+                           <CountdownTimer endTime={battleEndTime} onEnd={() => setIsBattleOver(true)} />
+                        ) : <Skeleton className="h-5 w-20" />}
+                     </div>
+                  )}
                   {currentUser && (
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={currentUser.imageUrl} />
