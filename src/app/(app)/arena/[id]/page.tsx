@@ -7,12 +7,12 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Calendar, Clock, Gift, Info, Star, ExternalLink, RefreshCw, Loader2, Megaphone, CheckCircle, Trophy, Swords, Share2, LogOut, Play, Gamepad2, Rocket } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp, onSnapshot, runTransaction, increment, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Event } from '@/lib/types';
-import { format, formatDistanceToNow, differenceInSeconds } from 'date-fns';
+import { format, formatDistanceToNow, differenceInSeconds, addHours } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth } from 'firebase/auth';
 import { BulletCoin } from '@/components/icons';
@@ -50,12 +50,16 @@ const Countdown = ({ to, prefix }: { to: Date, prefix: string }) => {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    return `${prefix} ${days}d ${hours}h ${minutes}m ${secs}s`;
+    if (days > 0) {
+        return `${prefix} ${days}d ${hours}h ${minutes}m ${secs}s`;
+    }
+    return `${prefix} ${hours}h ${minutes}m ${secs}s`;
 };
 
 export default function ContestDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const id = params.id as string;
     const [contest, setContest] = useState<Event | null>(null);
@@ -65,9 +69,21 @@ export default function ContestDetailPage() {
     const [isSharing, setIsSharing] = useState(false);
     const auth = getAuth();
     const currentUser = auth.currentUser;
+    const [virtualBattleEndTime, setVirtualBattleEndTime] = useState<Date | null>(null);
 
     useEffect(() => {
         if (!id) return;
+        
+        // Check for active virtual battle in local storage
+        const activeBattle = localStorage.getItem(`virtualBattle_${id}`);
+        if (activeBattle) {
+            const endTime = new Date(JSON.parse(activeBattle));
+            if (endTime > new Date()) {
+                setVirtualBattleEndTime(endTime);
+            } else {
+                localStorage.removeItem(`virtualBattle_${id}`);
+            }
+        }
 
         const contestDocRef = doc(db, 'events', id);
         const unsubscribe = onSnapshot(contestDocRef, (docSnap) => {
@@ -75,7 +91,6 @@ export default function ContestDetailPage() {
             if (docSnap.exists()) {
                 const contestData = { id: docSnap.id, ...docSnap.data() } as Event;
                 setContest(contestData);
-                // Check if current user is registered
                 if (currentUser && contestData.registeredUsers?.includes(currentUser.uid)) {
                     setIsRegistered(true);
                 } else {
@@ -108,7 +123,6 @@ export default function ContestDetailPage() {
                     throw new Error("Contest does not exist!");
                 }
                  const contestData = contestDoc.data();
-                 // Prevent double registration in transaction
                 if (contestData.registeredUsers?.includes(currentUser.uid)) {
                     return;
                 }
@@ -128,7 +142,7 @@ export default function ContestDetailPage() {
     
     const handleUnregisterConfirm = async () => {
         if (!currentUser || !id) return;
-        setIsRegistering(true); // Reuse the same loading state
+        setIsRegistering(true); 
 
         const contestDocRef = doc(db, 'events', id);
         try {
@@ -157,8 +171,15 @@ export default function ContestDetailPage() {
             toast({ variant: 'destructive', title: 'No Challenges', description: 'This contest has no challenges to practice.' });
             return;
         }
+        
+        const startTime = Date.now();
+        const endTime = addHours(new Date(startTime), 2);
+        
+        localStorage.setItem(`virtualBattle_${id}`, JSON.stringify(endTime));
+        setVirtualBattleEndTime(endTime);
+        
         const firstChallengeId = contest.challengeIds[0];
-        router.push(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${Date.now()}`);
+        router.push(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${startTime}`);
     };
 
     const handleShare = async () => {
@@ -180,7 +201,6 @@ export default function ContestDetailPage() {
                 });
             }
         } catch (error: any) {
-            // Fallback for when sharing is denied or fails
             if (error.name === 'NotAllowedError') {
                  await navigator.clipboard.writeText(window.location.href);
                  toast({
@@ -246,6 +266,15 @@ export default function ContestDetailPage() {
   }
 
   const getStatusDisplay = () => {
+    if (contestStatus === 'past' && virtualBattleEndTime) {
+        if (virtualBattleEndTime > new Date()) {
+            return <Countdown to={virtualBattleEndTime} prefix="Battle Ends in" />;
+        } else {
+             localStorage.removeItem(`virtualBattle_${id}`);
+             setVirtualBattleEndTime(null);
+        }
+    }
+    
     switch (contestStatus) {
         case 'upcoming':
             return <Countdown to={startDate} prefix="Starts in" />;
