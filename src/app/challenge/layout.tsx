@@ -892,17 +892,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 </Tabs>
                            </SheetContent>
                          </Sheet>
-                     </>
-                   ) : (
-                     <Link href="/dashboard" className="flex items-center gap-2">
-                        <SmecBattleCodeLogo className="h-7 w-7" />
-                        <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
-                    </Link>
-                   )}
-                </div>
-                 
-                <div className="flex items-center gap-2">
-                   {isVirtualBattle ? (
                         <div className="flex items-center border border-slate-700 rounded-md">
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!prevContestChallengeId}>
                                 <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}&startTime=${startTimeParam}` : '#'}>
@@ -916,7 +905,17 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 </Link>
                             </Button>
                          </div>
+                     </>
                    ) : (
+                     <Link href="/dashboard" className="flex items-center gap-2">
+                        <SmecBattleCodeLogo className="h-7 w-7" />
+                        <span className="font-semibold hidden sm:inline">SMEC Battle Code</span>
+                    </Link>
+                   )}
+                </div>
+                 
+                <div className="hidden md:flex items-center gap-2">
+                   {!isVirtualBattle && (
                     <>
                         <Button variant="ghost" size="sm" asChild disabled={!prevChallengeId}>
                             <Link href={prevChallengeId ? `/challenge/${prevChallengeId}` : '#'}>
