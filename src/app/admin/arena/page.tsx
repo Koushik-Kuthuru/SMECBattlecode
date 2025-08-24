@@ -521,8 +521,8 @@ export default function ManageArenaPage() {
           ) : contests.length > 0 ? (
             <div className="space-y-4">
               {contests.map(event => (
-                <div key={event.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4 flex-1" onClick={() => handleEditClick(event)}>
+                <div key={event.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4 cursor-pointer hover:bg-muted/50" onClick={() => handleEditClick(event)}>
+                  <div className="flex items-center gap-4 flex-1">
                       <img src={event.imageUrl || 'https://placehold.co/64'} alt={event.title} className="w-16 h-16 object-cover rounded-md bg-muted" />
                       <div>
                         <h3 className="font-semibold">{event.title}</h3>
@@ -539,10 +539,6 @@ export default function ManageArenaPage() {
                            <Label>{event.isEnabled ? 'Enabled' : 'Disabled'}</Label>
                      </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditClick(event)}>
-                             <Edit className="mr-2 h-4 w-4" />
-                             Edit
-                        </Button>
                         <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setContestToDelete(event.id); }}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
