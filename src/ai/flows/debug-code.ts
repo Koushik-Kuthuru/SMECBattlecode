@@ -21,11 +21,16 @@ export type DebugCodeInput = z.infer<typeof DebugCodeInputSchema>;
 const DebugCodeOutputSchema = z.object({
   stdout: z.string().describe("The standard output from the user's code."),
   stderr: z.string().describe("The standard error from the user's code, if any."),
+  compile_output: z.string().describe("Compilation output, if any."),
+  status: z.string().describe("The execution status description."),
 });
 export type DebugCodeOutput = z.infer<typeof DebugCodeOutputSchema>;
 
 
 export async function debugCode(input: DebugCodeInput): Promise<DebugCodeOutput> {
-  const debugCodeFlow = await import('./debug-code-flow');
-  return debugCodeFlow.debugCodeFlow(input);
+  const { debugCodeFlow } = await import('./debug-code-flow');
+  // The problemId is not strictly needed for a debug run against custom input,
+  // but we can pass an empty string or a placeholder if the flow expects it.
+  // In this new implementation, it's not needed.
+  return debugCodeFlow(input);
 }

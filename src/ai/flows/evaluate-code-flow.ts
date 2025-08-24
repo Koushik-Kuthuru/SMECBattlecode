@@ -4,8 +4,11 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-const JUDGE0_URL = 'https://judge0-ce.p.rapidapi.com';
+
+const JUDGE0_URL = 'http://localhost:2358';
 
 // Maps our language names to the ones Judge0 expects
 const languageMap: Record<string, number> = {
@@ -22,7 +25,12 @@ const TestCaseResultSchema = z.object({
   expectedOutput: z.string().describe("The expected output for the test case."),
   actualOutput: z.string().describe("The actual output from the user's code."),
   passed: z.boolean().describe("Whether the user's code passed the test case."),
+  status: z.string().describe("The status description from the judge (e.g., 'Accepted', 'Wrong Answer')."),
+  stdout: z.string().nullable().describe("The standard output from the user's code."),
+  stderr: z.string().nullable().describe("The standard error from the user's code, if any."),
+  compile_output: z.string().nullable().describe("The compilation output, if any."),
 });
+
 
 const EvaluateCodeInputSchema = z.object({
   problemId: z.string().describe('The ID of the problem to evaluate against.'),
@@ -45,32 +53,11 @@ async function executeOnJudge(languageId: number, code: string, testCases: { inp
       expected_output: tc.output
   }));
   
-  const response = await axios.post(`${JUDGE0_URL}/submissions/batch`, 
-      { submissions },
-      {
-          headers: {
-              'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-              'Content-Type': 'application/json'
-          }
-      }
+  const response = await axios.post(`${JUDGE0_URL}/submissions/batch?base64_encoded=false&wait=true`, 
+      { submissions }
   );
-  
-  const tokens = response.data.map((s: { token: string }) => s.token).join(',');
 
-  while(true) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const resultRes = await axios.get(`${JUDGE0_URL}/submissions/batch?tokens=${tokens}&base64_encoded=false&fields=*`, {
-          headers: {
-              'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-          }
-      });
-      const results = resultRes.data.submissions;
-      if (results.every((res: any) => res.status.id > 2)) { // Status > 2 means finished (Accepted, WA, TLE, etc.)
-          return results;
-      }
-  }
+  return response.data;
 }
 
 export const evaluateCodeFlow = ai.defineFlow(
@@ -100,21 +87,21 @@ export const evaluateCodeFlow = ai.defineFlow(
             const passed = res.status.id === 3; // 3 is "Accepted"
             if(!passed) allPassed = false;
             
-            let actualOutput = res.stdout || '';
-            if (res.status.id === 6) actualOutput = `Compilation Error: ${res.compile_output || 'Unknown error'}`;
-            else if (res.status.id !== 3) actualOutput = res.stderr || `Error: ${res.status.description}`;
-
             return {
                 testCaseInput: testCases[index].input,
                 expectedOutput: testCases[index].output,
-                actualOutput: actualOutput,
+                actualOutput: res.stdout || res.stderr || res.compile_output || 'No output',
                 passed: passed,
+                status: res.status.description,
+                stdout: res.stdout,
+                stderr: res.stderr,
+                compile_output: res.compile_output,
             };
         });
 
         let feedback = allPassed 
             ? 'All test cases passed!' 
-            : `Failed on test case ${results.findIndex(r => !r.passed) + 1}.`;
+            : `Failed ${results.filter(r => !r.passed).length} test case(s).`;
 
         const firstError = judgeResults.find((res:any) => res.status.id > 3);
         if (firstError) {
@@ -124,11 +111,11 @@ export const evaluateCodeFlow = ai.defineFlow(
         return { results, allPassed, feedback };
 
     } catch (error: any) {
-        console.error("Error executing with Judge0:", error.response?.data || error.message);
+        console.error("Error communicating with Judge0:", error.response?.data || error.message);
         return {
             results: [],
             allPassed: false,
-            feedback: `Judge Communication Error: ${error.response?.data?.error || error.message}`
+            feedback: `Judge Communication Error: ${error.message}`
         }
     }
   }

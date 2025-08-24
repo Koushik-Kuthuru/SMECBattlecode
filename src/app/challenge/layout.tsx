@@ -220,7 +220,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }, [challenge, language, solution, toast, challengeId]);
 
   const handleDebugCode = useCallback(async (customInput: string) => {
-    if (!challenge || !language || !challengeId) {
+    if (!challenge || !language) {
       toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
     }
@@ -233,7 +233,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
     try {
       const result = await debugCode({
-          problemId: challengeId,
           code: solution,
           programmingLanguage: language,
           input: customInput,
@@ -246,7 +245,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast, challengeId]);
+  }, [challenge, language, solution, toast]);
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser || !challenge || !challengeId || !language) {
@@ -621,8 +620,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     );
   }
   
- const renderOutput = (output: string, title: "Your Output" | "Expected Output" | "Error") => {
-    const isError = title === 'Error';
+ const renderOutput = (output: string | null, title: "Your Output" | "Expected Output" | "Error" | "Compile Output") => {
+    const isError = title === 'Error' || title === 'Compile Output';
     const titleColor = isError ? "text-red-500" : "font-semibold";
     const bgColor = isError ? "bg-red-50" : "bg-gray-100";
     const textColor = isError ? "text-red-700" : "";
@@ -633,7 +632,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             <h4 className={cn("mb-1 text-xs", titleColor)}>{title}</h4>
             <Textarea 
                 readOnly 
-                value={output} 
+                value={output || ''} 
                 className={cn("font-mono text-xs h-20", bgColor, textColor, borderColor)} 
             />
         </div>
@@ -653,7 +652,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     {runResult.feedback}
                 </span>
             )}
-            {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
+            {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">{debugOutput.status}</span>}
          </div>
       </header>
         <>
@@ -668,8 +667,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                      {runResult.results.map((res, i) => (
                        <AccordionItem value={String(i)} key={i}>
                           <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
-                              Test Case {i + 1}
+                              <span>Test Case {i + 1}</span>
                               {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                              <span className={cn("font-semibold", res.passed ? 'text-green-600' : 'text-red-500')}>{res.status}</span>
                           </AccordionTrigger>
                           <AccordionContent className="p-4 space-y-4 bg-muted/50">
                                <div>
@@ -680,6 +680,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     {renderOutput(res.actualOutput, 'Your Output')}
                                     {renderOutput(res.expectedOutput, 'Expected Output')}
                                 </div>
+                                {res.compile_output && renderOutput(res.compile_output, "Compile Output")}
+                                {res.stderr && renderOutput(res.stderr, "Error")}
                           </AccordionContent>
                        </AccordionItem>
                      ))}
@@ -687,14 +689,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </ScrollArea>
             ) : debugOutput ? (
                 <div className="p-2 space-y-4">
-                    <div>
-                        <h4 className="font-semibold mb-1 text-sm">Standard Output</h4>
-                        <Textarea readOnly value={debugOutput.stdout || '(empty)'} className="font-mono text-xs h-32 bg-gray-100" />
-                    </div>
-                    <div>
-                        <h4 className="font-semibold mb-1 text-sm text-red-500">Standard Error</h4>
-                        <Textarea readOnly value={debugOutput.stderr || '(empty)'} className="font-mono text-xs h-20 bg-red-50 text-red-700 border-red-200" />
-                    </div>
+                    {renderOutput(debugOutput.stdout, "Your Output")}
+                    {renderOutput(debugOutput.stderr, "Error")}
+                    {renderOutput(debugOutput.compile_output, "Compile Output")}
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">

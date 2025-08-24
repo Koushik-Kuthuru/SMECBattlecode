@@ -16,7 +16,12 @@ const TestCaseResultSchema = z.object({
   expectedOutput: z.string().describe("The expected output for the test case."),
   actualOutput: z.string().describe("The actual output from the user's code."),
   passed: z.boolean().describe("Whether the user's code passed the test case."),
+  status: z.string().describe("The status description from the judge (e.g., 'Accepted', 'Wrong Answer')."),
+  stdout: z.string().nullable().describe("The standard output from the user's code."),
+  stderr: z.string().nullable().describe("The standard error from the user's code, if any."),
+  compile_output: z.string().nullable().describe("The compilation output, if any."),
 });
+
 
 const EvaluateCodeInputSchema = z.object({
   problemId: z.string().describe('The ID of the problem to evaluate against.'),
@@ -33,6 +38,6 @@ const EvaluateCodeOutputSchema = z.object({
 export type EvaluateCodeOutput = z.infer<typeof EvaluateCodeOutputSchema>;
 
 export async function evaluateCode(input: EvaluateCodeInput): Promise<EvaluateCodeOutput> {
-  const evaluateCodeFlow = await import('./evaluate-code-flow');
-  return evaluateCodeFlow.evaluateCodeFlow(input);
+  const { evaluateCodeFlow } = await import('./evaluate-code-flow');
+  return evaluateCodeFlow(input);
 }

@@ -5,7 +5,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
 
-const JUDGE0_URL = 'https://judge0-ce.p.rapidapi.com';
+const JUDGE0_URL = 'http://localhost:2358';
 
 const languageMap: Record<string, number> = {
   'javascript': 93, // Node.js
@@ -18,7 +18,6 @@ const languageMap: Record<string, number> = {
 
 
 const DebugCodeInputSchema = z.object({
-  problemId: z.string().describe('The ID of the problem to test against.'),
   code: z.string().describe('The code submission to debug.'),
   programmingLanguage: z.string().describe('The programming language of the code submission.'),
   input: z.string().describe('The standard input to provide to the code.'),
@@ -27,6 +26,8 @@ const DebugCodeInputSchema = z.object({
 const DebugCodeOutputSchema = z.object({
   stdout: z.string().describe("The standard output from the user's code."),
   stderr: z.string().describe("The standard error from the user's code, if any."),
+  compile_output: z.string().describe("Compilation output, if any."),
+  status: z.string().describe("The execution status description."),
 });
 
 export const debugCodeFlow = ai.defineFlow(
@@ -35,7 +36,7 @@ export const debugCodeFlow = ai.defineFlow(
     inputSchema: DebugCodeInputSchema,
     outputSchema: DebugCodeOutputSchema,
   },
-  async ({ problemId, code, programmingLanguage, input }) => {
+  async ({ code, programmingLanguage, input }) => {
     const languageId = languageMap[programmingLanguage.toLowerCase()];
     if (!languageId) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
@@ -48,26 +49,17 @@ export const debugCodeFlow = ai.defineFlow(
           stdin: input,
       }, {
           headers: {
-              'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
               'Content-Type': 'application/json'
           }
       });
       
       const result = response.data;
       
-      let stdout = result.stdout || '';
-      let stderr = result.stderr || '';
-
-      if (result.status.id === 6) { // Compilation Error
-          stderr = result.compile_output || 'Compilation Error';
-      } else if (result.status.id !== 3 && result.status.description) { // Not "Accepted"
-          stderr = stderr ? `${result.status.description}\n${stderr}` : result.status.description;
-      }
-      
       return {
-        stdout,
-        stderr,
+        stdout: result.stdout || '',
+        stderr: result.stderr || '',
+        compile_output: result.compile_output || '',
+        status: result.status.description || 'Unknown Status',
       };
 
     } catch (error: any) {
@@ -76,6 +68,8 @@ export const debugCodeFlow = ai.defineFlow(
       return {
         stdout: '',
         stderr: `Execution Error: ${errorMessage}`,
+        compile_output: '',
+        status: 'Error'
       };
     }
   }
