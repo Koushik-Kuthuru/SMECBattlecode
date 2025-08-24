@@ -638,6 +638,26 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     );
   }
   
+ const renderOutput = (output: string) => {
+    const isError = output.toLowerCase().includes('error');
+    const title = isError ? "Error" : "Your Output";
+    const titleColor = isError ? "text-red-500" : "font-semibold";
+    const bgColor = isError ? "bg-red-50" : "bg-gray-100";
+    const textColor = isError ? "text-red-700" : "";
+    const borderColor = isError ? "border-red-200" : "";
+
+    return (
+        <div>
+            <h4 className={cn("mb-1 text-xs", titleColor)}>{title}</h4>
+            <Textarea 
+                readOnly 
+                value={output} 
+                className={cn("font-mono text-xs h-20", bgColor, textColor, borderColor)} 
+            />
+        </div>
+    );
+ };
+
   const testResultPanel = (
     <div className="h-full w-full bg-background flex flex-col">
       <header className="p-2 border-b flex justify-between items-center flex-shrink-0">
@@ -675,10 +695,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <h4 className="font-semibold mb-1 text-xs">Your Output</h4>
-                                        <Textarea readOnly value={res.actualOutput} className="font-mono text-xs h-20" />
-                                    </div>
+                                    {renderOutput(res.actualOutput)}
                                     <div>
                                         <h4 className="font-semibold mb-1 text-xs">Expected Output</h4>
                                         <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
@@ -759,7 +776,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                               {submissions.map((submission) => (
                                 <TableRow key={submission.id}>
                                   <TableCell>
-                                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'}>
+                                    <Badge variant={submission.status === 'Accepted' ? 'default' : 'destructive'} className={cn(submission.status === 'Accepted' ? 'bg-green-600' : '')}>
                                       {submission.status}
                                     </Badge>
                                   </TableCell>
@@ -973,3 +990,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
