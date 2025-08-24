@@ -121,11 +121,24 @@ export const evaluateCodeFlow = ai.defineFlow(
         try {
             const judgeResult = await runOnJudge0(languageId, code, testCase.input);
             
-            // Normalize outputs for comparison
-            const actualOutput = (judgeResult.stdout || '').trim();
+            let actualOutput = (judgeResult.stdout || '').trim();
             const expectedOutput = testCase.output.trim();
+            let passed = false;
 
-            const passed = actualOutput === expectedOutput && judgeResult.status.id === 3; // Status 3 is "Accepted"
+            if (judgeResult.status.id === 3) { // 3: Accepted
+                passed = actualOutput === expectedOutput;
+            } else {
+                // If not accepted, it definitely failed.
+                passed = false;
+                // Provide detailed error as output
+                if (judgeResult.compile_output) {
+                    actualOutput = `Compilation Error:\n${judgeResult.compile_output}`;
+                } else if (judgeResult.stderr) {
+                     actualOutput = `Runtime Error:\n${judgeResult.stderr}`;
+                } else {
+                     actualOutput = judgeResult.status.description;
+                }
+            }
 
             if (!passed) {
                 allPassed = false;
@@ -134,7 +147,7 @@ export const evaluateCodeFlow = ai.defineFlow(
             results.push({
                 testCaseInput: testCase.input,
                 expectedOutput: testCase.output,
-                actualOutput: judgeResult.stdout || judgeResult.stderr || judgeResult.compile_output || 'No output',
+                actualOutput: judgeResult.stdout || actualOutput, // Prefer stdout, but show error if present
                 passed,
             });
 
