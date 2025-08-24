@@ -229,7 +229,6 @@ export default function ManageChallengesPage() {
 
     setIsSaving(true);
     
-    // Determine the slug to use. If a slug is provided, use it. Otherwise, generate from title.
     const slug = formData.slug ? createSlug(formData.slug) : createSlug(formData.title);
     if (!slug) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not generate a valid slug from the title or provided slug.' });
@@ -237,7 +236,6 @@ export default function ManageChallengesPage() {
         return;
     }
     
-    // Check for ID existence only for new challenges to prevent overwriting
     if (!editingChallengeId) {
         const docRef = doc(db, 'challenges', slug);
         const docSnap = await getDoc(docRef);
@@ -259,7 +257,6 @@ export default function ManageChallengesPage() {
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
     };
-    // remove slug from data to save as it's the id
     // @ts-ignore
     delete challengeDataToSave.slug;
 
@@ -306,21 +303,12 @@ export default function ManageChallengesPage() {
                 
                 const solutionRef = doc(db, `users/${userId}/solutions`, challengeToDelete);
                 transaction.delete(solutionRef);
-
-                const inProgressRef = doc(db, `users/${userId}/challengeData`, 'inProgress');
-                const completedRef = doc(db, `users/${userId}/challengeData`, 'completed');
                 
-                const [inProgressSnap, completedSnap] = await Promise.all([
-                    transaction.get(inProgressRef),
-                    transaction.get(completedRef)
-                ]);
+                const inProgressRef = doc(db, `users/${userId}/challengeData`, 'inProgress');
+                transaction.set(inProgressRef, { [challengeToDelete]: deleteField() }, { merge: true });
 
-                if (inProgressSnap.exists()) {
-                    transaction.update(inProgressRef, { [challengeToDelete]: deleteField() });
-                }
-                if (completedSnap.exists()) {
-                    transaction.update(completedRef, { [challengeToDelete]: deleteField() });
-                }
+                const completedRef = doc(db, `users/${userId}/challengeData`, 'completed');
+                transaction.set(completedRef, { [challengeToDelete]: deleteField() }, { merge: true });
             }
 
             transaction.delete(challengeRef);
