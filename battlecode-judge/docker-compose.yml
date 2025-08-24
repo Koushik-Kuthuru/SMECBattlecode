@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  server:
+    build: ./server
+    command: sh -c "npm run dev"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+      - PROBLEM_DIR=/app/problems
+    volumes:
+      - ./server:/app
+      - ./problems:/app/problems
+      - ./shared:/app/shared
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+
+  worker:
+    build: ./worker
+    command: sh -c "npm run dev"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - TMP_DIR=/tmp/judge
+    volumes:
+      - ./worker:/app
+      - ./shared:/app/shared
+      - /var/run/docker.sock:/var/run/docker.sock  # allow docker-in-docker control
+    depends_on:
+      - redis

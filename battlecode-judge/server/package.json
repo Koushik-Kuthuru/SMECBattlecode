@@ -1,0 +1,19 @@
+{
+  "name": "battlecode-judge-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts"
+  },
+  "dependencies": {
+    "bullmq": "^5.7.7",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-validator": "^7.0.1"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.0"
+  }
+}

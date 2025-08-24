@@ -1,0 +1,12 @@
+### Submit (Python)
+POST http://localhost:8080/api/submit
+Content-Type: application/json
+
+{
+  "problemId": "two-sum",
+  "language": "python",
+  "code": "n=int(input());\nnums=list(map(int,input().split()));\nt=int(input());\nd={};\nimport sys\nfor i,x in enumerate(nums):\n  y=t-x\n  if y in d: print(d[y], i); sys.exit(0)\n  d[x]=i\n"
+}
+
+### Poll
+GET http://localhost:8080/api/result/{{last_response.body.$.jobId}}
