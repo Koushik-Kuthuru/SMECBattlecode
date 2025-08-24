@@ -47,6 +47,7 @@ const ALL_LANGUAGES = ['C', 'C++', 'Java', 'Python', 'JavaScript'];
 const ITEMS_PER_PAGE = 10;
 
 type FormData = Omit<Challenge, 'id' | 'tags' | 'languages' | 'starterCode' | 'solution' | 'likes'> & { 
+  slug: string;
   tags: string;
   languages: string[];
   starterCode: { [key: string]: string };
@@ -54,6 +55,7 @@ type FormData = Omit<Challenge, 'id' | 'tags' | 'languages' | 'starterCode' | 's
 };
 
 const defaultFormData: FormData = {
+  slug: '',
   title: '',
   difficulty: 'Easy',
   points: 10,
@@ -197,6 +199,7 @@ export default function ManageChallengesPage() {
       setFormData({
         ...defaultFormData, // ensure all fields are present
         ...challenge,
+        slug: challenge.id || '',
         languages: challenge.languages || [],
         starterCode: challenge.starterCode || {},
         solution: challenge.solution || {},
@@ -226,33 +229,46 @@ export default function ManageChallengesPage() {
 
     setIsSaving(true);
     
-    const { solution, ...restOfFormData } = formData;
-    const challengeDataToSave = {
-        ...restOfFormData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
-    };
-
-    try {
-      const slug = editingChallengeId || createSlug(formData.title);
-      const challengeRef = doc(db, 'challenges', slug);
-
-      if (!editingChallengeId) {
-        const docExists = await getDoc(challengeRef);
-        if (docExists.exists()) {
+    // Determine the slug to use. If a slug is provided, use it. Otherwise, generate from title.
+    const slug = formData.slug ? createSlug(formData.slug) : createSlug(formData.title);
+    if (!slug) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate a valid slug from the title or provided slug.' });
+        setIsSaving(false);
+        return;
+    }
+    
+    // Check for ID existence only for new challenges to prevent overwriting
+    if (!editingChallengeId) {
+        const docRef = doc(db, 'challenges', slug);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
             toast({
                 variant: 'destructive',
                 title: 'ID Exists',
-                description: 'A challenge with this title already exists, creating a conflict. Please choose a unique title.'
+                description: 'A challenge with this slug already exists. Please choose a unique slug or title.'
             });
             setIsSaving(false);
             return;
         }
-      }
+    }
+    
+    const { solution, ...restOfFormData } = formData;
+    const challengeDataToSave = {
+        ...restOfFormData,
+        id: slug,
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        likes: challenges.find(c => c.id === editingChallengeId)?.likes || 0
+    };
+    // remove slug from data to save as it's the id
+    // @ts-ignore
+    delete challengeDataToSave.slug;
+
+    try {
+      const challengeRef = doc(db, 'challenges', slug);
       
       const dataWithTimestamp = editingChallengeId 
-          ? { ...challengeDataToSave, id: slug }
-          : { ...challengeDataToSave, id: slug, createdAt: serverTimestamp() };
+          ? challengeDataToSave
+          : { ...challengeDataToSave, createdAt: serverTimestamp() };
 
       await setDoc(challengeRef, dataWithTimestamp, { merge: true });
       
@@ -383,6 +399,13 @@ export default function ManageChallengesPage() {
                     <Label htmlFor='title'>Title</Label>
                     <Input id='title' placeholder="e.g., Two Sum" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
                 </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor='slug'>Slug (URL Identifier)</Label>
+                    <Input id='slug' placeholder="e.g., two-sum (optional, auto-generated from title)" value={formData.slug} onChange={(e) => handleInputChange('slug', e.target.value)} disabled={!!editingChallengeId} />
+                    {!editingChallengeId && <p className="text-xs text-muted-foreground">This will be the unique ID in the URL. If left empty, it's created from the title. Cannot be changed later.</p>}
+                </div>
+
 
                 <div className="grid md:grid-cols-2 gap-6">
                    <div className="space-y-2">
