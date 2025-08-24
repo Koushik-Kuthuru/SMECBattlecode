@@ -73,7 +73,7 @@ const ContestCard = ({ id, title, time, schedule, imageUrl, aiHint, status, enro
 );
 
 const PastContestItem = ({ id, title, date, imageUrl, aiHint }: { id: string; title: string; date: string; imageUrl: string; aiHint?: string }) => (
-    <Link href={`/arena/${id}`} className="block transition-colors hover:bg-muted/50 rounded-lg">
+    <Link href={`/arena/${id}`} className="block group transition-colors hover:bg-muted/50 rounded-lg">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4">
         <div className="flex items-center gap-4 w-full">
           <Image
@@ -89,7 +89,7 @@ const PastContestItem = ({ id, title, date, imageUrl, aiHint }: { id: string; ti
             <p className="text-sm text-muted-foreground">{date}</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" asChild className="w-full sm:w-auto flex-shrink-0">
+        <Button variant="outline" size="sm" asChild className="w-full sm:w-auto flex-shrink-0 transition-transform group-hover:scale-105">
           <div><Play className="mr-2 h-4 w-4" />Battle</div>
         </Button>
       </div>
