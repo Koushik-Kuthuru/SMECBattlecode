@@ -45,7 +45,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/challenges', label: 'Manage Challenges', icon: ListChecks },
     { href: '/admin/users', label: 'Manage Users', icon: Users },
     { href: '/admin/arena', label: 'Manage Arena', icon: Flame },
-    { href: '/admin/arena/arena-challenges', label: 'Arena Challenges', icon: ListChecks },
     { href: '/admin/events', label: 'Manage Events', icon: CalendarDays },
     { href: '/admin/advertisement', label: 'Manage Ads', icon: Megaphone },
     { href: '/admin/study-plans', label: 'Manage Study Plans', icon: BookCopy },
