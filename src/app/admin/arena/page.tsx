@@ -88,27 +88,27 @@ export default function ManageArenaPage() {
   const challengesCollectionRef = collection(db, 'challenges');
 
   const fetchContests = useCallback(() => {
-      const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-          const contestList: Event[] = [];
-          snapshot.forEach(doc => {
-              const eventData = { id: doc.id, ...doc.data() } as Event;
-              if (eventData.type === 'Challenge') {
-                  contestList.push(eventData);
-              }
-          });
-          setContests(contestList);
-          setIsLoading(false);
-      }, (error) => {
-          console.error("Error fetching contests:", error);
-          toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'Could not load contests from Firestore.'
-          });
-          setIsLoading(false);
-      });
-      return unsubscribe;
+    const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const contestList: Event[] = [];
+        snapshot.forEach(doc => {
+            const eventData = { id: doc.id, ...doc.data() } as Event;
+            if (eventData.type === 'Challenge') {
+                contestList.push(eventData);
+            }
+        });
+        setContests(contestList);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching contests:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not load contests from Firestore.'
+        });
+        setIsLoading(false);
+    });
+    return unsubscribe;
   }, [db, toast]);
 
   useEffect(() => {
@@ -280,23 +280,24 @@ export default function ManageArenaPage() {
 
   const handleDelete = async () => {
     if (!contestToDelete) return;
-
+    
+    setIsSaving(true);
     try {
-      const contestRef = doc(db, "events", contestToDelete);
-      await deleteDoc(contestRef);
+      await deleteDoc(doc(db, "events", contestToDelete));
       toast({
         title: "Contest Deleted",
-        description: "The contest has been successfully removed.",
+        description: "The contest has been removed.",
       });
     } catch (error) {
       console.error("Error deleting contest: ", error);
       toast({
         variant: "destructive",
-        title: "Error Deleting",
+        title: "Deletion Failed",
         description: "Could not delete the contest. Please try again.",
       });
     } finally {
-        setContestToDelete(null);
+      setContestToDelete(null);
+      setIsSaving(false);
     }
   };
   
@@ -582,7 +583,8 @@ export default function ManageArenaPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setContestToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Continue
             </AlertDialogAction>
           </AlertDialogFooter>
