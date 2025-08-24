@@ -45,6 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/challenges', label: 'Manage Challenges', icon: ListChecks },
     { href: '/admin/users', label: 'Manage Users', icon: Users },
     { href: '/admin/arena', label: 'Manage Arena', icon: Flame },
+    { href: '/admin/arena/arena-challenges', label: 'Arena Challenges', icon: ListChecks },
     { href: '/admin/events', label: 'Manage Events', icon: CalendarDays },
     { href: '/admin/advertisement', label: 'Manage Ads', icon: Megaphone },
     { href: '/admin/study-plans', label: 'Manage Study Plans', icon: BookCopy },
@@ -80,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           href={link.href}
                           className={cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-slate-800',
-                            pathname.startsWith(link.href) ? 'bg-slate-700' : 'text-slate-300'
+                            pathname.startsWith(link.href) && link.href !== '/admin/arena' && link.href !== '/admin/challenges' ? 'bg-slate-700' : (pathname === link.href ? 'bg-slate-700' : 'text-slate-300')
                           )}
                         >
                           <link.icon className="h-4 w-4" />
