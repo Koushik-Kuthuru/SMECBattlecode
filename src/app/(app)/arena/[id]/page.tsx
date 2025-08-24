@@ -252,7 +252,7 @@ export default function ContestDetailPage() {
         case 'live':
             return <Countdown to={endDate} prefix="Ends in" />;
         case 'past':
-            return <span>Ended {formatDistanceToNow(endDate, { addSuffix: true })}</span>;
+            return <span>Contest Ended</span>;
     }
   };
 
