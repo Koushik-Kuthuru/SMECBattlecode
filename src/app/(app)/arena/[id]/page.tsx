@@ -179,7 +179,7 @@ export default function ContestDetailPage() {
         setVirtualBattleEndTime(endTime);
         
         const firstChallengeId = contest.challengeIds[0];
-        router.push(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${startTime}`);
+        window.open(`/challenge/${firstChallengeId}?contestId=${id}&startTime=${startTime}`, '_blank');
     };
 
     const handleShare = async () => {
