@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
-import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users, Search } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Event } from '@/lib/types';
@@ -81,13 +81,13 @@ export default function ManageArenaPage() {
 
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [challengeSearchTerm, setChallengeSearchTerm] = useState('');
   
   const db = getFirestore(app);
   const eventsCollectionRef = collection(db, 'events');
   const challengesCollectionRef = collection(db, 'challenges');
 
   const fetchContests = useCallback(() => {
-      setIsLoading(true);
       const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const contestList: Event[] = [];
@@ -112,7 +112,8 @@ export default function ManageArenaPage() {
   }, [db, toast]);
 
   useEffect(() => {
-    const unsubscribe = fetchContests();
+    setIsLoading(true);
+    const unsubscribeContests = fetchContests();
     
     const challengesQuery = query(challengesCollectionRef, orderBy('title'));
     const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
@@ -121,7 +122,7 @@ export default function ManageArenaPage() {
     });
 
     return () => {
-        unsubscribe();
+        unsubscribeContests();
         unsubscribeChallenges();
     }
   }, [fetchContests, db]);
@@ -320,6 +321,10 @@ export default function ManageArenaPage() {
       }
   };
 
+  const filteredChallenges = allChallenges.filter(c => 
+    c.title.toLowerCase().includes(challengeSearchTerm.toLowerCase())
+  );
+
   const renderDateTimePicker = (field: 'startDate' | 'endDate') => (
      <div className="space-y-2">
       <Label htmlFor={field}>{field === 'startDate' ? 'Start Date & Time' : 'End Date & Time'}</Label>
@@ -459,9 +464,18 @@ export default function ManageArenaPage() {
 
                 <div className="space-y-4">
                     <Label>Contest Challenges (select 4)</Label>
+                    <div className="relative">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                       <Input 
+                           placeholder="Search challenges by title..." 
+                           className="pl-10 mb-2" 
+                           value={challengeSearchTerm}
+                           onChange={(e) => setChallengeSearchTerm(e.target.value)}
+                       />
+                    </div>
                     <Card className="max-h-60 overflow-y-auto p-4">
                         <div className="space-y-2">
-                            {allChallenges.map(challenge => (
+                            {filteredChallenges.length > 0 ? filteredChallenges.map(challenge => (
                                 <div key={challenge.id} className="flex items-center gap-2">
                                     <Checkbox
                                         id={`challenge-${challenge.id}`}
@@ -471,7 +485,9 @@ export default function ManageArenaPage() {
                                     />
                                     <Label htmlFor={`challenge-${challenge.id}`} className="font-normal">{challenge.title}</Label>
                                 </div>
-                            ))}
+                            )) : (
+                               <p className="text-sm text-muted-foreground text-center">No challenges found.</p>
+                            )}
                         </div>
                     </Card>
                     <p className="text-sm text-muted-foreground">{formData.challengeIds.length} / 4 selected</p>
