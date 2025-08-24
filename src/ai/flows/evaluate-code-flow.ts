@@ -5,14 +5,14 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
 
-// Maps our language names to the custom judge language names
-const languageIdMap: Record<string, string> = {
-  'javascript': 'node',
-  'python': 'python',
-  'java': 'java',
-  'c++': 'cpp',
-  'cpp': 'cpp',
-  'c': 'cpp', // Assuming C code can be compiled with g++
+// Maps our language names to the Judge0 language IDs
+const languageIdMap: Record<string, number> = {
+  'javascript': 93, // Node.js
+  'python': 71,
+  'java': 62,
+  'c++': 54,
+  'cpp': 54,
+  'c': 50,
 };
 
 const TestCaseResultSchema = z.object({
@@ -39,33 +39,51 @@ const EvaluateCodeOutputSchema = z.object({
 });
 
 
-async function runOnCustomJudge(problemId: string, language: string, sourceCode: string) {
-  const JUDGE_API_URL = 'http://localhost:8080/api';
-
-  // 1. Submit the code
-  const submitResponse = await axios.post(`${JUDGE_API_URL}/submit`, {
-    problemId: problemId,
-    language: language,
-    code: sourceCode,
-  });
-  
-  const jobId = submitResponse.data.jobId;
-  if (!jobId) {
-    throw new Error("Submission failed: No Job ID returned from judge.");
-  }
-
-  // 2. Poll for the result
-  while (true) {
-    const resultResponse = await axios.get(`${JUDGE_API_URL}/result/${jobId}`);
-    const { state, result } = resultResponse.data;
-
-    if (state === 'completed') {
-      return result;
-    } else if (state === 'failed') {
-      throw new Error(`Judging failed: ${result?.runtimeLog || 'Unknown error'}`);
+async function runOnJudge0(languageId: number, sourceCode: string, testCases: { input: string, output: string }[]) {
+  const options = {
+    method: 'POST',
+    url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',
+    params: { base64_encoded: 'false', fields: '*' },
+    headers: {
+      'content-type': 'application/json',
+      'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+    },
+    data: {
+      submissions: testCases.map(tc => ({
+        language_id: languageId,
+        source_code: sourceCode,
+        stdin: tc.input,
+        expected_output: tc.output,
+      }))
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every second
+  };
+
+  const response = await axios.request(options);
+  const tokens = response.data.map((s: { token: string }) => s.token);
+  
+  // Poll for results
+  while (true) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const statusOptions = {
+        method: 'GET',
+        url: 'https://judge0-ce.p.rapidapi.com/submissions/batch',
+        params: {
+            tokens: tokens.join(','),
+            base64_encoded: 'false',
+            fields: 'status_id,stdout,stderr,compile_output,expected_output,stdin'
+        },
+        headers: {
+            'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+        }
+    };
+    const resultsResponse = await axios.request(statusOptions);
+    const submissions = resultsResponse.data.submissions;
+    const allDone = submissions.every((s: any) => s.status_id > 2); // Status > 2 means finished (Accepted, WA, RE, etc.)
+    if (allDone) {
+        return submissions;
+    }
   }
 }
 
@@ -76,73 +94,60 @@ export const evaluateCodeFlow = ai.defineFlow(
     outputSchema: EvaluateCodeOutputSchema,
   },
   async ({ code, programmingLanguage, testCases }) => {
-    const judgeLanguage = languageIdMap[programmingLanguage.toLowerCase()];
-    if (!judgeLanguage) {
+    const languageId = languageIdMap[programmingLanguage.toLowerCase()];
+    if (!languageId) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
-    
-    // We need a problem definition for the custom judge.
-    // We will create a temporary one on the fly.
-    const tempProblemId = `eval-${Date.now()}`;
-    const problemData = {
-        id: tempProblemId,
-        title: "Temporary Evaluation Problem",
-        slug: tempProblemId,
-        timeLimitMs: 2000,
-        memoryLimitMb: 256,
-        statement: "Temporary problem for evaluation",
-        samples: [],
-        tests: testCases,
-    };
-    
-    try {
-        // This is a temporary way to handle ad-hoc test cases with the new judge.
-        // The judge expects problems to be on its file system. A better long-term
-        // solution would be to allow POSTing problems directly. For now, we assume
-        // the judge is running locally and we can "fake" a problem.
-        // Since we can't write to its filesystem, we'll use an existing problem `two-sum`
-        // and just run the code against the provided test cases.
-        // NOTE: This assumes a `two-sum.json` problem exists on the judge.
-        
-        const result = await runOnCustomJudge('two-sum', judgeLanguage, code);
+    if (!process.env.JUDGE0_API_KEY) {
+        throw new Error("JUDGE0_API_KEY is not set in the environment variables. Cannot execute code.");
+    }
 
-        const results: z.infer<typeof TestCaseResultSchema>[] = [];
-        let allPassed = result.status === 'AC';
+    const results: z.infer<typeof TestCaseResultSchema>[] = [];
+    let allPassed = true;
+    let feedback = "All test cases passed!";
+
+    try {
+        const judge0Results = await runOnJudge0(languageId, code, testCases);
         
-        result.details?.forEach((detail: any, index: number) => {
+        judge0Results.forEach((result: any, index: number) => {
+            const passed = result.status_id === 3; // 3 is "Accepted"
+            if (!passed) {
+                allPassed = false;
+            }
+
+            let actualOutput = result.stdout || '';
+            if (result.status_id === 5) { // Time Limit Exceeded
+                actualOutput = `Error: Time Limit Exceeded. Your code took too long to run.`;
+                feedback = "Time Limit Exceeded. Please optimize your code.";
+            } else if (result.status_id === 6) { // Compilation Error
+                actualOutput = `Compilation Error:\n${result.compile_output}`;
+                feedback = "Your code failed to compile. Please check the syntax.";
+            } else if (result.status_id > 4) { // Other Runtime Errors
+                actualOutput = `Runtime Error:\n${result.stderr}`;
+                feedback = "A runtime error occurred. Please check your code for issues like division by zero or out-of-bounds access.";
+            }
+
             results.push({
-                testCaseInput: detail.input,
-                expectedOutput: detail.expected,
-                actualOutput: detail.status !== 'AC' ? (result.compileLog || result.runtimeLog || detail.actual) : detail.actual,
-                passed: detail.status === 'AC',
+                testCaseInput: result.stdin,
+                expectedOutput: result.expected_output,
+                actualOutput: actualOutput,
+                passed: passed,
             });
         });
 
-        let feedback = "Your code has been evaluated.";
-        if (result.status === 'AC') {
-            feedback = "Great job! Your solution passed all test cases.";
-        } else if (result.status === 'WA') {
-            feedback = "Your solution did not pass all test cases. Review the results and try again.";
-        } else if (result.status === 'CE') {
-            feedback = `Compilation Error: ${result.compileLog}`;
-        } else if (result.status === 'TLE') {
-            feedback = `Time Limit Exceeded: Your code took too long to run.`;
-        } else if (result.status === 'RE') {
-            feedback = `Runtime Error: ${result.runtimeLog}`;
+        if (!allPassed && feedback === "All test cases passed!") {
+            feedback = "Some test cases failed. Please review the results.";
         }
 
-
-        return { results, allPassed, feedback };
-
     } catch (error: any) {
-        console.error("Error executing with custom judge:", error.message);
+        console.error("Error executing with Judge0:", error.response?.data || error.message);
         return {
             results: [],
             allPassed: false,
-            feedback: `Execution Error: ${error.message}`
+            feedback: `Execution Error: ${error.response?.data?.error || error.message}`
         }
     }
+    
+    return { results, allPassed, feedback };
   }
 );
-
-    
