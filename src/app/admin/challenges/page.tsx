@@ -295,41 +295,34 @@ export default function ManageChallengesPage() {
   const handleDelete = async () => {
     if (!challengeToDelete) return;
 
-    // First, get all user documents. This is done outside the transaction.
     const usersSnapshot = await getDocs(collection(db, "users"));
 
     try {
         await runTransaction(db, async (transaction) => {
             const challengeRef = doc(db, "challenges", challengeToDelete);
             
-            // For each user, prepare to delete their challenge-related data.
             for (const userDoc of usersSnapshot.docs) {
                 const userId = userDoc.id;
-
-                // Path refs
+                
                 const solutionRef = doc(db, `users/${userId}/solutions`, challengeToDelete);
-                const submissionsPath = `users/${userId}/submissions/${challengeToDelete}/attempts`;
-                const inProgressRef = doc(db, `users/${userId}/challengeData/inProgress`);
-                const completedRef = doc(db, `users/${userId}/challengeData/completed`);
-
-                // This is a simplified approach. For a large number of users, 
-                // you'd want to handle this in a batched server-side process.
-                // We read all potentially affected documents for a user.
-                const submissionsSnapshot = await getDocs(collection(db, submissionsPath));
-
-                // WRITES: Now perform all writes based on the reads.
                 transaction.delete(solutionRef);
 
-                submissionsSnapshot.forEach(submissionDoc => {
-                    transaction.delete(submissionDoc.ref);
-                });
+                const inProgressRef = doc(db, `users/${userId}/challengeData`, 'inProgress');
+                const completedRef = doc(db, `users/${userId}/challengeData`, 'completed');
+                
+                const [inProgressSnap, completedSnap] = await Promise.all([
+                    transaction.get(inProgressRef),
+                    transaction.get(completedRef)
+                ]);
 
-                // Use field deletion for progress/completion tracking
-                transaction.update(inProgressRef, { [challengeToDelete]: deleteField() });
-                transaction.update(completedRef, { [challengeToDelete]: deleteField() });
+                if (inProgressSnap.exists()) {
+                    transaction.update(inProgressRef, { [challengeToDelete]: deleteField() });
+                }
+                if (completedSnap.exists()) {
+                    transaction.update(completedRef, { [challengeToDelete]: deleteField() });
+                }
             }
 
-            // Finally, delete the main challenge document.
             transaction.delete(challengeRef);
         });
 
@@ -337,7 +330,7 @@ export default function ManageChallengesPage() {
             title: "Challenge Deleted",
             description: "The challenge and all associated user data have been removed.",
         });
-        fetchChallenges(); // Refresh the list
+        fetchChallenges();
     } catch (error) {
         console.error("Error deleting challenge transactionally: ", error);
         toast({
