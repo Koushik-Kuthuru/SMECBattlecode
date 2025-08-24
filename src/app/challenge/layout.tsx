@@ -20,8 +20,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { type Challenge } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type EvaluateCodeOutput } from '@/ai/flows/evaluate-code';
-import { type DebugCodeOutput } from '@/ai/flows/debug-code';
+import { evaluateCode, type EvaluateCodeOutput } from '@/ai/flows/evaluate-code';
+import { debugCode, type DebugCodeOutput } from '@/ai/flows/debug-code';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -206,7 +206,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
-        const {evaluateCode} = await import("@/ai/flows/evaluate-code");
         const result = await evaluateCode({
             code: solution,
             programmingLanguage: language,
@@ -241,7 +240,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
-      const {debugCode} = await import("@/ai/flows/debug-code");
       const result = await debugCode({
           code: solution,
           programmingLanguage: language,
@@ -282,7 +280,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
          return;
       }
       
-      const {evaluateCode} = await import("@/ai/flows/evaluate-code");
       const result = await evaluateCode({
           code: solution,
           programmingLanguage: language,
