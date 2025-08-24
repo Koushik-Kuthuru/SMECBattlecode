@@ -258,23 +258,22 @@ export default function ManageArenaPage() {
 
   const handleDelete = async (contestId: string) => {
     if (!window.confirm("Are you sure you want to delete this contest? This action is irreversible.")) return;
-    
+
     try {
-        const contestRef = doc(db, 'events', contestId);
-        await deleteDoc(contestRef);
-        
-        toast({
-            title: "Contest Deleted",
-            description: "The contest has been removed successfully.",
-        });
-        
+      const contestRef = doc(db, "events", contestId);
+      await deleteDoc(contestRef);
+      toast({
+        title: "Contest Deleted",
+        description: "The contest has been successfully removed.",
+      });
+      // The onSnapshot listener will automatically update the state.
     } catch (error) {
-        console.error("Error deleting contest: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error Deleting",
-            description: "Could not delete the contest. It may have already been removed.",
-        });
+      console.error("Error deleting contest: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error Deleting",
+        description: "Could not delete the contest. Please try again.",
+      });
     }
   };
 
