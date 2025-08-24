@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -62,7 +62,7 @@ export default function ManageStudyPlansPage() {
   const db = getFirestore(app);
   const plansCollectionRef = collection(db, 'study_plans');
 
-  useEffect(() => {
+  const fetchPlans = () => {
     const q = query(plansCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const plansList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudyPlan));
@@ -77,9 +77,13 @@ export default function ManageStudyPlansPage() {
       });
       setIsLoading(false);
     });
-
+    return unsubscribe;
+  };
+  
+  useEffect(() => {
+    const unsubscribe = fetchPlans();
     return () => unsubscribe();
-  }, [db, toast]);
+  }, []);
 
   const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -163,6 +167,27 @@ export default function ManageStudyPlansPage() {
     } finally {
         setPlanToDelete(null);
     }
+  };
+  
+  const handleToggleEnable = async (planId: string, isEnabled: boolean) => {
+      setIsSaving(true);
+      try {
+          const planRef = doc(db, 'study_plans', planId);
+          await updateDoc(planRef, { isEnabled: isEnabled });
+          toast({
+              title: 'Study Plan Updated',
+              description: `Plan has been ${isEnabled ? 'enabled' : 'disabled'}.`
+          });
+      } catch (error) {
+           console.error("Error updating plan status: ", error);
+           toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not update plan status.'
+           });
+      } finally {
+        setIsSaving(false);
+      }
   };
   
   if (isFormVisible) {
@@ -266,7 +291,7 @@ export default function ManageStudyPlansPage() {
             <div className="space-y-4">
               {studyPlans.map(plan => (
                 <div key={plan.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleEditClick(plan)}>
                       <div className={`w-16 h-16 rounded-md bg-gradient-to-br ${plan.gradient}`}></div>
                       <div>
                         <h3 className="font-semibold">{plan.title}</h3>
@@ -274,7 +299,14 @@ export default function ManageStudyPlansPage() {
                       </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant={plan.isEnabled ? 'default' : 'secondary'}>{plan.isEnabled ? 'Enabled' : 'Disabled'}</Badge>
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                           <Switch
+                             checked={plan.isEnabled}
+                             onCheckedChange={(checked) => handleToggleEnable(plan.id, checked)}
+                             disabled={isSaving}
+                           />
+                           <Label>{plan.isEnabled ? 'Enabled' : 'Disabled'}</Label>
+                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>
                              <Edit className="mr-2 h-4 w-4" />

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -68,7 +68,7 @@ export default function ManageAdvertisementPage() {
   const db = getFirestore(app);
   const adsCollectionRef = collection(db, 'advertisements');
 
-  useEffect(() => {
+  const fetchAds = () => {
     const q = query(adsCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const adsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Advertisement));
@@ -83,9 +83,13 @@ export default function ManageAdvertisementPage() {
       });
       setIsLoading(false);
     });
-
+    return unsubscribe;
+  };
+  
+  useEffect(() => {
+    const unsubscribe = fetchAds();
     return () => unsubscribe();
-  }, [db, toast]);
+  }, []);
 
   const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -194,6 +198,27 @@ export default function ManageAdvertisementPage() {
     }
   };
   
+  const handleToggleEnable = async (adId: string, isEnabled: boolean) => {
+      setIsSaving(true);
+      try {
+          const adRef = doc(db, 'advertisements', adId);
+          await updateDoc(adRef, { isEnabled: isEnabled });
+          toast({
+              title: 'Advertisement Updated',
+              description: `Ad has been ${isEnabled ? 'enabled' : 'disabled'}.`
+          });
+      } catch (error) {
+           console.error("Error updating ad status: ", error);
+           toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not update ad status.'
+           });
+      } finally {
+        setIsSaving(false);
+      }
+  };
+  
   if (isFormVisible) {
     return (
       <div className="container mx-auto py-8">
@@ -283,7 +308,7 @@ export default function ManageAdvertisementPage() {
             <div className="space-y-4">
               {advertisements.map(ad => (
                 <div key={ad.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleEditClick(ad)}>
                       <img src={ad.imageUrl || 'https://placehold.co/64'} alt={ad.title} className="w-16 h-16 object-cover rounded-md bg-muted" />
                       <div>
                         <h3 className="font-semibold">{ad.title}</h3>
@@ -291,7 +316,14 @@ export default function ManageAdvertisementPage() {
                       </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant={ad.isEnabled ? 'default' : 'secondary'}>{ad.isEnabled ? 'Enabled' : 'Disabled'}</Badge>
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                           <Switch
+                             checked={ad.isEnabled}
+                             onCheckedChange={(checked) => handleToggleEnable(ad.id, checked)}
+                             disabled={isSaving}
+                           />
+                           <Label>{ad.isEnabled ? 'Enabled' : 'Disabled'}</Label>
+                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditClick(ad)}>
                              <Edit className="mr-2 h-4 w-4" />

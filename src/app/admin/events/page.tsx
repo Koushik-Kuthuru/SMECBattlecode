@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -73,7 +73,7 @@ export default function ManageEventsPage() {
   const db = getFirestore(app);
   const eventsCollectionRef = collection(db, 'events');
 
-  useEffect(() => {
+  const fetchEvents = useCallback(() => {
     const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventsList = snapshot.docs
@@ -90,9 +90,13 @@ export default function ManageEventsPage() {
       });
       setIsLoading(false);
     });
-
-    return () => unsubscribe();
+    return unsubscribe;
   }, [db, toast]);
+  
+  useEffect(() => {
+    const unsubscribe = fetchEvents();
+    return () => unsubscribe();
+  }, [fetchEvents]);
 
   const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'prizeImages'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -210,6 +214,27 @@ export default function ManageEventsPage() {
     } finally {
         setEventToDelete(null);
     }
+  };
+  
+  const handleToggleEnable = async (eventId: string, isEnabled: boolean) => {
+      setIsSaving(true);
+      try {
+          const eventRef = doc(db, 'events', eventId);
+          await updateDoc(eventRef, { isEnabled: isEnabled });
+          toast({
+              title: 'Event Updated',
+              description: `Event has been ${isEnabled ? 'enabled' : 'disabled'}.`
+          });
+      } catch (error) {
+           console.error("Error updating event status: ", error);
+           toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not update event status.'
+           });
+      } finally {
+        setIsSaving(false);
+      }
   };
   
   if (isFormVisible) {
@@ -360,7 +385,7 @@ export default function ManageEventsPage() {
             <div className="space-y-4">
               {events.map(event => (
                 <div key={event.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleEditClick(event)}>
                       <img src={event.imageUrl || 'https://placehold.co/64'} alt={event.title} className="w-16 h-16 object-cover rounded-md bg-muted" />
                       <div>
                         <h3 className="font-semibold">{event.title}</h3>
@@ -368,7 +393,14 @@ export default function ManageEventsPage() {
                       </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant={event.isEnabled ? 'default' : 'secondary'}>{event.isEnabled ? 'Enabled' : 'Disabled'}</Badge>
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                           <Switch
+                             checked={event.isEnabled}
+                             onCheckedChange={(checked) => handleToggleEnable(event.id, checked)}
+                             disabled={isSaving}
+                           />
+                           <Label>{event.isEnabled ? 'Enabled' : 'Disabled'}</Label>
+                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditClick(event)}>
                              <Edit className="mr-2 h-4 w-4" />

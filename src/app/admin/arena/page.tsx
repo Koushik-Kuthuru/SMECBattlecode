@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -86,27 +86,33 @@ export default function ManageArenaPage() {
   const eventsCollectionRef = collection(db, 'events');
   const challengesCollectionRef = collection(db, 'challenges');
 
+  const fetchContests = useCallback(() => {
+      setIsLoading(true);
+      const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const contestList: Event[] = [];
+          snapshot.forEach(doc => {
+              const eventData = { id: doc.id, ...doc.data() } as Event;
+              if (eventData.type === 'Challenge') {
+                  contestList.push(eventData);
+              }
+          });
+          setContests(contestList);
+          setIsLoading(false);
+      }, (error) => {
+          console.error("Error fetching contests:", error);
+          toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Could not load contests from Firestore.'
+          });
+          setIsLoading(false);
+      });
+      return unsubscribe;
+  }, [db, toast]);
+
   useEffect(() => {
-    const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contestList: Event[] = [];
-      snapshot.forEach(doc => {
-          const eventData = { id: doc.id, ...doc.data() } as Event;
-          if (eventData.type === 'Challenge') {
-              contestList.push(eventData);
-          }
-      });
-      setContests(contestList);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching contests:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Could not load contests from Firestore.'
-      });
-      setIsLoading(false);
-    });
+    const unsubscribe = fetchContests();
     
     const challengesQuery = query(challengesCollectionRef, orderBy('title'));
     const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
@@ -118,7 +124,7 @@ export default function ManageArenaPage() {
         unsubscribe();
         unsubscribeChallenges();
     }
-  }, [db, toast]);
+  }, [fetchContests, db]);
 
   const handleInputChange = useCallback((field: keyof Omit<FormData, 'startDate' | 'endDate' | 'prizes' | 'importantNotes' | 'announcements' | 'description' | 'challengeIds'>, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -291,6 +297,27 @@ export default function ManageArenaPage() {
     } finally {
         setContestToDelete(null);
     }
+  };
+  
+  const handleToggleEnable = async (contestId: string, isEnabled: boolean) => {
+      setIsSaving(true);
+      try {
+          const contestRef = doc(db, 'events', contestId);
+          await updateDoc(contestRef, { isEnabled: isEnabled });
+          toast({
+              title: 'Contest Updated',
+              description: `Contest has been ${isEnabled ? 'enabled' : 'disabled'}.`
+          });
+      } catch (error) {
+           console.error("Error updating contest status: ", error);
+           toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not update contest status.'
+           });
+      } finally {
+        setIsSaving(false);
+      }
   };
 
   const renderDateTimePicker = (field: 'startDate' | 'endDate') => (
@@ -495,7 +522,7 @@ export default function ManageArenaPage() {
             <div className="space-y-4">
               {contests.map(event => (
                 <div key={event.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1" onClick={() => handleEditClick(event)}>
                       <img src={event.imageUrl || 'https://placehold.co/64'} alt={event.title} className="w-16 h-16 object-cover rounded-md bg-muted" />
                       <div>
                         <h3 className="font-semibold">{event.title}</h3>
@@ -503,7 +530,14 @@ export default function ManageArenaPage() {
                       </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Badge variant={event.isEnabled ? 'default' : 'secondary'}>{event.isEnabled ? 'Enabled' : 'Disabled'}</Badge>
+                     <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                           <Switch
+                             checked={event.isEnabled}
+                             onCheckedChange={(checked) => handleToggleEnable(event.id, checked)}
+                             disabled={isSaving}
+                           />
+                           <Label>{event.isEnabled ? 'Enabled' : 'Disabled'}</Label>
+                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditClick(event)}>
                              <Edit className="mr-2 h-4 w-4" />
