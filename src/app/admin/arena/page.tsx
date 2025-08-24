@@ -77,9 +77,13 @@ export default function ManageArenaPage() {
   useEffect(() => {
     const q = query(eventsCollectionRef, orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contestList = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Event))
-        .filter(event => event.type === 'Challenge');
+      const contestList: Event[] = [];
+      snapshot.forEach(doc => {
+          const eventData = { id: doc.id, ...doc.data() } as Event;
+          if (eventData.type === 'Challenge') {
+              contestList.push(eventData);
+          }
+      });
       setContests(contestList);
       setIsLoading(false);
     }, (error) => {
