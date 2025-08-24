@@ -266,7 +266,9 @@ var maxArea = function(height) {
         { input: '" "', output: '1', isHidden: true },
         { input: '"dvdf"', output: '3', isHidden: true },
     ],
-    starterCode: `class Solution:
+    starterCode: `from typing import List
+
+class Solution:
     def lengthOfLongestSubstring(self, s: str) -> int:
         # Write your code here
         pass
@@ -455,7 +457,9 @@ double findMedianSortedArrays(int* nums1, int nums1Size, int* nums2, int nums2Si
         { input: '[4,2,3]', output: '1', isHidden: true },
         { input: '[5,4,1,2]', output: '1', isHidden: true },
     ],
-    starterCode: `class Solution:
+    starterCode: `from typing import List
+
+class Solution:
     def trap(self, height: list[int]) -> int:
         # Write your code here
         pass
