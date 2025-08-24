@@ -335,10 +335,26 @@ export default function ContestDetailPage() {
                                 <SkipForward className="mr-2 h-4 w-4" />
                                 Continue Battle
                             </Button>
-                            <Button variant="destructive-outline" onClick={handleEndBattle}>
-                                <StopCircle className="mr-2 h-4 w-4" />
-                                End Battle
-                            </Button>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive-outline">
+                                        <StopCircle className="mr-2 h-4 w-4" />
+                                        End Battle
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure you want to end the battle?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will end your current virtual practice session. You can start a new one anytime.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleEndBattle} className="bg-destructive hover:bg-destructive/90">Leave</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </>
                     ) : (
                         <AlertDialog>
