@@ -126,7 +126,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [contestDetails, setContestDetails] = useState<Contest | null>(null);
 
   const auth = getAuth(app);
-  const challengeId = params.id as string;
+  const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const contestId = searchParams.get('contestId');
@@ -872,4 +872,5 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
 

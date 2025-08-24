@@ -10,7 +10,7 @@ export default function ChallengePageRouter() {
   const isVirtualBattle = !!contestId;
 
   if (isVirtualBattle) {
-    return <ChallengeWorkspace contestId={contestId} />;
+    return <ChallengeWorkspace contestId={contestId as string} />;
   }
 
   return <ChallengeDetail />;
