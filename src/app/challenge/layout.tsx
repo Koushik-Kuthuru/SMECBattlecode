@@ -572,7 +572,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold">{challenge.title}</h1>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">ID: {challenge.id}</p>
               <div className="flex items-center gap-4 text-sm mt-2">
                   {statusBadge}
                   <span className={cn("font-semibold", difficultyTextColors[challenge.difficulty])}>{challenge.difficulty}</span>
