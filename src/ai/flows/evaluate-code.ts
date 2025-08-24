@@ -2,10 +2,10 @@
 'use server';
 
 /**
- * @fileOverview A code evaluation agent that uses Judge0.
+ * @fileOverview A code evaluation agent that uses the custom judge.
  *
- * - evaluateCode - A function that evaluates a code submission against test cases using Judge0.
- * - EvaluateCodeInput - The input type for the evaluateCode function eyewrvwery
+ * - evaluateCode - A function that evaluates a code submission against test cases.
+ * - EvaluateCodeInput - The input type for the evaluateCode function.
  * - EvaluateCodeOutput - The return type for the evaluateCode function.
  */
 
@@ -19,13 +19,9 @@ const TestCaseResultSchema = z.object({
 });
 
 const EvaluateCodeInputSchema = z.object({
+  problemId: z.string().describe('The ID of the problem to evaluate against.'),
   code: z.string().describe('The code submission to evaluate.'),
   programmingLanguage: z.string().describe('The programming language of the code submission.'),
-  problemDescription: z.string().describe('The description of the coding problem.'),
-  testCases: z.array(z.object({
-    input: z.string(),
-    output: z.string(),
-  })).describe('The test cases to evaluate against.'),
 });
 export type EvaluateCodeInput = z.infer<typeof EvaluateCodeInputSchema>;
 

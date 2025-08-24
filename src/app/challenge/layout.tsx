@@ -187,16 +187,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }
 
   const handleRunCode = useCallback(async () => {
-    if (!challenge || !language) {
+    if (!challenge || !language || !challengeId) {
       toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
-    }
-    
-    const testCasesToRun = challenge.examples.map(ex => ({ input: ex.input, output: ex.output }));
-    
-    if (!testCasesToRun || testCasesToRun.length === 0) {
-        toast({ variant: "destructive", title: "Missing Test Cases", description: "No example test cases to run against." });
-        return;
     }
     
     setIsRunning(true);
@@ -206,17 +199,17 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
+        // For custom judge, "Run" will execute against all test cases.
         const result = await evaluateCode({
+            problemId: challengeId,
             code: solution,
             programmingLanguage: language,
-            problemDescription: challenge.description,
-            testCases: testCasesToRun,
         });
         setRunResult(result);
         if (result.allPassed) {
-            toast({ title: "All Example Tests Passed!", description: "You can now try submitting your solution." });
+            toast({ title: "All Tests Passed!", description: "Your code passed all sample and hidden tests." });
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Some example test cases did not pass. Check the results." });
+             toast({ variant: "destructive", title: "Tests Failed", description: "Your solution did not pass all test cases. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);
@@ -225,10 +218,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast]);
+  }, [challenge, language, solution, toast, challengeId]);
 
   const handleDebugCode = useCallback(async (customInput: string) => {
-    if (!challenge || !language) {
+    if (!challenge || !language || !challengeId) {
       toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
     }
@@ -241,9 +234,10 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
     try {
       const result = await debugCode({
+          problemId: challengeId,
           code: solution,
           programmingLanguage: language,
-          input: customInput,
+          input: customInput, // Note: custom judge might ignore this and run against first sample
       });
       setDebugOutput(result);
     } catch(error) {
@@ -253,7 +247,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast]);
+  }, [challenge, language, solution, toast, challengeId]);
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser || !challenge || !challengeId || !language) {
@@ -267,24 +261,15 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
     setIsRunning(true);
     startCooldown();
-    setRunResult({ feedback: '', results: [], allPassed: false });
+    setRunResult(null);
     setDebugOutput(null);
     setActiveTab('result');
 
     try {
-      const allTestCases = challenge.testCases || [];
-      if (allTestCases.length === 0) {
-         toast({ variant: "destructive", title: "No Test Cases", description: "Cannot submit, no test cases exist." });
-         setIsRunning(false);
-         setRunResult(null);
-         return;
-      }
-      
       const result = await evaluateCode({
+          problemId: challengeId,
           code: solution,
           programmingLanguage: language,
-          problemDescription: challenge.description,
-          testCases: allTestCases,
       });
 
       setRunResult(result);
@@ -318,7 +303,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             
             const completedData = completedChallengesSnap.exists() ? completedChallengesSnap.data() : {};
             
-            // Save the final correct solution for this language
             transaction.set(solRef, { 
               codeByLang: { [language]: solution },
               updatedAt: serverTimestamp() 
@@ -667,7 +651,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     "text-sm font-bold",
                     runResult.allPassed ? "text-green-600" : "text-red-500"
                 )}>
-                    {runResult.allPassed ? "Accepted" : "Wrong Answer"}
+                    {runResult.feedback}
                 </span>
             )}
             {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">Debug Output</span>}
@@ -694,7 +678,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {renderOutput(res.actualOutput, res.passed ? 'Your Output' : res.actualOutput.startsWith('Error:') ? 'Error' : 'Your Output')}
+                                    {renderOutput(res.actualOutput, res.passed ? 'Your Output' : res.actualOutput.startsWith('Error:') || res.actualOutput.includes('Error:') ? 'Error' : 'Your Output')}
                                     {renderOutput(res.expectedOutput, 'Expected Output')}
                                 </div>
                           </AccordionContent>
