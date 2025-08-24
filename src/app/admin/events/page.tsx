@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, query, orderBy, deleteDoc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { Loader2, PlusCircle, Trash2, Edit, X, Calendar as CalendarIcon, Link2, Users } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -23,11 +23,13 @@ import { cn } from '@/lib/utils';
 type PrizeImage = { src: string; alt: string; hint: string };
 
 type FormData = Omit<Event, 'id' | 'createdAt' | 'startDate' | 'endDate' | 'status'> & {
+  slug: string;
   startDate: Date;
   endDate: Date;
 };
 
 const defaultFormData: FormData = {
+  slug: '',
   title: '',
   description: '',
   imageUrl: '',
@@ -41,6 +43,14 @@ const defaultFormData: FormData = {
   prizes: [],
   prizeImages: [],
 };
+
+const createSlug = (title: string) => {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with -
+        .replace(/(^-|-$)+/g, '');   // Remove leading/trailing dashes
+};
+
 
 export default function ManageEventsPage() {
   const { toast } = useToast();
@@ -96,6 +106,7 @@ export default function ManageEventsPage() {
     setFormData({
       ...defaultFormData,
       ...event,
+      slug: event.id,
       startDate: event.startDate.toDate(),
       endDate: event.endDate.toDate(),
       registrationLink: event.registrationLink || '',
@@ -113,8 +124,30 @@ export default function ManageEventsPage() {
     e.preventDefault();
     setIsSaving(true);
     
+    const slug = formData.slug ? createSlug(formData.slug) : createSlug(formData.title);
+    if (!slug) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not generate a valid slug from the title or provided slug.' });
+        setIsSaving(false);
+        return;
+    }
+
+    if (!editingEventId) {
+        const docRef = doc(db, 'events', slug);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            toast({
+                variant: 'destructive',
+                title: 'ID Exists',
+                description: 'An event with this slug already exists. Please choose a unique slug or title.'
+            });
+            setIsSaving(false);
+            return;
+        }
+    }
+
+    const { slug: formSlug, ...restOfFormData } = formData;
     const dataToSave = {
-        ...formData,
+        ...restOfFormData,
         startDate: Timestamp.fromDate(formData.startDate),
         endDate: Timestamp.fromDate(formData.endDate),
         prizes: [], // Ensure these fields are not saved for non-challenge events
@@ -122,15 +155,15 @@ export default function ManageEventsPage() {
     };
 
     try {
+      const docRef = doc(db, 'events', slug);
       if (editingEventId) {
-        const eventDocRef = doc(db, 'events', editingEventId);
-        await setDoc(eventDocRef, dataToSave, { merge: true });
+        await setDoc(docRef, dataToSave, { merge: true });
         toast({
           title: 'Event Updated!',
           description: 'The event has been successfully updated.',
         });
       } else {
-        await addDoc(eventsCollectionRef, { ...dataToSave, createdAt: serverTimestamp() });
+        await setDoc(docRef, { ...dataToSave, createdAt: serverTimestamp() });
         toast({
           title: 'Event Added!',
           description: 'The new event has been created.',
@@ -188,6 +221,11 @@ export default function ManageEventsPage() {
               <div className="space-y-2">
                 <Label htmlFor='title'>Title</Label>
                 <Input id='title' placeholder="Event Title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor='slug'>Slug (URL Identifier)</Label>
+                <Input id='slug' placeholder="e.g., web-dev-workshop (optional, auto-generated from title)" value={formData.slug} onChange={(e) => handleInputChange('slug', e.target.value)} disabled={!!editingEventId}/>
+                 {!editingEventId && <p className="text-xs text-muted-foreground">This will be the unique ID. If left empty, it's created from the title. Cannot be changed later.</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
