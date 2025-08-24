@@ -21,6 +21,17 @@ import { format, setHours, setMinutes } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Challenge } from '@/lib/data';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 type Prize = { rank: string; details: string };
 
@@ -47,6 +58,7 @@ export default function ManageArenaPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingContestId, setEditingContestId] = useState<string | null>(null);
+  const [contestToDelete, setContestToDelete] = useState<string | null>(null);
   
   const defaultFormData: FormData = {
     slug: '',
@@ -259,11 +271,11 @@ export default function ManageArenaPage() {
     }
   };
 
-  const handleDelete = async (contestId: string) => {
-    if (!window.confirm("Are you sure you want to delete this contest? This action is irreversible.")) return;
+  const handleDelete = async () => {
+    if (!contestToDelete) return;
 
     try {
-      const contestRef = doc(db, "events", contestId);
+      const contestRef = doc(db, "events", contestToDelete);
       await deleteDoc(contestRef);
       toast({
         title: "Contest Deleted",
@@ -276,6 +288,8 @@ export default function ManageArenaPage() {
         title: "Error Deleting",
         description: "Could not delete the contest. Please try again.",
       });
+    } finally {
+        setContestToDelete(null);
     }
   };
 
@@ -455,6 +469,7 @@ export default function ManageArenaPage() {
   }
 
   return (
+    <>
     <div className="container mx-auto py-8">
        <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Arena Contests</h1>
@@ -494,7 +509,7 @@ export default function ManageArenaPage() {
                              <Edit className="mr-2 h-4 w-4" />
                              Edit
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(event.id)}>
+                        <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setContestToDelete(event.id); }}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
@@ -511,5 +526,22 @@ export default function ManageArenaPage() {
         </CardContent>
       </Card>
     </div>
+    <AlertDialog open={!!contestToDelete} onOpenChange={(open) => !open && setContestToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the contest from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setContestToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
