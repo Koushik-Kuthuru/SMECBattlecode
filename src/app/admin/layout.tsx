@@ -49,7 +49,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/events', label: 'Manage Events', icon: CalendarDays },
     { href: '/admin/advertisement', label: 'Manage Ads', icon: Megaphone },
     { href: '/admin/study-plans', label: 'Manage Study Plans', icon: BookCopy },
-    { href: '/admin/cheating-detection', label: 'Cheating Detection', icon: ShieldAlert },
   ];
   
   if (isLoading || !currentUser) {
