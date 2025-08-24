@@ -161,7 +161,7 @@ export default function ChallengeWorkspace({ contestId }: { contestId: string })
             )}
          </div>
        </div>
-       <div className="flex-grow relative bg-white pr-[2px]">
+       <div className="flex-grow relative bg-white p-4">
             <CodeEditor
                 value={solution || ''}
                 onChange={setSolution}
