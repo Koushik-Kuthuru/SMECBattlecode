@@ -5,15 +5,16 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
 
-// Maps our language names to Judge0 language IDs
-const languageIdMap: Record<string, number> = {
-  'javascript': 63,
-  'python': 71,
-  'java': 62,
-  'c++': 54,
-  'cpp': 54,
-  'c': 50,
+// Maps our language names to the custom judge language names
+const languageIdMap: Record<string, string> = {
+  'javascript': 'node',
+  'python': 'python',
+  'java': 'java',
+  'c++': 'cpp',
+  'cpp': 'cpp',
+  'c': 'cpp', // Assuming C code can be compiled with g++
 };
+
 
 const DebugCodeInputSchema = z.object({
   code: z.string().describe('The code submission to debug.'),
@@ -26,53 +27,33 @@ const DebugCodeOutputSchema = z.object({
   stderr: z.string().describe("The standard error from the user's code, if any."),
 });
 
-/**
- * Helper function to run code on Judge0
- * @param languageId Judge0 language ID
- * @param sourceCode The code to run
- * @param stdin The standard input for the code
- * @returns The Judge0 submission result
- */
-async function runOnJudge0(languageId: number, sourceCode: string, stdin: string) {
-  const url = 'https://judge0-ce.p.rapidapi.com/submissions';
+async function runOnCustomJudge(problemId: string, language: string, sourceCode: string) {
+  const JUDGE_API_URL = 'http://localhost:8080/api';
 
-  const headers: any = {
-    'content-type': 'application/json',
-    'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
-    'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-  };
-
-  const options = {
-    method: 'POST',
-    url: url,
-    params: {
-      base64_encoded: 'false',
-      fields: '*'
-    },
-    headers: headers,
-    data: {
-      language_id: languageId,
-      source_code: sourceCode,
-      stdin: stdin
-    }
-  };
-
-  const submissionResponse = await axios.request(options);
-  const token = submissionResponse.data.token;
+  // 1. Submit the code
+  const submitResponse = await axios.post(`${JUDGE_API_URL}/submit`, {
+    problemId: problemId,
+    language: language,
+    code: sourceCode,
+  });
   
-  if (!token) {
-    return submissionResponse.data;
+  const jobId = submitResponse.data.jobId;
+  if (!jobId) {
+    throw new Error("Submission failed: No Job ID returned from judge.");
   }
 
-  const getResultUrl = `https://judge0-ce.p.rapidapi.com/submissions/${token}`;
-
+  // 2. Poll for the result
   while (true) {
-    const resultResponse = await axios.get(`${getResultUrl}?base64_encoded=false&fields=*`, { headers });
-    const statusId = resultResponse.data.status.id;
-    if (statusId > 2) { // Statuses: 1-In Queue, 2-Processing. Others are final.
-        return resultResponse.data;
+    const resultResponse = await axios.get(`${JUDGE_API_URL}/result/${jobId}`);
+    const { state, result } = resultResponse.data;
+
+    if (state === 'completed') {
+      return result;
+    } else if (state === 'failed') {
+      throw new Error(`Judging failed: ${result?.runtimeLog || 'Unknown error'}`);
     }
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before polling again
+    
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every second
   }
 }
 
@@ -83,26 +64,39 @@ export const debugCodeFlow = ai.defineFlow(
     outputSchema: DebugCodeOutputSchema,
   },
   async ({ code, programmingLanguage, input }) => {
-    const languageId = languageIdMap[programmingLanguage.toLowerCase()];
-    if (!languageId) {
+    const judgeLanguage = languageIdMap[programmingLanguage.toLowerCase()];
+    if (!judgeLanguage) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
-    if (!process.env.JUDGE0_API_KEY) {
-        throw new Error("JUDGE0_API_KEY is not set in the environment variables. Cannot execute code.");
-    }
-
+    
+     // For debugging, we don't have a real problem.
+     // We will use the existing `two-sum` problem as a scaffold, but override the
+     // test cases with our single custom input.
+     // A more robust solution might involve a dedicated debug endpoint on the judge.
+     // NOTE: This approach is a workaround. The judge expects a problem file.
+     // We're just borrowing its environment to run our code with custom input.
+     
+     // The judge itself doesn't support passing custom STDIN, so we can't *actually*
+     // use the user's input. We'll have to return a placeholder.
+     // This is a limitation of the current custom judge design.
+     // A future improvement would be to add a dedicated `/debug` endpoint to the judge.
+     
     try {
-        const judgeResult = await runOnJudge0(languageId, code, input);
+        // Since we can't pass STDIN, we can at least try to compile the code
+        // and report any compilation errors.
+        const result = await runOnCustomJudge('two-sum', judgeLanguage, code);
+
+        let stdout = '';
+        let stderr = '';
         
-        const stdout = judgeResult.stdout || '';
-        let stderr = judgeResult.stderr || '';
-
-        if (judgeResult.compile_output) {
-            stderr = stderr ? `${stderr}\n\n---COMPILE ERRORS---\n${judgeResult.compile_output}` : judgeResult.compile_output;
-        }
-
-        if (judgeResult.status.id !== 3) { // Not "Accepted"
-             stderr = stderr ? `${stderr}\n\n---EXECUTION INFO---\n${judgeResult.status.description}` : judgeResult.status.description;
+        if (result.status === 'CE') {
+            stderr = result.compileLog;
+        } else if (result.status === 'RE') {
+            stderr = result.runtimeLog;
+        } else if (result.status === 'AC' || result.status === 'WA') {
+            // We can't get the actual stdout for custom input.
+            // We can inform the user about this limitation.
+            stdout = "Note: Custom input execution is not fully supported by the current judge. This run just checks for compilation and basic runtime errors."
         }
 
         return {
@@ -111,21 +105,13 @@ export const debugCodeFlow = ai.defineFlow(
         };
 
     } catch (error: any) {
-        console.error("Error executing debug run with Judge0:", error.response?.data || error.message);
-        let errorMessage = `Execution Error: ${error.message}`;
-        if (error.response?.status === 429) {
-            errorMessage = "Execution Error: Too many requests. You have exceeded the API rate limit for code execution. Please wait a moment and try again.";
-        } else if (error.response?.data?.message?.includes('exceeded the DAILY quota')) {
-            errorMessage = "Execution Error: You have exceeded the daily quota for the public code execution API. Please try again tomorrow or upgrade your plan on RapidAPI.";
-        } else if (error.response?.status === 403) {
-            errorMessage = "Execution Error: 403 Forbidden. This may be due to an invalid API key or exceeding your daily quota. Please check your Judge0 API key and plan.";
-        } else if (error.response?.data?.message) {
-            errorMessage = `Execution Error: ${error.response.data.message}`;
-        }
+        console.error("Error executing debug run with custom judge:", error.message);
         return {
             stdout: '',
-            stderr: errorMessage,
+            stderr: `Execution Error: ${error.message}`,
         };
     }
   }
 );
+
+    
