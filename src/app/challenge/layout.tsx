@@ -36,9 +36,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import { SmecBattleCodeLogo } from '@/components/icons';
+import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
 import confetti from 'canvas-confetti';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 
 type CurrentUser = {
@@ -352,7 +353,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         });
         return () => unsubscribe();
     }
-  }, [isVirtualBattle, contestId]);
+  }, [isVirtualBattle, contestId, db]);
 
   useEffect(() => {
     const fetchAllChallenges = async () => {
@@ -365,7 +366,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         setAllChallenges(challengesList);
     };
     fetchAllChallenges();
-  }, []);
+  }, [db]);
 
   useEffect(() => {
     if (challengeId) {
@@ -385,7 +386,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       });
       return () => unsubscribe();
     }
-  }, [challengeId, language]);
+  }, [challengeId, language, db]);
   
   useEffect(() => {
       if (!currentUser || !challengeId || isVirtualBattle) return;
@@ -415,7 +416,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         unsubscribeCompleted();
         unsubscribeLikes();
       }
-  }, [currentUser, challengeId, isVirtualBattle]);
+  }, [currentUser, challengeId, isVirtualBattle, db]);
 
   useEffect(() => {
     if (!currentUser || !challengeId || isVirtualBattle) return;
@@ -429,7 +430,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     });
 
     return () => unsubscribe();
-  }, [currentUser, challengeId, isVirtualBattle]);
+  }, [currentUser, challengeId, isVirtualBattle, db]);
 
   useEffect(() => {
     if(runResult || debugOutput) {
@@ -475,6 +476,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const currentContestChallengeIndex = contestDetails?.challengeIds.findIndex(id => id === challengeId) ?? -1;
   const prevContestChallengeId = contestDetails && currentContestChallengeIndex > 0 ? contestDetails.challengeIds[currentContestChallengeIndex - 1] : null;
   const nextContestChallengeId = contestDetails && currentContestChallengeIndex < contestDetails.challengeIds.length - 1 ? contestDetails.challengeIds[currentContestChallengeIndex + 1] : null;
+  
+  const contestChallengeDetails = contestDetails?.challengeIds.map(id => allChallenges.find(c => c.id === id)).filter(Boolean) as Challenge[] || [];
 
   if (isLoading || isChallengeLoading) {
     return (
@@ -811,10 +814,46 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </div>
                  {isVirtualBattle ? (
                     <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                             <List className="h-5 w-5" />
-                         </Button>
-                         <span className="font-semibold">{contestDetails?.title || 'Contest'}</span>
+                         <Sheet>
+                           <SheetTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <List className="h-5 w-5" />
+                              </Button>
+                           </SheetTrigger>
+                           <SheetContent side="left" className="p-0">
+                                <SheetHeader className="p-4 border-b">
+                                  <SheetTitle>{contestDetails?.title}</SheetTitle>
+                                  <SheetDescription>
+                                    <Badge variant="outline">Virtual</Badge>
+                                  </SheetDescription>
+                                </SheetHeader>
+                                <Tabs defaultValue="problems" className="mt-4">
+                                  <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="problems">Problem List</TabsTrigger>
+                                    <TabsTrigger value="ranking">Ranking</TabsTrigger>
+                                  </TabsList>
+                                  <TabsContent value="problems" className="p-4">
+                                    <div className="space-y-2">
+                                      {contestChallengeDetails.map((c, index) => (
+                                        <Link key={c.id} href={`/challenge/${c.id}?contestId=${contestId}`}>
+                                            <div className={cn("p-3 rounded-md hover:bg-muted", c.id === challengeId && "bg-muted")}>
+                                              <p className="font-semibold">Q{index + 1}. {c.title}</p>
+                                               <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
+                                                <span className={cn(difficultyTextColors[c.difficulty])}>{c.difficulty}</span>
+                                                <span>{c.points} pt.</span>
+                                               </div>
+                                            </div>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </TabsContent>
+                                  <TabsContent value="ranking" className="p-4 text-center text-muted-foreground">
+                                    Ranking is not available in virtual battles.
+                                  </TabsContent>
+                                </Tabs>
+                           </SheetContent>
+                         </Sheet>
+
                          <div className="flex items-center border border-slate-700 rounded-md">
                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild disabled={!prevContestChallengeId}>
                                 <Link href={prevContestChallengeId ? `/challenge/${prevContestChallengeId}?contestId=${contestId}` : '#'}>
@@ -828,9 +867,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                 </Link>
                             </Button>
                          </div>
-                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                             <BarChart2 className="h-5 w-5" />
-                         </Button>
                     </div>
                  ) : (
                     <div className="flex items-center gap-2">
@@ -872,5 +908,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
 
 
