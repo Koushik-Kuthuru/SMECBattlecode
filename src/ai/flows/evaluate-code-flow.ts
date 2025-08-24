@@ -5,16 +5,16 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
 
-const JUDGE_URL = 'http://localhost:8080/api';
+const JUDGE0_URL = 'https://judge0-ce.p.rapidapi.com';
 
-// Maps our language names to the ones the judge expects
-const languageMap: Record<string, string> = {
-  'javascript': 'node',
-  'python': 'python',
-  'java': 'java',
-  'c++': 'cpp',
-  'cpp': 'cpp',
-  'c': 'cpp', // Assuming C code can be compiled with g++
+// Maps our language names to the ones Judge0 expects
+const languageMap: Record<string, number> = {
+  'javascript': 93, // Node.js
+  'python': 71, // Python 3.8.1
+  'java': 62, // Java 11
+  'c++': 54, // C++ 11
+  'cpp': 54,
+  'c': 50, // C
 };
 
 const TestCaseResultSchema = z.object({
@@ -36,32 +36,41 @@ const EvaluateCodeOutputSchema = z.object({
   feedback: z.string().describe('Overall feedback on the submission.'),
 });
 
-async function submitToJudge(language: string, problemId: string, code: string) {
-    const submitRes = await axios.post(`${JUDGE_URL}/submit`, {
-        problemId,
-        language,
-        code,
-    });
-    const { jobId } = submitRes.data;
-    if (!jobId) {
-        throw new Error('Submission to judge failed, no jobId returned.');
-    }
-    return jobId;
-}
 
-async function pollForResult(jobId: string) {
-    while (true) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every second
-        const resultRes = await axios.get(`${JUDGE_URL}/result/${jobId}`);
-        const { state, result } = resultRes.data;
+async function executeOnJudge(languageId: number, code: string, testCases: { input: string, output: string}[]) {
+  const submissions = testCases.map(tc => ({
+      language_id: languageId,
+      source_code: code,
+      stdin: tc.input,
+      expected_output: tc.output
+  }));
+  
+  const response = await axios.post(`${JUDGE0_URL}/submissions/batch`, 
+      { submissions },
+      {
+          headers: {
+              'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+              'Content-Type': 'application/json'
+          }
+      }
+  );
+  
+  const tokens = response.data.map((s: { token: string }) => s.token).join(',');
 
-        if (state === 'completed' || state === 'failed') {
-            if (!result) {
-                throw new Error('Job finished but no result was returned.');
-            }
-            return result;
-        }
-    }
+  while(true) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const resultRes = await axios.get(`${JUDGE0_URL}/submissions/batch?tokens=${tokens}&base64_encoded=false&fields=*`, {
+          headers: {
+              'X-RapidAPI-Key': process.env.JUDGE0_API_KEY,
+              'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+          }
+      });
+      const results = resultRes.data.submissions;
+      if (results.every((res: any) => res.status.id > 2)) { // Status > 2 means finished (Accepted, WA, TLE, etc.)
+          return results;
+      }
+  }
 }
 
 export const evaluateCodeFlow = ai.defineFlow(
@@ -71,44 +80,51 @@ export const evaluateCodeFlow = ai.defineFlow(
     outputSchema: EvaluateCodeOutputSchema,
   },
   async ({ problemId, code, programmingLanguage }) => {
-    const judgeLanguage = languageMap[programmingLanguage.toLowerCase()];
-    if (!judgeLanguage) {
+    const languageId = languageMap[programmingLanguage.toLowerCase()];
+    if (!languageId) {
       throw new Error(`Unsupported language: ${programmingLanguage}`);
     }
 
     try {
-        const jobId = await submitToJudge(judgeLanguage, problemId, code);
-        const judgeResult = await pollForResult(jobId);
+        const challengeDoc = await getDoc(doc(db, 'challenges', problemId));
+        if (!challengeDoc.exists()) {
+            throw new Error('Challenge not found');
+        }
+        const challenge = challengeDoc.data();
+        const testCases = challenge.testCases;
 
-        if (!judgeResult.details) {
-            let feedback = 'An unknown error occurred.';
-            if(judgeResult.status === 'CE') feedback = judgeResult.compileLog || 'Compilation Error';
-            if(judgeResult.status === 'IE') feedback = judgeResult.runtimeLog || 'Internal Error';
-             return {
-                results: [],
-                allPassed: false,
-                feedback: `Execution failed: ${feedback}`,
+        const judgeResults = await executeOnJudge(languageId, code, testCases);
+        
+        let allPassed = true;
+        const results = judgeResults.map((res: any, index: number) => {
+            const passed = res.status.id === 3; // 3 is "Accepted"
+            if(!passed) allPassed = false;
+            
+            let actualOutput = res.stdout || '';
+            if (res.status.id === 6) actualOutput = `Compilation Error: ${res.compile_output || 'Unknown error'}`;
+            else if (res.status.id !== 3) actualOutput = res.stderr || `Error: ${res.status.description}`;
+
+            return {
+                testCaseInput: testCases[index].input,
+                expectedOutput: testCases[index].output,
+                actualOutput: actualOutput,
+                passed: passed,
             };
+        });
+
+        let feedback = allPassed 
+            ? 'All test cases passed!' 
+            : `Failed on test case ${results.findIndex(r => !r.passed) + 1}.`;
+
+        const firstError = judgeResults.find((res:any) => res.status.id > 3);
+        if (firstError) {
+          feedback = firstError.status.description;
         }
 
-        const results: z.infer<typeof TestCaseResultSchema>[] = judgeResult.details.map((detail: any) => ({
-            testCaseInput: detail.input,
-            expectedOutput: detail.expected,
-            actualOutput: detail.actual || judgeResult.runtimeLog || judgeResult.compileLog || '',
-            passed: detail.status === 'AC',
-        }));
-
-        const allPassed = judgeResult.status === 'AC';
-        let feedback = allPassed ? 'All test cases passed!' : `Failed on test case ${results.findIndex(r => !r.passed) + 1}.`;
-        if (judgeResult.status === 'TLE') feedback = 'Time Limit Exceeded.';
-        if (judgeResult.status === 'MLE') feedback = 'Memory Limit Exceeded.';
-        if (judgeResult.status === 'RE') feedback = `Runtime Error: ${judgeResult.runtimeLog || 'Unknown error'}`;
-        if (judgeResult.status === 'CE') feedback = `Compilation Error: ${judgeResult.compileLog || 'Check syntax'}`;
-        
         return { results, allPassed, feedback };
 
     } catch (error: any) {
-        console.error("Error executing with custom judge:", error.response?.data || error.message);
+        console.error("Error executing with Judge0:", error.response?.data || error.message);
         return {
             results: [],
             allPassed: false,

@@ -199,7 +199,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
-        // For custom judge, "Run" will execute against all test cases.
         const result = await evaluateCode({
             problemId: challengeId,
             code: solution,
@@ -237,7 +236,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           problemId: challengeId,
           code: solution,
           programmingLanguage: language,
-          input: customInput, // Note: custom judge might ignore this and run against first sample
+          input: customInput,
       });
       setDebugOutput(result);
     } catch(error) {
@@ -678,7 +677,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {renderOutput(res.actualOutput, res.passed ? 'Your Output' : res.actualOutput.startsWith('Error:') || res.actualOutput.includes('Error:') ? 'Error' : 'Your Output')}
+                                    {renderOutput(res.actualOutput, 'Your Output')}
                                     {renderOutput(res.expectedOutput, 'Expected Output')}
                                 </div>
                           </AccordionContent>
