@@ -638,9 +638,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     );
   }
   
- const renderOutput = (output: string) => {
-    const isError = output.toLowerCase().includes('error');
-    const title = isError ? "Error" : "Your Output";
+ const renderOutput = (output: string, title: "Your Output" | "Expected Output" | "Error") => {
+    const isError = title === 'Error';
     const titleColor = isError ? "text-red-500" : "font-semibold";
     const bgColor = isError ? "bg-red-50" : "bg-gray-100";
     const textColor = isError ? "text-red-700" : "";
@@ -695,11 +694,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {renderOutput(res.actualOutput)}
-                                    <div>
-                                        <h4 className="font-semibold mb-1 text-xs">Expected Output</h4>
-                                        <Textarea readOnly value={res.expectedOutput} className="font-mono text-xs h-20" />
-                                    </div>
+                                    {renderOutput(res.actualOutput, res.passed ? 'Your Output' : res.actualOutput.startsWith('Error:') ? 'Error' : 'Your Output')}
+                                    {renderOutput(res.expectedOutput, 'Expected Output')}
                                 </div>
                           </AccordionContent>
                        </AccordionItem>
@@ -990,4 +986,3 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
-
