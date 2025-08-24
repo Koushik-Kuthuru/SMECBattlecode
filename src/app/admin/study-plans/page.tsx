@@ -290,8 +290,8 @@ export default function ManageStudyPlansPage() {
           ) : studyPlans.length > 0 ? (
             <div className="space-y-4">
               {studyPlans.map(plan => (
-                <div key={plan.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleEditClick(plan)}>
+                <div key={plan.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg gap-4 cursor-pointer hover:bg-muted/50" onClick={() => handleEditClick(plan)}>
+                  <div className="flex items-center gap-4 flex-1">
                       <div className={`w-16 h-16 rounded-md bg-gradient-to-br ${plan.gradient}`}></div>
                       <div>
                         <h3 className="font-semibold">{plan.title}</h3>
@@ -308,11 +308,7 @@ export default function ManageStudyPlansPage() {
                            <Label>{plan.isEnabled ? 'Enabled' : 'Disabled'}</Label>
                      </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditClick(plan)}>
-                             <Edit className="mr-2 h-4 w-4" />
-                             Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => setPlanToDelete(plan.id)}>
+                        <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setPlanToDelete(plan.id); }}>
                              <Trash2 className="mr-2 h-4 w-4" />
                              Delete
                         </Button>
