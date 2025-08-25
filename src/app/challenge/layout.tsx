@@ -623,7 +623,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       return (
         <div className="p-4 space-y-2">
           <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
-          <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+          <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
             <code>{compileError}</code>
           </pre>
         </div>
@@ -635,7 +635,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         return (
           <div className="p-4 space-y-2">
             <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
-             <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+             <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
                 <code>{runtimeError}</code>
             </pre>
           </div>
@@ -712,7 +712,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
           ) : debugOutput ? (
             <div className="p-4 space-y-2">
                  <h3 className="text-lg font-semibold">Debug Output</h3>
-                 <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                 <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
                     <code>{debugOutput.run?.stdout || debugOutput.compile?.stderr || debugOutput.run?.stderr || "No output"}</code>
                  </pre>
             </div>
