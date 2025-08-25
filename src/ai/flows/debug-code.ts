@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A code debugging agent that uses Judge0.
+ * @fileOverview A code debugging agent that uses the Piston API.
  *
  * - debugCode - A function that executes code with a given input and returns the output.
  * - DebugCodeInput - The input type for the debugCode function.
@@ -18,19 +18,24 @@ const DebugCodeInputSchema = z.object({
 });
 export type DebugCodeInput = z.infer<typeof DebugCodeInputSchema>;
 
+const PistonExecutionOutputSchema = z.object({
+  stdout: z.string().describe('The standard output of the code execution.'),
+  stderr: z.string().describe('The standard error of the code execution, if any.'),
+  output: z.string().describe('The combined output (stdout and stderr).'),
+  code: z.number().optional().describe('The exit code of the execution.'),
+  signal: z.string().nullable().optional().describe('The signal that terminated the execution, if any.'),
+}).optional();
+
 const DebugCodeOutputSchema = z.object({
-  stdout: z.string().describe("The standard output from the user's code."),
-  stderr: z.string().describe("The standard error from the user's code, if any."),
-  compile_output: z.string().describe("Compilation output, if any."),
-  status: z.string().describe("The execution status description."),
+  language: z.string().optional(),
+  version: z.string().optional(),
+  run: PistonExecutionOutputSchema,
+  compile: PistonExecutionOutputSchema,
 });
 export type DebugCodeOutput = z.infer<typeof DebugCodeOutputSchema>;
 
 
 export async function debugCode(input: DebugCodeInput): Promise<DebugCodeOutput> {
   const { debugCodeFlow } = await import('./debug-code-flow');
-  // The problemId is not strictly needed for a debug run against custom input,
-  // but we can pass an empty string or a placeholder if the flow expects it.
-  // In this new implementation, it's not needed.
   return debugCodeFlow(input);
 }

@@ -5,17 +5,25 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import axios from 'axios';
 
-const JUDGE0_URL = 'http://localhost:2358';
+const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 
-const languageMap: Record<string, number> = {
-  'javascript': 93, // Node.js
-  'python': 71, // Python 3.8.1
-  'java': 62, // Java 11
-  'c++': 54, // C++ 11
-  'cpp': 54,
-  'c': 50, // C
+// Mapping our language names to Piston's language names
+const languageMap: Record<string, string> = {
+  'javascript': 'javascript',
+  'python': 'python',
+  'java': 'java',
+  'c++': 'cpp',
+  'cpp': 'cpp',
+  'c': 'c',
 };
 
+const PistonExecutionOutputSchema = z.object({
+  stdout: z.string().describe('The standard output of the code execution.'),
+  stderr: z.string().describe('The standard error of the code execution, if any.'),
+  output: z.string().describe('The combined output (stdout and stderr).'),
+  code: z.number().optional().describe('The exit code of the execution.'),
+  signal: z.string().nullable().optional().describe('The signal that terminated the execution, if any.'),
+}).optional();
 
 const DebugCodeInputSchema = z.object({
   code: z.string().describe('The code submission to debug.'),
@@ -24,11 +32,12 @@ const DebugCodeInputSchema = z.object({
 });
 
 const DebugCodeOutputSchema = z.object({
-  stdout: z.string().describe("The standard output from the user's code."),
-  stderr: z.string().describe("The standard error from the user's code, if any."),
-  compile_output: z.string().describe("Compilation output, if any."),
-  status: z.string().describe("The execution status description."),
+  language: z.string().optional(),
+  version: z.string().optional(),
+  run: PistonExecutionOutputSchema,
+  compile: PistonExecutionOutputSchema,
 });
+
 
 export const debugCodeFlow = ai.defineFlow(
   {
@@ -37,40 +46,43 @@ export const debugCodeFlow = ai.defineFlow(
     outputSchema: DebugCodeOutputSchema,
   },
   async ({ code, programmingLanguage, input }) => {
-    const languageId = languageMap[programmingLanguage.toLowerCase()];
-    if (!languageId) {
-      throw new Error(`Unsupported language: ${programmingLanguage}`);
+    const pistonLanguage = languageMap[programmingLanguage.toLowerCase()];
+    if (!pistonLanguage) {
+      throw new Error(`Unsupported language for Piston API: ${programmingLanguage}`);
     }
 
     try {
-      const response = await axios.post(`${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`, {
-          language_id: languageId,
-          source_code: code,
-          stdin: input,
-      }, {
-          headers: {
-              'Content-Type': 'application/json'
-          }
+      const response = await axios.post(PISTON_API_URL, {
+        language: pistonLanguage,
+        // We'll let Piston decide the version for now.
+        // For production, you might want to specify versions.
+        version: '*',
+        files: [{ content: code }],
+        stdin: input,
       });
       
       const result = response.data;
       
       return {
-        stdout: result.stdout || '',
-        stderr: result.stderr || '',
-        compile_output: result.compile_output || '',
-        status: result.status.description || 'Unknown Status',
+        language: result.language,
+        version: result.version,
+        run: result.run || {},
+        compile: result.compile || {},
       };
 
     } catch (error: any) {
-      console.error("Error executing debug run with Judge0:", error.response?.data || error.message);
-      const errorMessage = error.response?.data?.error || error.message || "An unknown error occurred";
+      console.error("Error executing debug run with Piston API:", error.response?.data || error.message);
+      const errorMessage = error.response?.data?.message || error.message || "An unknown error occurred";
+      // Return an error structure that matches the schema
       return {
-        stdout: '',
-        stderr: `Execution Error: ${errorMessage}`,
-        compile_output: '',
-        status: 'Error'
-      };
+        run: {
+            stdout: '',
+            stderr: `Execution Error: ${errorMessage}`,
+            output: `Execution Error: ${errorMessage}`,
+            code: -1
+        },
+        compile: {}
+      }
     }
   }
 );

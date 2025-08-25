@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A code evaluation agent that uses the custom judge.
+ * @fileOverview A code evaluation agent that uses the Piston API.
  *
  * - evaluateCode - A function that evaluates a code submission against test cases.
  * - EvaluateCodeInput - The input type for the evaluateCode function.

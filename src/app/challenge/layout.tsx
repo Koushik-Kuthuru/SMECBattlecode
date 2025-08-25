@@ -620,7 +620,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     );
   }
   
- const renderOutput = (output: string | null, title: "Your Output" | "Expected Output" | "Error" | "Compile Output") => {
+ const renderOutput = (output: string | null | undefined, title: "Your Output" | "Expected Output" | "Error" | "Compile Output") => {
+    if (output === null || output === undefined) return null;
     const isError = title === 'Error' || title === 'Compile Output';
     const titleColor = isError ? "text-red-500" : "font-semibold";
     const bgColor = isError ? "bg-red-50" : "bg-gray-100";
@@ -632,7 +633,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             <h4 className={cn("mb-1 text-xs", titleColor)}>{title}</h4>
             <Textarea 
                 readOnly 
-                value={output || ''} 
+                value={output} 
                 className={cn("font-mono text-xs h-20", bgColor, textColor, borderColor)} 
             />
         </div>
@@ -652,7 +653,11 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                     {runResult.feedback}
                 </span>
             )}
-            {debugOutput && !isRunning && <span className="text-sm font-bold text-blue-500">{debugOutput.status}</span>}
+            {debugOutput && !isRunning && (
+              <span className="text-sm font-bold text-blue-500">
+                {debugOutput.compile?.stderr ? 'Compilation Error' : (debugOutput.run?.stderr ? 'Runtime Error' : 'Finished')}
+              </span>
+            )}
          </div>
       </header>
         <>
@@ -676,12 +681,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                                     <h4 className="font-semibold mb-1 text-sm">Input</h4>
                                     <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {renderOutput(res.actualOutput, 'Your Output')}
-                                    {renderOutput(res.expectedOutput, 'Expected Output')}
-                                </div>
-                                {res.compile_output && renderOutput(res.compile_output, "Compile Output")}
-                                {res.stderr && renderOutput(res.stderr, "Error")}
+                                {res.passed ? renderOutput(res.actualOutput, 'Your Output') : (
+                                  <div className="grid grid-cols-2 gap-2">
+                                      {renderOutput(res.actualOutput, 'Your Output')}
+                                      {renderOutput(res.expectedOutput, 'Expected Output')}
+                                  </div>
+                                )}
+                                {renderOutput(res.compile_output, "Compile Output")}
+                                {renderOutput(res.stderr, "Error")}
                           </AccordionContent>
                        </AccordionItem>
                      ))}
@@ -689,9 +696,9 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 </ScrollArea>
             ) : debugOutput ? (
                 <div className="p-2 space-y-4">
-                    {renderOutput(debugOutput.stdout, "Your Output")}
-                    {renderOutput(debugOutput.stderr, "Error")}
-                    {renderOutput(debugOutput.compile_output, "Compile Output")}
+                    {renderOutput(debugOutput.run?.stdout, "Your Output")}
+                    {renderOutput(debugOutput.compile?.stderr, "Compile Output")}
+                    {renderOutput(debugOutput.run?.stderr, "Error")}
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">

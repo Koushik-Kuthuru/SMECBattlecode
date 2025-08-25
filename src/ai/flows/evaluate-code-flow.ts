@@ -7,18 +7,25 @@ import axios from 'axios';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+const PISTON_API_URL = 'https://emkc.org/api/v2/piston/execute';
 
-const JUDGE0_URL = 'http://localhost:2358';
-
-// Maps our language names to the ones Judge0 expects
-const languageMap: Record<string, number> = {
-  'javascript': 93, // Node.js
-  'python': 71, // Python 3.8.1
-  'java': 62, // Java 11
-  'c++': 54, // C++ 11
-  'cpp': 54,
-  'c': 50, // C
+// Maps our language names to the ones Piston expects
+const languageMap: Record<string, string> = {
+  'javascript': 'javascript',
+  'python': 'python',
+  'java': 'java',
+  'c++': 'cpp',
+  'cpp': 'cpp',
+  'c': 'c',
 };
+
+const PistonExecutionOutputSchema = z.object({
+  stdout: z.string().describe('The standard output of the code execution.'),
+  stderr: z.string().describe('The standard error of the code execution, if any.'),
+  output: z.string().describe('The combined output (stdout and stderr).'),
+  code: z.number().optional().describe('The exit code of the execution.'),
+  signal: z.string().nullable().optional().describe('The signal that terminated the execution, if any.'),
+}).optional();
 
 const TestCaseResultSchema = z.object({
   testCaseInput: z.string().describe("The input for the test case."),
@@ -30,7 +37,6 @@ const TestCaseResultSchema = z.object({
   stderr: z.string().nullable().describe("The standard error from the user's code, if any."),
   compile_output: z.string().nullable().describe("The compilation output, if any."),
 });
-
 
 const EvaluateCodeInputSchema = z.object({
   problemId: z.string().describe('The ID of the problem to evaluate against.'),
@@ -44,20 +50,14 @@ const EvaluateCodeOutputSchema = z.object({
   feedback: z.string().describe('Overall feedback on the submission.'),
 });
 
-
-async function executeOnJudge(languageId: number, code: string, testCases: { input: string, output: string}[]) {
-  const submissions = testCases.map(tc => ({
-      language_id: languageId,
-      source_code: code,
-      stdin: tc.input,
-      expected_output: tc.output
-  }));
-  
-  const response = await axios.post(`${JUDGE0_URL}/submissions/batch?base64_encoded=false&wait=true`, 
-      { submissions }
-  );
-
-  return response.data;
+async function executeWithPiston(pistonLanguage: string, code: string, stdin: string) {
+    const response = await axios.post(PISTON_API_URL, {
+        language: pistonLanguage,
+        version: '*', // Let Piston pick the latest stable version
+        files: [{ content: code }],
+        stdin: stdin,
+    });
+    return response.data;
 }
 
 export const evaluateCodeFlow = ai.defineFlow(
@@ -67,9 +67,9 @@ export const evaluateCodeFlow = ai.defineFlow(
     outputSchema: EvaluateCodeOutputSchema,
   },
   async ({ problemId, code, programmingLanguage }) => {
-    const languageId = languageMap[programmingLanguage.toLowerCase()];
-    if (!languageId) {
-      throw new Error(`Unsupported language: ${programmingLanguage}`);
+    const pistonLanguage = languageMap[programmingLanguage.toLowerCase()];
+    if (!pistonLanguage) {
+      throw new Error(`Unsupported language for Piston API: ${programmingLanguage}`);
     }
 
     try {
@@ -80,42 +80,81 @@ export const evaluateCodeFlow = ai.defineFlow(
         const challenge = challengeDoc.data();
         const testCases = challenge.testCases;
 
-        const judgeResults = await executeOnJudge(languageId, code, testCases);
-        
         let allPassed = true;
-        const results = judgeResults.map((res: any, index: number) => {
-            const passed = res.status.id === 3; // 3 is "Accepted"
-            if(!passed) allPassed = false;
+        const results = [];
+        let firstErrorFeedback: string | null = null;
+        
+        for (let i = 0; i < testCases.length; i++) {
+            const tc = testCases[i];
+            const pistonResult = await executeWithPiston(pistonLanguage, code, tc.input);
+
+            const compileStderr = pistonResult.compile?.stderr;
+            if (compileStderr) {
+                // Compilation failed for the first test case, no need to run others.
+                allPassed = false;
+                firstErrorFeedback = `Compilation Error: ${compileStderr.substring(0, 500)}`;
+                results.push({
+                    testCaseInput: tc.input,
+                    expectedOutput: tc.output,
+                    actualOutput: compileStderr,
+                    passed: false,
+                    status: 'Compilation Error',
+                    stdout: null,
+                    stderr: null,
+                    compile_output: compileStderr,
+                });
+                break; // Stop testing
+            }
             
-            return {
-                testCaseInput: testCases[index].input,
-                expectedOutput: testCases[index].output,
-                actualOutput: res.stdout || res.stderr || res.compile_output || 'No output',
+            const runStderr = pistonResult.run?.stderr;
+            if (runStderr) {
+                 allPassed = false;
+                 if(!firstErrorFeedback) firstErrorFeedback = `Runtime Error: ${runStderr.substring(0, 500)}`;
+                 results.push({
+                    testCaseInput: tc.input,
+                    expectedOutput: tc.output,
+                    actualOutput: runStderr,
+                    passed: false,
+                    status: 'Runtime Error',
+                    stdout: pistonResult.run.stdout,
+                    stderr: runStderr,
+                    compile_output: null,
+                });
+                continue; // Continue to see if other test cases pass
+            }
+            
+            // Normalize outputs for comparison
+            const actualOutput = (pistonResult.run?.stdout || "").trim();
+            const expectedOutput = (tc.output || "").trim();
+            
+            const passed = actualOutput === expectedOutput;
+            if (!passed) {
+                allPassed = false;
+                if(!firstErrorFeedback) firstErrorFeedback = "Wrong Answer";
+            }
+            
+            results.push({
+                testCaseInput: tc.input,
+                expectedOutput: tc.output,
+                actualOutput: pistonResult.run.stdout || '',
                 passed: passed,
-                status: res.status.description,
-                stdout: res.stdout,
-                stderr: res.stderr,
-                compile_output: res.compile_output,
-            };
-        });
-
-        let feedback = allPassed 
-            ? 'All test cases passed!' 
-            : `Failed ${results.filter(r => !r.passed).length} test case(s).`;
-
-        const firstError = judgeResults.find((res:any) => res.status.id > 3);
-        if (firstError) {
-          feedback = firstError.status.description;
+                status: passed ? 'Accepted' : 'Wrong Answer',
+                stdout: pistonResult.run.stdout,
+                stderr: null,
+                compile_output: null,
+            });
         }
+        
+        const feedback = allPassed ? 'All test cases passed!' : (firstErrorFeedback || `Failed ${results.filter(r => !r.passed).length} test case(s).`);
 
         return { results, allPassed, feedback };
 
     } catch (error: any) {
-        console.error("Error communicating with Judge0:", error.response?.data || error.message);
+        console.error("Error communicating with Piston API:", error.response?.data || error.message);
         return {
             results: [],
             allPassed: false,
-            feedback: `Judge Communication Error: ${error.message}`
+            feedback: `API Communication Error: ${error.response?.data?.message || error.message}`
         }
     }
   }
