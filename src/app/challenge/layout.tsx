@@ -206,9 +206,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             programmingLanguage: language,
         });
         setRunResult(result);
-        if (result.allPassed) {
-            toast({ title: "Sample Tests Passed!", description: "Your code passed all sample tests." });
-        } else {
+        if (!result.allPassed) {
              toast({ variant: "destructive", title: "Sample Tests Failed", description: "Your solution did not pass all sample test cases. Check the results." });
         }
     } catch(error) {
