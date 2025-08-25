@@ -206,9 +206,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             programmingLanguage: language,
         });
         setRunResult(result);
-        if (!result.allPassed) {
-             toast({ variant: "destructive", title: "Sample Tests Failed", description: "Your solution did not pass all sample test cases. Check the results." });
-        }
     } catch(error) {
         console.error("Error running code:", error);
         toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
@@ -619,95 +616,117 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     );
   }
   
- const renderOutput = (output: string | null | undefined, title: "Your Output" | "Expected Output" | "Error" | "Compile Output") => {
-    if (output === null || output === undefined) return null;
-    const isError = title === 'Error' || title === 'Compile Output';
-    const titleColor = isError ? "text-red-500" : "font-semibold";
-    const bgColor = isError ? "bg-red-50" : "bg-gray-100";
-    const textColor = isError ? "text-red-700" : "";
-    const borderColor = isError ? "border-red-200" : "";
+  const testResultPanel = () => {
+    // Check for a global compilation error first
+    const compileError = runResult?.results.find(r => r.compile_output)?.compile_output;
+    if (compileError) {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
+          <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+            <code>{compileError}</code>
+          </pre>
+        </div>
+      );
+    }
+    
+     const runtimeError = runResult?.results.find(r => r.status === 'Runtime Error')?.stderr;
+      if (runtimeError) {
+        return (
+          <div className="p-4 space-y-2">
+            <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
+             <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                <code>{runtimeError}</code>
+            </pre>
+          </div>
+        );
+      }
+
+
+    const renderOutput = (output: string | null | undefined, title: "Your Output" | "Expected Output") => {
+        if (output === null || output === undefined) return null;
+        return (
+            <div>
+                <h4 className="font-semibold mb-1 text-sm">{title}</h4>
+                <Textarea 
+                    readOnly 
+                    value={output} 
+                    className="font-mono text-xs h-20 bg-gray-100"
+                />
+            </div>
+        );
+    };
 
     return (
-        <div>
-            <h4 className={cn("mb-1 text-xs", titleColor)}>{title}</h4>
-            <Textarea 
-                readOnly 
-                value={output} 
-                className={cn("font-mono text-xs h-20", bgColor, textColor, borderColor)} 
-            />
-        </div>
-    );
- };
-
-  const testResultPanel = (
-    <div className="h-full w-full bg-background flex flex-col">
-      <header className="p-2 border-b flex justify-between items-center flex-shrink-0">
-        <h3 className="text-base font-semibold">Test Result</h3>
-         <div className="flex items-center gap-2">
+      <div className="h-full w-full bg-background flex flex-col">
+        <header className="p-2 border-b flex justify-between items-center flex-shrink-0">
+          <h3 className="text-base font-semibold">Test Result</h3>
+          <div className="flex items-center gap-2">
             {runResult && !isRunning && (
-                <span className={cn(
-                    "text-sm font-bold",
-                    runResult.allPassed ? "text-green-600" : "text-red-500"
-                )}>
-                    {runResult.feedback}
-                </span>
+              <span className={cn(
+                "text-sm font-bold",
+                runResult.allPassed ? "text-green-600" : "text-red-500"
+              )}>
+                {runResult.feedback}
+              </span>
             )}
             {debugOutput && !isRunning && (
               <span className="text-sm font-bold text-blue-500">
                 {debugOutput.compile?.stderr ? 'Compilation Error' : (debugOutput.run?.stderr ? 'Runtime Error' : 'Finished')}
               </span>
             )}
-         </div>
-      </header>
+          </div>
+        </header>
         <>
-            {isRunning ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                    <p className="font-semibold">Running...</p>
-                </div>
-            ) : runResult ? (
-                <ScrollArea className="flex-grow">
-                  <Accordion type="single" collapsible defaultValue="0" className="w-full">
-                     {runResult.results.map((res, i) => (
-                       <AccordionItem value={String(i)} key={i}>
-                          <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
-                              <span>Test Case {i + 1}</span>
-                              {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                              <span className={cn("font-semibold", res.passed ? 'text-green-600' : 'text-red-500')}>{res.status}</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="p-4 space-y-4 bg-muted/50">
-                               <div>
-                                    <h4 className="font-semibold mb-1 text-sm">Input</h4>
-                                    <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
-                                </div>
-                                {res.passed ? renderOutput(res.actualOutput, 'Your Output') : (
-                                  <div className="grid grid-cols-2 gap-2">
-                                      {renderOutput(res.actualOutput, 'Your Output')}
-                                      {renderOutput(res.expectedOutput, 'Expected Output')}
-                                  </div>
-                                )}
-                                {renderOutput(res.compile_output, "Compile Output")}
-                                {renderOutput(res.stderr, "Error")}
-                          </AccordionContent>
-                       </AccordionItem>
-                     ))}
-                  </Accordion>
-                </ScrollArea>
-            ) : debugOutput ? (
-                <div className="p-2 space-y-4">
-                    {renderOutput(debugOutput.run?.stdout, "Your Output")}
-                    {renderOutput(debugOutput.compile?.stderr, "Compile Output")}
-                    {renderOutput(debugOutput.run?.stderr, "Error")}
-                </div>
-            ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <Play className="h-8 w-8 mb-2" />
-                    <p>Run your code to see test results.</p>
-                </div>
-            )}
+          {isRunning ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
+              <Loader2 className="h-8 w-8 animate-spin mb-2" />
+              <p className="font-semibold">Running...</p>
+            </div>
+          ) : runResult ? (
+            <ScrollArea className="flex-grow">
+              <Accordion type="single" collapsible defaultValue="0" className="w-full">
+                {runResult.results.map((res, i) => (
+                  <AccordionItem value={String(i)} key={i}>
+                    <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
+                      <span>Test Case {i + 1}</span>
+                      {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                      <span className={cn("font-semibold", res.passed ? 'text-green-600' : 'text-red-500')}>{res.status}</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 space-y-4 bg-muted/50">
+                      <div>
+                        <h4 className="font-semibold mb-1 text-sm">Input</h4>
+                        <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
+                      </div>
+                      {res.passed ? renderOutput(res.actualOutput, 'Your Output') : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {renderOutput(res.actualOutput, 'Your Output')}
+                          {renderOutput(res.expectedOutput, 'Expected Output')}
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </ScrollArea>
+          ) : debugOutput ? (
+            <div className="p-4 space-y-2">
+                 <h3 className="text-lg font-semibold">Debug Output</h3>
+                 <pre className="bg-slate-900 text-white p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                    <code>{debugOutput.run?.stdout || debugOutput.compile?.stderr || debugOutput.run?.stderr || "No output"}</code>
+                 </pre>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
+              <Play className="h-8 w-8 mb-2" />
+              <p>Run your code to see test results.</p>
+            </div>
+          )}
         </>
-  </div>
-  );
+      </div>
+    );
+  };
+
 
   const leftPanel = (
     <div className="h-full flex flex-col bg-background">
@@ -739,7 +758,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
               </TabsContent>
                <TabsContent value="result" className="mt-0 h-full">
                  <ScrollArea className="h-full">
-                    {testResultPanel}
+                    {testResultPanel()}
                  </ScrollArea>
               </TabsContent>
               <TabsContent value="submissions" className="mt-0 h-full">
@@ -827,7 +846,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             </TabsContent>
              <TabsContent value="result" className="mt-0 h-full">
                 <ScrollArea className="h-full">
-                  {testResultPanel}
+                  {testResultPanel()}
                 </ScrollArea>
             </TabsContent>
           </div>
