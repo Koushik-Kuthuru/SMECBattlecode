@@ -81,8 +81,11 @@ export const runCodeFlow = ai.defineFlow(
             const tc = testCases[i];
             const pistonResult = await executeWithPiston(pistonLanguage, code, tc.input);
 
-            const compileStderr = pistonResult.compile?.stderr;
+            let compileStderr = pistonResult.compile?.stderr;
             if (compileStderr) {
+                 if (compileStderr.includes("undefined reference to `main'")) {
+                    compileStderr = "Your code is missing a `main` function, which is required for it to run.";
+                }
                 // Compilation failed for the first test case, no need to run others.
                 allPassed = false;
                 firstErrorFeedback = `Compilation Error: ${compileStderr.substring(0, 500)}`;
