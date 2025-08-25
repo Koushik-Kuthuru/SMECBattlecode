@@ -189,7 +189,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
 
   const handleRunCode = useCallback(async () => {
     if (!challenge || !language || !challengeId) {
-      toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
     }
     
@@ -208,16 +207,14 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
         setRunResult(result);
     } catch(error) {
         console.error("Error running code:", error);
-        toast({ variant: "destructive", title: "Evaluation Error", description: "Could not evaluate your code. Please try again." });
         setRunResult(null);
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast, challengeId]);
+  }, [challenge, language, solution, challengeId]);
 
   const handleDebugCode = useCallback(async (customInput: string) => {
     if (!challenge || !language) {
-      toast({ variant: 'destructive', title: 'Cannot Run Code', description: 'The challenge data is still loading. Please wait a moment.' });
       return;
     }
     
@@ -236,21 +233,18 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       setDebugOutput(result);
     } catch(error) {
         console.error("Error running debug code:", error);
-        toast({ variant: "destructive", title: "Debug Error", description: "Could not run your code for debugging." });
         setDebugOutput(null);
     } finally {
         setIsRunning(false);
     }
-  }, [challenge, language, solution, toast]);
+  }, [challenge, language, solution]);
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser || !challenge || !challengeId || !language) {
-        toast({ variant: "destructive", title: "Submission Error", description: "You must be logged in to submit." });
         return;
     }
     if (isVirtualBattle) {
-        toast({ title: "Virtual Battle", description: "Points and submissions are not saved in virtual battle mode." });
-        return; // Don't allow official submission in virtual battle
+        return; 
     }
 
     setIsRunning(true);
@@ -312,28 +306,20 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
                 transaction.set(completedChallengesDocRef, { 
                     [challenge.id!]: { completedAt: Timestamp.now() }
                 }, { merge: true });
-
-                toast({ title: "Challenge Solved!", description: `You've earned ${challenge.points} points!` });
-            } else {
-                 toast({ title: "Challenge Accepted!", description: "You have already completed this challenge." });
-            }
-
+            } 
             const inProgressRef = doc(db, `users/${currentUser.uid}/challengeData`, 'inProgress');
             transaction.set(inProgressRef, { [challenge.id!]: false }, { merge: true });
         });
         
         setActiveTab('submissions');
-      } else {
-        toast({ variant: "destructive", title: "Submission Failed", description: "Your solution did not pass all test cases (including hidden ones)." });
       }
 
     } catch (error) {
       console.error("Error submitting code:", error);
-      toast({ variant: "destructive", title: "Submission Error", description: "An error occurred during submission." });
     } finally {
       setIsRunning(false);
     }
-  }, [currentUser, challenge, challengeId, solution, language, toast, isVirtualBattle]);
+  }, [currentUser, challenge, challengeId, solution, language, isVirtualBattle]);
 
 
   useEffect(() => {
@@ -618,30 +604,8 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   
   const testResultPanel = () => {
     const compileError = runResult?.results.find(r => r.compile_output)?.compile_output ?? debugOutput?.compile?.stderr;
-    if (compileError) {
-      return (
-        <div className="p-4 space-y-2">
-          <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
-          <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
-            <code>{compileError}</code>
-          </pre>
-        </div>
-      );
-    }
-    
     const runtimeError = runResult?.results.find(r => r.status === 'Runtime Error')?.stderr ?? debugOutput?.run?.stderr;
-    if (runtimeError) {
-      return (
-        <div className="p-4 space-y-2">
-          <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
-           <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
-              <code>{runtimeError}</code>
-          </pre>
-        </div>
-      );
-    }
-
-
+    
     const renderOutput = (output: string | null | undefined, title: "Your Output" | "Expected Output") => {
         if (output === null || output === undefined) return null;
         return (
@@ -676,52 +640,75 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             )}
           </div>
         </header>
-        <>
+        <ScrollArea className="flex-grow">
           {isRunning ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
               <Loader2 className="h-8 w-8 animate-spin mb-2" />
               <p className="font-semibold">Running...</p>
             </div>
-          ) : runResult ? (
-            <ScrollArea className="flex-grow">
-              <Accordion type="single" collapsible defaultValue="0" className="w-full">
-                {runResult.results.map((res, i) => (
-                  <AccordionItem value={String(i)} key={i}>
-                    <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
-                      <span>Test Case {i + 1}</span>
-                      {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
-                      <span className={cn("font-semibold", res.passed ? 'text-green-600' : 'text-red-500')}>{res.status}</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 space-y-4 bg-muted/50">
-                      <div>
-                        <h4 className="font-semibold mb-1 text-sm">Input</h4>
-                        <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
-                      </div>
-                      {res.passed ? renderOutput(res.actualOutput, 'Your Output') : (
-                        <div className="grid grid-cols-2 gap-2">
-                          {renderOutput(res.actualOutput, 'Your Output')}
-                          {renderOutput(res.expectedOutput, 'Expected Output')}
-                        </div>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </ScrollArea>
-          ) : debugOutput ? (
-            <div className="p-4 space-y-2">
-                 <h3 className="text-lg font-semibold">Debug Output</h3>
-                 <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
-                    <code>{debugOutput.run?.stdout || debugOutput.compile?.stderr || debugOutput.run?.stderr || "No output"}</code>
-                 </pre>
-            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-              <Play className="h-8 w-8 mb-2" />
-              <p>Run your code to see test results.</p>
-            </div>
+            <>
+              {compileError && (
+                 <div className="p-4 space-y-2">
+                    <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
+                    <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                      <code>{compileError}</code>
+                    </pre>
+                  </div>
+              )}
+               {runtimeError && (
+                 <div className="p-4 space-y-2">
+                    <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
+                     <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                        <code>{runtimeError}</code>
+                    </pre>
+                  </div>
+              )}
+
+              {runResult && (
+                <Accordion type="single" collapsible defaultValue="0" className="w-full">
+                  {runResult.results.map((res, i) => (
+                    <AccordionItem value={String(i)} key={i}>
+                      <AccordionTrigger className="flex items-center gap-1.5 text-xs h-10 px-4">
+                        <span>Test Case {i + 1}</span>
+                        {res.passed ? <CheckCircle className="text-green-500 h-4 w-4" /> : <XCircle className="text-red-500 h-4 w-4" />}
+                        <span className={cn("font-semibold", res.passed ? 'text-green-600' : 'text-red-500')}>{res.status}</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 space-y-4 bg-muted/50">
+                        <div>
+                          <h4 className="font-semibold mb-1 text-sm">Input</h4>
+                          <Textarea readOnly value={res.testCaseInput} className="font-mono text-xs h-20" />
+                        </div>
+                        {res.passed ? renderOutput(res.actualOutput, 'Your Output') : (
+                          <div className="grid grid-cols-2 gap-2">
+                            {renderOutput(res.actualOutput, 'Your Output')}
+                            {renderOutput(res.expectedOutput, 'Expected Output')}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
+
+              {debugOutput && !compileError && !runtimeError && (
+                 <div className="p-4 space-y-2">
+                    <h3 className="text-lg font-semibold">Debug Output</h3>
+                    <pre className="bg-white text-foreground p-4 rounded-md text-xs whitespace-pre-wrap font-mono border">
+                        <code>{debugOutput.run?.stdout || "(No output)"}</code>
+                    </pre>
+                </div>
+              )}
+              
+              {!isRunning && !runResult && !debugOutput && (
+                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
+                  <Play className="h-8 w-8 mb-2" />
+                  <p>Run your code to see test results.</p>
+                </div>
+              )}
+            </>
           )}
-        </>
+        </ScrollArea>
       </div>
     );
   };
