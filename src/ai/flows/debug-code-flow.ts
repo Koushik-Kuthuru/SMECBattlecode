@@ -18,9 +18,9 @@ const languageMap: Record<string, string> = {
 };
 
 const PistonExecutionOutputSchema = z.object({
-  stdout: z.string().describe('The standard output of the code execution.'),
-  stderr: z.string().describe('The standard error of the code execution, if any.'),
-  output: z.string().describe('The combined output (stdout and stderr).'),
+  stdout: z.string().optional().describe('The standard output of the code execution.'),
+  stderr: z.string().optional().describe('The standard error of the code execution, if any.'),
+  output: z.string().optional().describe('The combined output (stdout and stderr).'),
   code: z.number().optional().describe('The exit code of the execution.'),
   signal: z.string().nullable().optional().describe('The signal that terminated the execution, if any.'),
 }).optional();

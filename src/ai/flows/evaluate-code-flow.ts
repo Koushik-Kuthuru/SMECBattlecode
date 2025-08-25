@@ -20,9 +20,9 @@ const languageMap: Record<string, string> = {
 };
 
 const PistonExecutionOutputSchema = z.object({
-  stdout: z.string().describe('The standard output of the code execution.'),
-  stderr: z.string().describe('The standard error of the code execution, if any.'),
-  output: z.string().describe('The combined output (stdout and stderr).'),
+  stdout: z.string().optional().describe('The standard output of the code execution.'),
+  stderr: z.string().optional().describe('The standard error of the code execution, if any.'),
+  output: z.string().optional().describe('The combined output (stdout and stderr).'),
   code: z.number().optional().describe('The exit code of the execution.'),
   signal: z.string().nullable().optional().describe('The signal that terminated the execution, if any.'),
 }).optional();
@@ -141,10 +141,10 @@ export const evaluateCodeFlow = ai.defineFlow(
             results.push({
                 testCaseInput: tc.input,
                 expectedOutput: tc.output,
-                actualOutput: pistonResult.run.stdout || '',
+                actualOutput: pistonResult.run?.stdout || '',
                 passed: passed,
                 status: passed ? 'Accepted' : 'Wrong Answer',
-                stdout: pistonResult.run.stdout,
+                stdout: pistonResult.run?.stdout || null,
                 stderr: null,
                 compile_output: null,
             });

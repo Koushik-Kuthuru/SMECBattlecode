@@ -132,10 +132,10 @@ export const runCodeFlow = ai.defineFlow(
             results.push({
                 testCaseInput: tc.input,
                 expectedOutput: tc.output,
-                actualOutput: pistonResult.run.stdout || '',
+                actualOutput: pistonResult.run?.stdout || '',
                 passed: passed,
                 status: passed ? 'Accepted' : 'Wrong Answer',
-                stdout: pistonResult.run.stdout,
+                stdout: pistonResult.run?.stdout || null,
                 stderr: null,
                 compile_output: null,
             });
