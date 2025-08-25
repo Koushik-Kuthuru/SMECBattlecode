@@ -44,7 +44,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/hooks/use-toast';
 import { SmecBattleCodeLogo, BulletCoin } from '@/components/icons';
 import confetti from 'canvas-confetti';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -139,7 +138,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,7 +163,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [isBattleOver, setIsBattleOver] = useState(false);
 
   const auth = getAuth(app);
-  const challengeId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const challengeId = params.id as string;
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const contestId = searchParams.get('contestId');
@@ -841,8 +839,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ResizablePanelGroup>
   );
 
-  const currentIndex = allChallenges.findIndex(c => c.id === challengeId);
-  
   return (
     <ChallengeContext.Provider value={contextValue}>
         <div className="flex h-screen w-full flex-col overflow-hidden">
