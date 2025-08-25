@@ -21,6 +21,7 @@ import { type Challenge } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { evaluateCode, type EvaluateCodeOutput } from '@/ai/flows/evaluate-code';
+import { runCode, type RunCodeOutput } from '@/ai/flows/run-code';
 import { debugCode, type DebugCodeOutput } from '@/ai/flows/debug-code';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
@@ -76,8 +77,8 @@ type Contest = {
 
 type ChallengeContextType = {
   challenge: Challenge | null;
-  runResult: EvaluateCodeOutput | null;
-  setRunResult: React.Dispatch<React.SetStateAction<EvaluateCodeOutput | null>>;
+  runResult: RunCodeOutput | null;
+  setRunResult: React.Dispatch<React.SetStateAction<RunCodeOutput | null>>;
   debugOutput: DebugCodeOutput | null;
   setDebugOutput: React.Dispatch<React.SetStateAction<DebugCodeOutput | null>>;
   activeTab: string;
@@ -145,7 +146,7 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [isChallengeLoading, setIsChallengeLoading] = useState(true);
   const [isChallengeCompleted, setIsChallengeCompleted] = useState(false);
-  const [runResult, setRunResult] = useState<EvaluateCodeOutput | null>(null);
+  const [runResult, setRunResult] = useState<RunCodeOutput | null>(null);
   const [debugOutput, setDebugOutput] = useState<DebugCodeOutput | null>(null);
   const [activeTab, setActiveTab] = useState('description');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -199,16 +200,16 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     setActiveTab('result');
 
     try {
-        const result = await evaluateCode({
+        const result = await runCode({
             problemId: challengeId,
             code: solution,
             programmingLanguage: language,
         });
         setRunResult(result);
         if (result.allPassed) {
-            toast({ title: "All Tests Passed!", description: "Your code passed all sample and hidden tests." });
+            toast({ title: "Sample Tests Passed!", description: "Your code passed all sample tests." });
         } else {
-             toast({ variant: "destructive", title: "Tests Failed", description: "Your solution did not pass all test cases. Check the results." });
+             toast({ variant: "destructive", title: "Sample Tests Failed", description: "Your solution did not pass all sample test cases. Check the results." });
         }
     } catch(error) {
         console.error("Error running code:", error);

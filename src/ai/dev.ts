@@ -10,3 +10,5 @@ import './flows/debug-code-flow';
 import './flows/evaluate-code-flow';
 import './flows/generate-test-cases-flow';
 import './flows/suggest-code-improvements-flow';
+import './flows/run-code-flow';
+
