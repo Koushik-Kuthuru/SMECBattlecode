@@ -617,30 +617,29 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
   }
   
   const testResultPanel = () => {
-    // Check for a global compilation error first
-    const compileError = runResult?.results.find(r => r.compile_output)?.compile_output;
+    const compileError = runResult?.results.find(r => r.compile_output)?.compile_output ?? debugOutput?.compile?.stderr;
     if (compileError) {
       return (
         <div className="p-4 space-y-2">
           <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
-          <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
+          <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
             <code>{compileError}</code>
           </pre>
         </div>
       );
     }
     
-     const runtimeError = runResult?.results.find(r => r.status === 'Runtime Error')?.stderr;
-      if (runtimeError) {
-        return (
-          <div className="p-4 space-y-2">
-            <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
-             <pre className="bg-white text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono border border-destructive">
-                <code>{runtimeError}</code>
-            </pre>
-          </div>
-        );
-      }
+    const runtimeError = runResult?.results.find(r => r.status === 'Runtime Error')?.stderr ?? debugOutput?.run?.stderr;
+    if (runtimeError) {
+      return (
+        <div className="p-4 space-y-2">
+          <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
+           <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+              <code>{runtimeError}</code>
+          </pre>
+        </div>
+      );
+    }
 
 
     const renderOutput = (output: string | null | undefined, title: "Your Output" | "Expected Output") => {
