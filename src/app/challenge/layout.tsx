@@ -622,21 +622,6 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
       <div className="h-full w-full bg-background flex flex-col">
         <header className="p-2 border-b flex justify-between items-center flex-shrink-0">
           <h3 className="text-base font-semibold">Test Result</h3>
-          <div className="flex items-center gap-2">
-            {runResult && !isRunning && (
-              <span className={cn(
-                "text-sm font-bold",
-                runResult.allPassed ? "text-green-600" : "text-red-500"
-              )}>
-                {runResult.feedback}
-              </span>
-            )}
-            {debugOutput && !isRunning && (
-              <span className="text-sm font-bold text-blue-500">
-                {debugOutput.compile?.stderr ? 'Compilation Error' : (debugOutput.run?.stderr ? 'Runtime Error' : 'Finished')}
-              </span>
-            )}
-          </div>
         </header>
         <ScrollArea className="flex-grow">
           {isRunning ? (
@@ -646,21 +631,15 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
             </div>
           ) : (
             <>
-              {compileError && (
-                 <div className="p-4 space-y-2">
-                    <h3 className="text-lg font-semibold text-red-500">Compile Error</h3>
-                    <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
-                      <code>{compileError}</code>
-                    </pre>
-                  </div>
-              )}
-               {runtimeError && (
-                 <div className="p-4 space-y-2">
-                    <h3 className="text-lg font-semibold text-red-500">Runtime Error</h3>
-                     <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
-                        <code>{runtimeError}</code>
-                    </pre>
-                  </div>
+              {(compileError || runtimeError) && (
+                <div className="p-4 space-y-2">
+                  <h3 className="text-lg font-semibold text-red-500">
+                    {compileError ? 'Compile Error' : 'Runtime Error'}
+                  </h3>
+                  <pre className="bg-slate-900 text-red-500 p-4 rounded-md text-xs whitespace-pre-wrap font-mono">
+                    <code>{compileError || runtimeError}</code>
+                  </pre>
+                </div>
               )}
 
               {runResult && (
@@ -973,3 +952,4 @@ export default function ChallengeLayout({ children }: { children: React.ReactNod
     </ChallengeContext.Provider>
   );
 }
+
